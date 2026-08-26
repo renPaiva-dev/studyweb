@@ -6,7 +6,10 @@ Claude Code para recriá-los seguindo este padrão).
 
 ## Provedor
 
-- API Gemini (`gemini-1.5-flash`), free tier — https://aistudio.google.com/app/apikey
+- API Gemini (`gemini-3.6-flash`), free tier — https://aistudio.google.com/app/apikey
+  (nota: `gemini-1.5-flash`, usado originalmente, e depois `gemini-2.5-flash`,
+  foram descontinuados pelo Google para chaves novas; confirme o modelo atual
+  com `GET /v1beta/models?key=...` se voltar a dar 404 no futuro)
 - Chamada HTTP pura via `java.net.http.HttpClient` (sem SDK), para minimizar dependências.
 - Chave configurada via variável de ambiente `GEMINI_API_KEY`, nunca hardcoded.
 

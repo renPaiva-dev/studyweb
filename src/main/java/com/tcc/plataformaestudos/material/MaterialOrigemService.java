@@ -2,8 +2,12 @@ package com.tcc.plataformaestudos.material;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -21,8 +25,9 @@ import com.tcc.plataformaestudos.usuario.SecurityUtils;
 
 /**
  * UC03 — Enviar PDF de estudo. RN01 (isolamento por usuário) é garantida via
- * {@link DeckService#buscarDeckDoUsuarioAutenticado(Long)} (no envio) e
- * {@link #buscarMaterialDoUsuarioAutenticado(Long)} (na busca por id). RN06
+ * {@link DeckService#buscarDeckDoUsuarioAutenticado(Long)} (no envio e na
+ * listagem por deck) e {@link #buscarMaterialDoUsuarioAutenticado(Long)} (na
+ * busca por id). RN06
  * (formato/tamanho) é validada antes de qualquer processamento. RN07 (falha
  * de extração não deve acionar a IA) é implementada marcando o material com
  * status ERRO em vez de propagar a falha.
@@ -34,6 +39,7 @@ public class MaterialOrigemService {
 
 	private static final String EXTENSAO_PDF = ".pdf";
 	private static final long TAMANHO_MAXIMO_BYTES = 15L * 1024 * 1024;
+	private static final byte[] ASSINATURA_PDF = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final DeckService deckService;
@@ -77,6 +83,15 @@ public class MaterialOrigemService {
 		return MaterialOrigemResponseDTO.fromEntity(buscarMaterialDoUsuarioAutenticado(materialId));
 	}
 
+	@Transactional(readOnly = true)
+	public List<MaterialOrigemResponseDTO> listarPorDeck(Long deckId) {
+		deckService.buscarDeckDoUsuarioAutenticado(deckId);
+
+		return materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(deckId).stream()
+				.map(MaterialOrigemResponseDTO::fromEntity)
+				.toList();
+	}
+
 	private void validarArquivo(MultipartFile arquivo) {
 		if (arquivo == null || arquivo.isEmpty()) {
 			throw new ArquivoInvalidoException("Nenhum arquivo enviado");
@@ -91,6 +106,28 @@ public class MaterialOrigemService {
 
 		if (arquivo.getSize() > TAMANHO_MAXIMO_BYTES) {
 			throw new ArquivoInvalidoException("O arquivo enviado excede o tamanho máximo de 15MB");
+		}
+
+		if (!temAssinaturaDePdf(arquivo)) {
+			throw new ArquivoInvalidoException("O arquivo enviado não é um PDF válido");
+		}
+	}
+
+	/**
+	 * RN06 diz "apenas arquivos PDF são aceitos" - a extensão do nome do
+	 * arquivo (checada acima) não garante isso: um arquivo renomeado para
+	 * ".pdf" (ex.: uma página HTML salva com essa extensão) passaria pela
+	 * checagem de extensão e só falharia depois, na extração de texto
+	 * (RN07, status ERRO), quando o contrato já documenta esse caso como
+	 * 400 na própria chamada de upload. Verifica a assinatura real do
+	 * arquivo (%PDF-) em vez de confiar só no nome.
+	 */
+	private boolean temAssinaturaDePdf(MultipartFile arquivo) {
+		try (InputStream entrada = arquivo.getInputStream()) {
+			byte[] cabecalho = entrada.readNBytes(ASSINATURA_PDF.length);
+			return Arrays.equals(cabecalho, ASSINATURA_PDF);
+		} catch (IOException e) {
+			throw new ArquivoInvalidoException("Falha ao ler o arquivo enviado");
 		}
 	}
 

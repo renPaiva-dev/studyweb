@@ -36,6 +36,7 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
+| GET | `/api/decks/{id}/materiais` | — | `200` — `[ { id, nomeArquivo, statusProcessamento, criadoEm } ]` | `401` · `403` (RN01) · `404` |
 | POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho — RN06) · `401` · `403` · `404` |
 | GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, criadoEm }` | `401` · `403` · `404` |
 

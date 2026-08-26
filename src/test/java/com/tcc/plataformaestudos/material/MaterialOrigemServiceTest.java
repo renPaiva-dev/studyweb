@@ -72,7 +72,7 @@ class MaterialOrigemServiceTest {
 		deck.setId(DECK_ID);
 
 		MockMultipartFile arquivo = new MockMultipartFile(
-				"arquivo", "apostila.pdf", "application/pdf", "conteudo-fake".getBytes(StandardCharsets.UTF_8));
+				"arquivo", "apostila.pdf", "application/pdf", "%PDF-1.4\nconteudo-fake".getBytes(StandardCharsets.UTF_8));
 
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
 		when(pdfTextExtractorService.extrairTexto(any(File.class)))
@@ -93,6 +93,25 @@ class MaterialOrigemServiceTest {
 
 		MockMultipartFile arquivo = new MockMultipartFile(
 				"arquivo", "apostila.txt", "text/plain", "conteudo".getBytes(StandardCharsets.UTF_8));
+
+		assertThatThrownBy(() -> materialOrigemService.enviarPdf(DECK_ID, arquivo))
+				.isInstanceOf(ArquivoInvalidoException.class);
+
+		verifyNoInteractions(pdfTextExtractorService);
+		verify(materialOrigemRepository, never()).save(any());
+	}
+
+	@Test
+	void deveRejeitarArquivoComExtensaoPdfMasConteudoQueNaoEhPdf() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+
+		// Ex.: uma pagina HTML salva com extensao ".pdf" - passaria pela
+		// checagem de nome, mas nao tem a assinatura real de um PDF.
+		MockMultipartFile arquivo = new MockMultipartFile(
+				"arquivo", "nao-e-pdf-de-verdade.pdf", "application/pdf",
+				"<!DOCTYPE html><html></html>".getBytes(StandardCharsets.UTF_8));
 
 		assertThatThrownBy(() -> materialOrigemService.enviarPdf(DECK_ID, arquivo))
 				.isInstanceOf(ArquivoInvalidoException.class);
@@ -123,7 +142,7 @@ class MaterialOrigemServiceTest {
 		deck.setId(DECK_ID);
 
 		MockMultipartFile arquivo = new MockMultipartFile(
-				"arquivo", "apostila.pdf", "application/pdf", "conteudo-fake".getBytes(StandardCharsets.UTF_8));
+				"arquivo", "apostila.pdf", "application/pdf", "%PDF-1.4\nconteudo-fake".getBytes(StandardCharsets.UTF_8));
 
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
 		when(pdfTextExtractorService.extrairTexto(any(File.class)))
@@ -165,6 +184,34 @@ class MaterialOrigemServiceTest {
 
 		assertThatThrownBy(() -> materialOrigemService.buscarPorId(5L))
 				.isInstanceOf(RecursoNaoEncontradoException.class);
+	}
+
+	@Test
+	void deveListarMateriaisDoDeckQuandoDeckPertenceAoUsuario() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+
+		MaterialOrigem material = new MaterialOrigem();
+		material.setId(5L);
+		material.setNomeArquivo("apostila.pdf");
+		material.setStatusProcessamento(StatusProcessamento.PROCESSADO);
+		when(materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(DECK_ID)).thenReturn(List.of(material));
+
+		List<MaterialOrigemResponseDTO> resposta = materialOrigemService.listarPorDeck(DECK_ID);
+
+		assertThat(resposta).hasSize(1);
+		assertThat(resposta.get(0).nomeArquivo()).isEqualTo("apostila.pdf");
+	}
+
+	@Test
+	void deveLancarAcessoNegadoExceptionAoListarMateriaisDeDeckDeOutroUsuario() {
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenThrow(new AcessoNegadoException("Você não tem permissão para acessar este deck"));
+
+		assertThatThrownBy(() -> materialOrigemService.listarPorDeck(DECK_ID))
+				.isInstanceOf(AcessoNegadoException.class);
+
+		verifyNoInteractions(materialOrigemRepository);
 	}
 
 }

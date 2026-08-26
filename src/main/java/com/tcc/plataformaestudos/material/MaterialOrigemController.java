@@ -1,5 +1,7 @@
 package com.tcc.plataformaestudos.material;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,11 @@ public class MaterialOrigemController {
 	@GetMapping("/api/materiais/{id}")
 	public ResponseEntity<MaterialOrigemResponseDTO> buscarPorId(@PathVariable("id") Long id) {
 		return ResponseEntity.ok(materialOrigemService.buscarPorId(id));
+	}
+
+	@GetMapping("/api/decks/{id}/materiais")
+	public ResponseEntity<List<MaterialOrigemResponseDTO>> listarPorDeck(@PathVariable("id") Long deckId) {
+		return ResponseEntity.ok(materialOrigemService.listarPorDeck(deckId));
 	}
 
 }
