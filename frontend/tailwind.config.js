@@ -12,10 +12,29 @@ export default {
     },
     extend: {
       fontFamily: {
-        // Manrope como fonte padrao do app (carregada via Google Fonts em index.css).
+        // Manrope como fonte padrao do corpo (carregada via Google Fonts em index.css).
         sans: ['Manrope', 'system-ui', 'sans-serif'],
+        // Space Grotesk para titulos de pagina - quebra a monotonia
+        // tipografica do corpo (identidade visual "energetico e gamificado").
+        heading: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // Paleta positiva/conquista: coral-laranja (#FB923C = coral-400),
+        // usado para streak/dominado/sucesso - nunca para marca ou erro.
+        coral: {
+          DEFAULT: '#fb923c',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+          950: '#431407',
+        },
         // Paleta da marca: indigo (primaria) e violet (destaque IA/sucesso),
         // com tons 50-950 para dark mode futuro mesmo sem implementa-lo agora.
         brand: {
@@ -85,6 +104,12 @@ export default {
       },
       boxShadow: {
         subtle: '0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
+        // Sombras com leve tom violeta (nao cinza puro) - repouso sutil,
+        // hover mais profundo. Usadas pelo Card compartilhado.
+        card: '0 1px 2px 0 rgb(124 58 237 / 0.06), 0 2px 8px -2px rgb(124 58 237 / 0.08)',
+        'card-hover': '0 16px 32px -8px rgb(124 58 237 / 0.28), 0 4px 8px -2px rgb(124 58 237 / 0.15)',
+        // Glow coral para conquistas/sucesso (streak, dominado) em fases futuras.
+        'glow-coral': '0 8px 20px -4px rgb(251 146 60 / 0.35)',
       },
       keyframes: {
         'accordion-down': {
@@ -95,10 +120,15 @@ export default {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        shimmer: {
+          from: { transform: 'translateX(-100%)' },
+          to: { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        shimmer: 'shimmer 1.8s ease-in-out infinite',
       },
     },
   },

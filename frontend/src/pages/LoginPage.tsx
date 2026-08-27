@@ -64,11 +64,17 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      {/* Blobs decorativos solidos (sem gradiente) - quebram a simetria e do energia ao fundo. */}
+      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full bg-coral-300/25 blur-3xl" />
+
+      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary duration-500">
         <CardHeader className="items-center text-center">
-          <GraduationCap className="mb-2 h-8 w-8 text-primary" />
-          <CardTitle>Entrar</CardTitle>
+          <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <GraduationCap className="h-7 w-7" />
+          </span>
+          <CardTitle className="font-heading text-2xl">Entrar</CardTitle>
           <CardDescription>Acesse sua conta para continuar estudando</CardDescription>
         </CardHeader>
         <form onSubmit={aoSubmeter} noValidate>
@@ -78,6 +84,7 @@ export function LoginPage() {
               <Input
                 id="email"
                 type="email"
+                className="h-10"
                 placeholder="voce@email.com"
                 autoComplete="email"
                 value={email}
@@ -91,6 +98,7 @@ export function LoginPage() {
               <Input
                 id="senha"
                 type="password"
+                className="h-10"
                 placeholder="••••••••"
                 autoComplete="current-password"
                 value={senha}

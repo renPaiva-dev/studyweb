@@ -15,6 +15,12 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
         outline: "text-foreground",
+        // Coral solido - conquista/sucesso (ex.: dominado, PROCESSADO).
+        success:
+          "border-transparent bg-coral-400 text-white shadow hover:bg-coral-500",
+        // Ambar solido - risco/pendente (nunca marca ou sucesso).
+        warning:
+          "border-transparent bg-amber-500 text-white shadow hover:bg-amber-600",
       },
     },
     defaultVariants: {

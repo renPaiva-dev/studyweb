@@ -28,8 +28,10 @@ export function Layout() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container flex h-16 items-center justify-between">
-          <Link to="/decks" className="flex items-center gap-2 text-lg font-bold text-primary">
-            <GraduationCap className="h-6 w-6" />
+          <Link to="/decks" className="flex items-center gap-2.5 font-heading text-lg font-bold text-foreground">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <GraduationCap className="h-5 w-5" />
+            </span>
             Plataforma de Estudos
           </Link>
 

@@ -1,0 +1,32 @@
+import { apiClient } from './client'
+
+// UC07/UC08/UC09 - Estudo com repeticao espacada (docs/contrato-api.md,
+// secao "Estudo com Repeticao Espacada").
+
+export interface ItemFilaEstudo {
+  flashcardId: number
+  pergunta: string
+  resposta: string
+  mnemonico: string | null
+}
+
+export interface ResultadoRevisao {
+  fatorFacilidade: number
+  intervaloDias: number
+  repeticoes: number
+  proximaRevisao: string
+}
+
+/** GET /api/decks/{id}/fila-estudo -> 200, so flashcards com proxima_revisao <= hoje (RN10) */
+export async function buscarFilaEstudo(deckId: number): Promise<ItemFilaEstudo[]> {
+  const { data } = await apiClient.get<ItemFilaEstudo[]>(`/api/decks/${deckId}/fila-estudo`)
+  return data
+}
+
+/** POST /api/flashcards/{id}/revisoes -> 201, recalculo SM-2 (RN09/RN11/RN12) */
+export async function avaliarRevisao(flashcardId: number, qualidadeResposta: number): Promise<ResultadoRevisao> {
+  const { data } = await apiClient.post<ResultadoRevisao>(`/api/flashcards/${flashcardId}/revisoes`, {
+    qualidadeResposta,
+  })
+  return data
+}
