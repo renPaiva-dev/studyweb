@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
  * (endpoints escopados a um flashcard individual — reutilizável no futuro
  * pelo fluxo de estudo, UC07/UC08). RN04 marca a origem (MANUAL ou IA). RN05
  * é implementada em confirmarSugestoes: apenas os aceitos são persistidos.
+ * RN17: o `topico` de cada sugestão aceita (gerado em UC04/UC12) é persistido
+ * junto; para flashcards manuais o campo é opcional.
  */
 @Service
 @RequiredArgsConstructor
@@ -51,6 +53,7 @@ public class FlashcardService {
 		flashcard.setPergunta(request.pergunta());
 		flashcard.setResposta(request.resposta());
 		flashcard.setMnemonico(request.mnemonico());
+		flashcard.setTopico(request.topico());
 		flashcard.setOrigem(OrigemFlashcard.MANUAL);
 
 		Flashcard salvo = flashcardRepository.save(flashcard);
@@ -81,6 +84,7 @@ public class FlashcardService {
 		flashcard.setPergunta(request.pergunta());
 		flashcard.setResposta(request.resposta());
 		flashcard.setMnemonico(request.mnemonico());
+		flashcard.setTopico(request.topico());
 
 		Flashcard atualizado = flashcardRepository.save(flashcard);
 		log.info("Flashcard atualizado: flashcardId={}", flashcardId);
@@ -100,6 +104,7 @@ public class FlashcardService {
 		flashcard.setDeck(deck);
 		flashcard.setPergunta(sugestao.pergunta());
 		flashcard.setResposta(sugestao.resposta());
+		flashcard.setTopico(sugestao.topico());
 		flashcard.setOrigem(OrigemFlashcard.IA);
 		return flashcard;
 	}

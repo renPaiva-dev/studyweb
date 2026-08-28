@@ -163,3 +163,44 @@
   2. Sistema calcula % dominado e % em risco (RN14).
   3. Sistema exibe as métricas.
 - **Regras relacionadas:** RN14
+
+## UC12 — Classificar tópico do flashcard (incluído por UC04)
+
+- **Ator:** Sistema (incluído no fluxo de UC04)
+- **Objetivo:** Atribuir um tópico curto a cada flashcard sugerido pela IA, permitindo agregações futuras (dashboard, recomendação).
+- **Pré-condições:** Fluxo de UC04 em andamento (texto extraído já disponível).
+- **Pós-condições:** Cada sugestão retornada inclui o campo `topico`.
+- **Fluxo principal:** O prompt de UC04 é ajustado para pedir também um campo `topico` por sugestão, no mesmo JSON de resposta — não é uma chamada adicional à IA.
+- **Regras relacionadas:** RN17
+
+## UC13 — Obter recomendação de foco de estudo
+
+- **Ator:** Estudante
+- **Objetivo:** Fornecer uma sugestão textual curta indicando em qual tópico o estudante deveria focar, com base no desempenho real registrado.
+- **Pré-condições:** Deck existente, pertencente ao usuário autenticado.
+- **Pós-condições:** Recomendação retornada (não persistida).
+- **Fluxo principal:**
+  1. Estudante solicita a recomendação.
+  2. Sistema aplica RN01.
+  3. Sistema agrega os flashcards em risco por tópico.
+  4. Se houver tópico(s) com concentração significativa, monta prompt com esses dados agregados e chama a IA.
+  5. Sistema retorna a recomendação textual e o tópico de foco.
+- **Fluxos alternativos:** A1 — sem dados suficientes → mensagem padrão, sem chamar a IA.
+- **Fluxos de exceção:** E1 — falha na API de IA → mensagem de erro amigável.
+- **Regras relacionadas:** RN18
+
+## UC14 — Solicitar explicação de um flashcard
+
+- **Ator:** Estudante
+- **Objetivo:** Obter uma explicação alternativa/mais detalhada de um flashcard, ancorada no material original quando disponível.
+- **Pré-condições:** Flashcard existente, pertencente a um deck do usuário autenticado.
+- **Pós-condições:** Explicação retornada (não persistida).
+- **Fluxo principal:**
+  1. Estudante solicita explicação de um flashcard (ex.: durante UC08).
+  2. Sistema aplica RN01.
+  3. Sistema verifica se há material de origem disponível no deck.
+  4. Se houver texto extraído, monta prompt com pergunta, resposta e o texto do material, pedindo explicação ancorada nele.
+  5. Se não houver, gera explicação sem ancoragem, sinalizando isso.
+  6. Sistema retorna a explicação.
+- **Fluxos de exceção:** E1 — falha na API de IA → mensagem de erro amigável.
+- **Regras relacionadas:** RN19

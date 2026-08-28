@@ -2,6 +2,7 @@ package com.tcc.plataformaestudos.flashcard;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record SugestaoConfirmacaoDTO(
 
@@ -12,5 +13,8 @@ public record SugestaoConfirmacaoDTO(
 		String resposta,
 
 		@NotNull(message = "Campo aceitar é obrigatório")
-		Boolean aceitar) {
+		Boolean aceitar,
+
+		@Size(max = 60, message = "Tópico deve ter no máximo 60 caracteres")
+		String topico) {
 }

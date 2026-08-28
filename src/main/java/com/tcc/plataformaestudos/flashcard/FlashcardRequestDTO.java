@@ -14,5 +14,8 @@ public record FlashcardRequestDTO(
 		String resposta,
 
 		@Size(max = 500, message = "Mnemônico deve ter no máximo 500 caracteres")
-		String mnemonico) {
+		String mnemonico,
+
+		@Size(max = 60, message = "Tópico deve ter no máximo 60 caracteres")
+		String topico) {
 }

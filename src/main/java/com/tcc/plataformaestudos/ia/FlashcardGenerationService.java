@@ -21,7 +21,10 @@ import tools.jackson.databind.ObjectMapper;
  * {@link MaterialOrigemService#buscarMaterialDoUsuarioAutenticado(Long)}.
  * RN07 é validada antes de qualquer chamada à IA. RN08 limita a resposta a
  * {@value #MAXIMO_FLASHCARDS} sugestões, mesmo que a IA retorne mais. RN16
- * registra cada chamada em log (timestamp + status).
+ * registra cada chamada em log (timestamp + status). UC12/RN17: o prompt
+ * também pede um campo "topico" por sugestão; se a IA não o retornar,
+ * {@link FlashcardSugestaoDTO#topico()} fica nulo e o fluxo continua
+ * normalmente (RN08/RN05 não dependem desse campo).
  */
 @Service
 @RequiredArgsConstructor
@@ -111,7 +114,10 @@ public class FlashcardGenerationService {
 		return """
 				Você é um assistente que cria flashcards de estudo a partir de um texto.
 				Gere no máximo %d flashcards com base no texto abaixo.
-				Responda apenas com um array JSON no formato [{"pergunta": "...", "resposta": "..."}],
+				Para cada flashcard, inclua também um campo "topico": uma classificação
+				curta (até 60 caracteres) do assunto da pergunta/resposta (RN17).
+				Responda apenas com um array JSON no formato
+				[{"pergunta": "...", "resposta": "...", "topico": "..."}],
 				sem markdown, sem crases, sem texto fora do JSON.
 
 				Texto:

@@ -7,6 +7,7 @@ public record FlashcardResponseDTO(
 		String pergunta,
 		String resposta,
 		String mnemonico,
+		String topico,
 		OrigemFlashcard origem,
 		LocalDateTime criadoEm) {
 
@@ -16,6 +17,7 @@ public record FlashcardResponseDTO(
 				flashcard.getPergunta(),
 				flashcard.getResposta(),
 				flashcard.getMnemonico(),
+				flashcard.getTopico(),
 				flashcard.getOrigem(),
 				flashcard.getCriadoEm());
 	}

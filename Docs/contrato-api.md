@@ -36,7 +36,6 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/materiais` | — | `200` — `[ { id, nomeArquivo, statusProcessamento, criadoEm } ]` | `401` · `403` (RN01) · `404` |
 | POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho — RN06) · `401` · `403` · `404` |
 | GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, criadoEm }` | `401` · `403` · `404` |
 
@@ -44,7 +43,7 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta } ] }` (máx. 15 — RN08; nada persistido ainda) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `403` · `404` · `502` (falha no serviço de IA) |
+| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta, topico } ] }` (máx. 15 — RN08; nada persistido ainda; topico ver RN17) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `403` · `404` · `502` (falha no serviço de IA) |
 | POST | `/api/decks/{id}/flashcards/confirmar-sugestoes` | `{ sugestoes: [ { pergunta, resposta, aceitar: true } ] }` | `201` — flashcards criados com `origem: "IA"` | `400` · `401` · `403` · `404` |
 
 ## Flashcards (UC05/UC06)
@@ -94,3 +93,17 @@ POST /api/flashcards/57/revisoes
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
 | GET | `/api/decks/{id}/dashboard` | — | `200` — `{ totalFlashcards, percentualDominado, percentualEmRisco }` (RN14) | `401` · `403` · `404` |
+
+## Recomendação de Foco de Estudo (UC13)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| POST | `/api/decks/{id}/recomendacao-estudo` | — | `200` — `{ recomendacao, topicoFoco, baseadoEmDados }` (RN18) | `401` · `403` · `404` · `502` (falha na IA) |
+
+`baseadoEmDados: false` indica mensagem padrão (sem chamada à IA), por falta de dados suficientes.
+
+## Explicação de Flashcard (UC14)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| POST | `/api/flashcards/{id}/explicacao` | — | `200` — `{ explicacao, ancoradaNoMaterial }` (RN19) | `401` · `403` (RN01) · `404` · `502` (falha na IA) |

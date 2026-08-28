@@ -51,13 +51,31 @@ class FlashcardGenerationServiceTest {
 	void deveGerarSugestoesComSucessoNaPrimeiraTentativa() {
 		when(materialOrigemService.buscarMaterialDoUsuarioAutenticado(MATERIAL_ID)).thenReturn(materialProcessado());
 		when(geminiClient.gerarConteudo(org.mockito.ArgumentMatchers.any())).thenReturn(
+				"[{\"pergunta\":\"O que é mitose?\",\"resposta\":\"Divisão celular.\",\"topico\":\"Biologia\"}]");
+
+		SugestoesFlashcardsResponseDTO resposta = flashcardGenerationService.gerarSugestoes(MATERIAL_ID);
+
+		assertThat(resposta.sugestoes()).hasSize(1);
+		assertThat(resposta.sugestoes().get(0).pergunta()).isEqualTo("O que é mitose?");
+		assertThat(resposta.sugestoes().get(0).topico()).isEqualTo("Biologia");
+		verify(geminiClient, times(1)).gerarConteudo(org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void deveGerarSugestaoComTopicoNuloQuandoIaNaoRetornaOCampoTopico() {
+		// RN17/UC12: o campo "topico" é pedido no prompt, mas não é
+		// obrigatório na resposta da IA — sua ausência não pode quebrar
+		// RN08 (limite de sugestões) nem RN05 (fluxo de revisão/confirmação).
+		when(materialOrigemService.buscarMaterialDoUsuarioAutenticado(MATERIAL_ID)).thenReturn(materialProcessado());
+		when(geminiClient.gerarConteudo(org.mockito.ArgumentMatchers.any())).thenReturn(
 				"[{\"pergunta\":\"O que é mitose?\",\"resposta\":\"Divisão celular.\"}]");
 
 		SugestoesFlashcardsResponseDTO resposta = flashcardGenerationService.gerarSugestoes(MATERIAL_ID);
 
 		assertThat(resposta.sugestoes()).hasSize(1);
 		assertThat(resposta.sugestoes().get(0).pergunta()).isEqualTo("O que é mitose?");
-		verify(geminiClient, times(1)).gerarConteudo(org.mockito.ArgumentMatchers.any());
+		assertThat(resposta.sugestoes().get(0).resposta()).isEqualTo("Divisão celular.");
+		assertThat(resposta.sugestoes().get(0).topico()).isNull();
 	}
 
 	@Test

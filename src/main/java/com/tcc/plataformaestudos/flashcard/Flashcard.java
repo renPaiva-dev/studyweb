@@ -54,6 +54,9 @@ public class Flashcard {
 	@Column(name = "mnemonico", length = 500)
 	private String mnemonico;
 
+	@Column(name = "topico", length = 60)
+	private String topico;
+
 	@Enumerated(EnumType.STRING)
 	@Column(name = "origem", nullable = false, length = 10)
 	private OrigemFlashcard origem = OrigemFlashcard.MANUAL;

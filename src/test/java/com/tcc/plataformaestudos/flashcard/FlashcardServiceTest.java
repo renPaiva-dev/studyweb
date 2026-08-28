@@ -101,19 +101,20 @@ class FlashcardServiceTest {
 			return flashcard;
 		});
 
-		FlashcardRequestDTO request = new FlashcardRequestDTO("O que é mitose?", "Divisão celular.", "Mito = divisão");
+		FlashcardRequestDTO request = new FlashcardRequestDTO("O que é mitose?", "Divisão celular.", "Mito = divisão", "Biologia");
 
 		FlashcardResponseDTO resposta = flashcardService.criarManual(DECK_ID, request);
 
 		assertThat(resposta.origem()).isEqualTo(OrigemFlashcard.MANUAL);
 		assertThat(resposta.pergunta()).isEqualTo("O que é mitose?");
 		assertThat(resposta.mnemonico()).isEqualTo("Mito = divisão");
+		assertThat(resposta.topico()).isEqualTo("Biologia");
 	}
 
 	@Test
 	void deveFalharValidacaoAntesDeChegarNoRepositorioQuandoPerguntaVazia() {
 		Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-		FlashcardRequestDTO request = new FlashcardRequestDTO("", "Resposta qualquer", null);
+		FlashcardRequestDTO request = new FlashcardRequestDTO("", "Resposta qualquer", null, null);
 
 		Set<ConstraintViolation<FlashcardRequestDTO>> violacoes = validator.validate(request);
 
@@ -127,12 +128,13 @@ class FlashcardServiceTest {
 		when(flashcardRepository.findByIdAndDeckUsuarioId(FLASHCARD_ID, USUARIO_ID)).thenReturn(Optional.of(flashcard));
 		when(flashcardRepository.save(flashcard)).thenReturn(flashcard);
 
-		FlashcardRequestDTO request = new FlashcardRequestDTO("Nova pergunta", "Nova resposta", "Novo mnemônico");
+		FlashcardRequestDTO request = new FlashcardRequestDTO("Nova pergunta", "Nova resposta", "Novo mnemônico", "Novo tópico");
 		FlashcardResponseDTO resposta = flashcardService.atualizar(FLASHCARD_ID, request);
 
 		assertThat(resposta.pergunta()).isEqualTo("Nova pergunta");
 		assertThat(resposta.resposta()).isEqualTo("Nova resposta");
 		assertThat(resposta.mnemonico()).isEqualTo("Novo mnemônico");
+		assertThat(resposta.topico()).isEqualTo("Novo tópico");
 	}
 
 	@Test
@@ -140,7 +142,7 @@ class FlashcardServiceTest {
 		when(flashcardRepository.findByIdAndDeckUsuarioId(FLASHCARD_ID, USUARIO_ID)).thenReturn(Optional.empty());
 		when(flashcardRepository.existsById(FLASHCARD_ID)).thenReturn(true);
 
-		FlashcardRequestDTO request = new FlashcardRequestDTO("Pergunta", "Resposta", null);
+		FlashcardRequestDTO request = new FlashcardRequestDTO("Pergunta", "Resposta", null, null);
 
 		assertThatThrownBy(() -> flashcardService.atualizar(FLASHCARD_ID, request))
 				.isInstanceOf(AcessoNegadoException.class);
@@ -173,16 +175,18 @@ class FlashcardServiceTest {
 		when(flashcardRepository.save(any(Flashcard.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
 		ConfirmarSugestoesRequestDTO request = new ConfirmarSugestoesRequestDTO(List.of(
-				new SugestaoConfirmacaoDTO("O que é mitose?", "Divisão celular.", true),
-				new SugestaoConfirmacaoDTO("Pergunta descartada", "Resposta descartada", false),
-				new SugestaoConfirmacaoDTO("O que é meiose?", "Divisão celular reducional.", true)));
+				new SugestaoConfirmacaoDTO("O que é mitose?", "Divisão celular.", true, "Biologia"),
+				new SugestaoConfirmacaoDTO("Pergunta descartada", "Resposta descartada", false, "Biologia"),
+				new SugestaoConfirmacaoDTO("O que é meiose?", "Divisão celular reducional.", true, null)));
 
 		List<FlashcardResponseDTO> criados = flashcardService.confirmarSugestoes(DECK_ID, request);
 
 		assertThat(criados).hasSize(2);
 		assertThat(criados).allSatisfy(f -> assertThat(f.origem()).isEqualTo(OrigemFlashcard.IA));
 		assertThat(criados.get(0).pergunta()).isEqualTo("O que é mitose?");
+		assertThat(criados.get(0).topico()).isEqualTo("Biologia");
 		assertThat(criados.get(1).pergunta()).isEqualTo("O que é meiose?");
+		assertThat(criados.get(1).topico()).isNull();
 		verify(flashcardRepository, times(2)).save(any(Flashcard.class));
 	}
 
@@ -193,7 +197,7 @@ class FlashcardServiceTest {
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
 
 		ConfirmarSugestoesRequestDTO request = new ConfirmarSugestoesRequestDTO(List.of(
-				new SugestaoConfirmacaoDTO("Pergunta descartada", "Resposta descartada", false)));
+				new SugestaoConfirmacaoDTO("Pergunta descartada", "Resposta descartada", false, null)));
 
 		List<FlashcardResponseDTO> criados = flashcardService.confirmarSugestoes(DECK_ID, request);
 

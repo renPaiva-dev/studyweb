@@ -60,6 +60,9 @@
 | RN11 | Qualidade < 3 zera `repeticoes` e reinicia o intervalo. |
 | RN12 | O fator de facilidade (EF) nunca é menor que 1,3. |
 | RN13 | Excluir um deck exige confirmação e remove em cascata flashcards, materiais e histórico. |
-| RN14 | Dashboard calcula, por deck, % "dominado" (repeticoes >= 3 e última qualidade >= 4) e % "em risco" (última qualidade_resposta < 3 — mesmo limiar de RN11 — ou proxima_revisao vencida há mais de 7 dias). Um flashcard nunca revisado não conta nem como dominado nem como em risco. |
+| RN14 | Dashboard calcula, por deck, % "dominado" (repeticoes >= 3 e última qualidade >= 4). Um flashcard é considerado "em risco" quando sua última `qualidade_resposta` for menor que 3 (mesmo limiar de RN11) OU quando `proxima_revisao` estiver vencida há mais de 7 dias. Um flashcard nunca revisado não conta nem como dominado nem como em risco. |
 | RN15 | Um quiz só pode ser respondido integralmente; tentativas parciais não geram pontuação. |
 | RN16 | Toda chamada à API de IA é registrada em log (timestamp + status). |
+| RN17 | Todo flashcard gerado por IA (origem=IA) deve receber, no mesmo processo de geração (UC04), uma classificação de tópico curta (até 60 caracteres) extraída do conteúdo da pergunta/resposta. Flashcards manuais (origem=MANUAL) têm o campo `topico` opcional. |
+| RN18 | A recomendação de foco de estudo é gerada sob demanda (não persistida). O sistema identifica o(s) tópico(s) com maior concentração de flashcards "em risco" (critério de RN14) e, havendo dados suficientes, gera uma sugestão textual curta via IA. Sem dados suficientes, retorna mensagem padrão sem chamar a IA. |
+| RN19 | Quando o estudante solicita explicação de um flashcard, a explicação deve ser gerada via IA ancorada no texto extraído do material de origem daquele flashcard, quando disponível (não em conhecimento genérico do modelo). Sem material associado, a explicação é gerada sem ancoragem, sinalizando isso na resposta (`ancoradaNoMaterial: false`). |
