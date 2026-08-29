@@ -10,13 +10,8 @@ public record DeckResponseDTO(
 		LocalDateTime atualizadoEm,
 		int totalFlashcards) {
 
-	/**
-	 * totalFlashcards é fixo em 0 por enquanto — a entidade Flashcard ainda não
-	 * existe. Quando ela existir, este método deve passar a contar os
-	 * flashcards do deck.
-	 */
-	public static DeckResponseDTO fromEntity(Deck deck) {
-		return new DeckResponseDTO(deck.getId(), deck.getTitulo(), deck.getDescricao(), deck.getCriadoEm(), deck.getAtualizadoEm(), 0);
+	public static DeckResponseDTO fromEntity(Deck deck, long totalFlashcards) {
+		return new DeckResponseDTO(deck.getId(), deck.getTitulo(), deck.getDescricao(), deck.getCriadoEm(), deck.getAtualizadoEm(), (int) totalFlashcards);
 	}
 
 }

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
+import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 import com.tcc.plataformaestudos.usuario.SecurityUtils;
 import com.tcc.plataformaestudos.usuario.Usuario;
 import com.tcc.plataformaestudos.usuario.UsuarioRepository;
@@ -29,6 +30,7 @@ public class DeckService {
 
 	private final DeckRepository deckRepository;
 	private final UsuarioRepository usuarioRepository;
+	private final FlashcardRepository flashcardRepository;
 
 	@Transactional
 	public DeckResponseDTO criar(DeckRequestDTO request) {
@@ -43,7 +45,7 @@ public class DeckService {
 		Deck salvo = deckRepository.save(deck);
 		log.info("Deck criado: deckId={}, usuarioId={}", salvo.getId(), usuarioId);
 
-		return DeckResponseDTO.fromEntity(salvo);
+		return DeckResponseDTO.fromEntity(salvo, 0);
 	}
 
 	@Transactional(readOnly = true)
@@ -51,13 +53,14 @@ public class DeckService {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
 		return deckRepository.findByUsuarioId(usuarioId).stream()
-				.map(DeckResponseDTO::fromEntity)
+				.map(deck -> DeckResponseDTO.fromEntity(deck, flashcardRepository.countByDeckId(deck.getId())))
 				.toList();
 	}
 
 	@Transactional(readOnly = true)
 	public DeckResponseDTO buscarPorId(Long deckId) {
-		return DeckResponseDTO.fromEntity(buscarDeckDoUsuarioAutenticado(deckId));
+		Deck deck = buscarDeckDoUsuarioAutenticado(deckId);
+		return DeckResponseDTO.fromEntity(deck, flashcardRepository.countByDeckId(deckId));
 	}
 
 	@Transactional
@@ -69,7 +72,7 @@ public class DeckService {
 		Deck atualizado = deckRepository.save(deck);
 		log.info("Deck atualizado: deckId={}", deckId);
 
-		return DeckResponseDTO.fromEntity(atualizado);
+		return DeckResponseDTO.fromEntity(atualizado, flashcardRepository.countByDeckId(deckId));
 	}
 
 	@Transactional

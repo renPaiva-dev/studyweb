@@ -28,6 +28,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
+import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 import com.tcc.plataformaestudos.usuario.Usuario;
 import com.tcc.plataformaestudos.usuario.UsuarioAutenticado;
 import com.tcc.plataformaestudos.usuario.UsuarioRepository;
@@ -42,6 +43,9 @@ class DeckServiceTest {
 
 	@Mock
 	private UsuarioRepository usuarioRepository;
+
+	@Mock
+	private FlashcardRepository flashcardRepository;
 
 	@InjectMocks
 	private DeckService deckService;
@@ -96,11 +100,13 @@ class DeckServiceTest {
 	void deveListarApenasDecksDoUsuarioAutenticado() {
 		Deck deck = criarDeckExistente(10L, USUARIO_ID);
 		when(deckRepository.findByUsuarioId(USUARIO_ID)).thenReturn(List.of(deck));
+		when(flashcardRepository.countByDeckId(10L)).thenReturn(14L);
 
 		List<DeckResponseDTO> resposta = deckService.listar();
 
 		assertThat(resposta).hasSize(1);
 		assertThat(resposta.get(0).id()).isEqualTo(10L);
+		assertThat(resposta.get(0).totalFlashcards()).isEqualTo(14);
 	}
 
 	@Test
