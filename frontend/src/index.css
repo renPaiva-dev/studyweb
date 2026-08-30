@@ -6,8 +6,10 @@
 
 @layer base {
   :root {
-    /* Lavanda muito claro (nao branco puro) - contraste suave com os cards brancos. */
-    --background: 252 60% 98%;
+    /* Neutro de verdade (sem tingimento de matiz) - a cor de marca (violeta)
+       so aparece onde e usada com intencao (acao primaria, foco, nav ativo),
+       nunca diluida no fundo/borda/hover geral. */
+    --background: 0 0% 99%;
     --foreground: 222.2 47.4% 11.2%;
 
     --card: 0 0% 100%;
@@ -16,58 +18,61 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 47.4% 11.2%;
 
-    /* Violeta vibrante - cor primaria da marca (identico ao brand-600 abaixo). */
+    /* Violeta - cor primaria da marca (identico ao brand-600 abaixo). Uso
+       restrito a acao primaria/foco/estado ativo - ver --accent abaixo. */
     --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
+    --secondary: 0 0% 95%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 0 0% 95%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 262 83% 58%;
-    --accent-foreground: 0 0% 100%;
+    /* Hover/estado neutro generico (menu items, ghost buttons) - antes era
+       igual a --primary, o que tingia de violeta qualquer hover no app. */
+    --accent: 0 0% 94%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
     --ring: 262 83% 58%;
 
-    /* rounded-xl como raio padrao dos componentes menores; Card usa rounded-2xl a mais (ver components/ui/card.tsx). */
-    --radius: 0.75rem;
+    /* Raio contido - nada sobe de nivel (Card usava rounded-2xl); a unica
+       excecao fica para modais/dialogs, que ja usam sm:rounded-lg direto. */
+    --radius: 0.5rem;
   }
 
-  /* Preparado para dark mode (nao ativado ainda - falta o toggle/persistencia). */
   .dark {
-    --background: 224 71% 4%;
+    --background: 224 20% 6%;
     --foreground: 210 40% 98%;
 
-    --card: 224 71% 7%;
+    --card: 224 16% 9%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 224 71% 7%;
+    --popover: 224 16% 9%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 262 83% 65%;
-    --primary-foreground: 224 71% 4%;
+    --primary-foreground: 224 20% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 220 10% 16%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 10% 16%;
+    --muted-foreground: 220 8% 65%;
 
-    --accent: 262 83% 65%;
-    --accent-foreground: 224 71% 4%;
+    --accent: 220 10% 20%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62.8% 50.6%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 220 10% 18%;
+    --input: 220 10% 18%;
     --ring: 262 83% 65%;
   }
 

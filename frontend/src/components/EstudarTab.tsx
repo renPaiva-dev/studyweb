@@ -15,33 +15,41 @@ interface EstudarTabProps {
 }
 
 // UC07 - fila diaria de estudo (GET /api/decks/{id}/fila-estudo, RN10: so
-// flashcards com proxima_revisao <= hoje ou primeira revisao). UC08 -
-// avaliacao da resposta 0-5 (POST /api/flashcards/{id}/revisoes), que
-// aciona o recalculo SM-2 no backend (UC09). Avanca automaticamente para
-// o proximo item da fila apos cada avaliacao.
+// flashcards com proxima_revisao <= hoje ou primeira revisao). Se a fila
+// vier vazia, o estudante pode optar por "Revisar mesmo assim" (RN22),
+// que busca o deck inteiro ignorando RN10 - as revisoes geradas continuam
+// reais, pelo mesmo UC08/UC09. UC08 - avaliacao da resposta 0-5 (POST
+// /api/flashcards/{id}/revisoes), que aciona o recalculo SM-2 no backend
+// (UC09). Avanca automaticamente para o proximo item da fila apos cada
+// avaliacao.
 export function EstudarTab({ deckId }: EstudarTabProps) {
   const [fila, setFila] = useState<ItemFilaEstudo[] | null>(null)
+  const [modoCompleto, setModoCompleto] = useState(false)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
   const [indiceAtual, setIndiceAtual] = useState(0)
   const [virado, setVirado] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
-  const carregarFila = useCallback(async () => {
-    setErroCarregamento(null)
-    setFila(null)
-    setIndiceAtual(0)
-    setVirado(false)
+  const carregarFila = useCallback(
+    async (incluirTodos: boolean) => {
+      setErroCarregamento(null)
+      setFila(null)
+      setModoCompleto(incluirTodos)
+      setIndiceAtual(0)
+      setVirado(false)
 
-    try {
-      setFila(await buscarFilaEstudo(deckId))
-    } catch (erro) {
-      setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar a fila de estudo deste deck.'))
-    }
-  }, [deckId])
+      try {
+        setFila(await buscarFilaEstudo(deckId, incluirTodos))
+      } catch (erro) {
+        setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar a fila de estudo deste deck.'))
+      }
+    },
+    [deckId],
+  )
 
   useEffect(() => {
-    void carregarFila()
+    void carregarFila(false)
   }, [carregarFila])
 
   async function aoAvaliar(qualidadeResposta: number) {
@@ -76,7 +84,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
-        <Button variant="outline" onClick={() => void carregarFila()}>
+        <Button variant="outline" onClick={() => void carregarFila(modoCompleto)}>
           Tentar novamente
         </Button>
       </div>
@@ -90,8 +98,13 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
           <PartyPopper className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
         </div>
         <p className="text-lg font-medium text-emerald-800 dark:text-emerald-300">
-          Nenhuma revisão pendente hoje, volte amanhã!
+          {modoCompleto ? 'Este deck ainda não tem flashcards.' : 'Nenhuma revisão pendente hoje, volte amanhã!'}
         </p>
+        {!modoCompleto && (
+          <Button variant="outline" onClick={() => void carregarFila(true)}>
+            Revisar mesmo assim
+          </Button>
+        )}
       </div>
     )
   }
@@ -108,7 +121,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
             Você revisou {fila.length} flashcard{fila.length === 1 ? '' : 's'} hoje.
           </p>
         </div>
-        <Button variant="outline" onClick={() => void carregarFila()}>
+        <Button variant="outline" onClick={() => void carregarFila(false)}>
           Verificar novamente
         </Button>
       </div>
@@ -131,7 +144,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
           </span>
           <span className="flex items-center gap-1">
             <Sparkles className="h-3.5 w-3.5" />
-            Repetição espaçada
+            {modoCompleto ? 'Revisão mesmo assim' : 'Repetição espaçada'}
           </span>
         </div>
         <Progress value={progresso} />

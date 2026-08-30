@@ -9,6 +9,8 @@ import com.tcc.plataformaestudos.deck.Deck;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -44,6 +46,16 @@ public class Quiz {
 
 	@Column(name = "titulo", nullable = false, length = 150)
 	private String titulo;
+
+	/** UC10 (DETERMINISTICO) vs UC27/RN35 (IA_PERSONALIZADA). */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "origem", nullable = false, length = 20)
+	private OrigemQuiz origem = OrigemQuiz.DETERMINISTICO;
+
+	/** UC27/RN35 — só preenchido quando origem=IA_PERSONALIZADA. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "estilo", length = 20)
+	private EstiloProva estilo;
 
 	@Column(name = "criado_em", nullable = false)
 	private LocalDateTime criadoEm;

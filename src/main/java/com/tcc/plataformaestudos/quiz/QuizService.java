@@ -19,6 +19,8 @@ import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
+import com.tcc.plataformaestudos.ia.ProvaGenerationService;
+import com.tcc.plataformaestudos.ia.ProvaSugestaoDTO;
 import com.tcc.plataformaestudos.usuario.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,7 @@ public class QuizService {
 	private final FlashcardRepository flashcardRepository;
 	private final QuizRepository quizRepository;
 	private final TentativaQuizRepository tentativaQuizRepository;
+	private final ProvaGenerationService provaGenerationService;
 
 	@Transactional
 	public QuizResponseDTO gerarQuiz(Long deckId) {
@@ -93,29 +96,102 @@ public class QuizService {
 		}
 
 		List<QuestaoQuiz> questoes = quiz.getQuestoes();
-		int acertos = 0;
 		for (QuestaoQuiz questao : questoes) {
-			String respondida = respostasPorQuestao.get(questao.getId());
-			if (respondida == null) {
+			if (!respostasPorQuestao.containsKey(questao.getId())) {
 				throw new TentativaIncompletaException("Todas as questões do quiz devem ser respondidas");
 			}
-			if (respondida.equals(questao.getRespostaCorreta())) {
-				acertos++;
-			}
 		}
-
-		int total = questoes.size();
-		BigDecimal pontuacao = calcularPontuacao(acertos, total);
 
 		TentativaQuiz tentativa = new TentativaQuiz();
 		tentativa.setQuiz(quiz);
 		tentativa.setUsuario(quiz.getDeck().getUsuario());
+
+		int acertos = 0;
+		for (QuestaoQuiz questao : questoes) {
+			String respondida = respostasPorQuestao.get(questao.getId());
+			boolean correta = respondida.equals(questao.getRespostaCorreta());
+			if (correta) {
+				acertos++;
+			}
+
+			RespostaTentativaQuiz resposta = new RespostaTentativaQuiz();
+			resposta.setTentativa(tentativa);
+			resposta.setQuestao(questao);
+			resposta.setAlternativaEscolhida(respondida);
+			resposta.setCorreta(correta);
+			tentativa.getRespostas().add(resposta);
+		}
+
+		int total = questoes.size();
+		BigDecimal pontuacao = calcularPontuacao(acertos, total);
 		tentativa.setPontuacao(pontuacao);
 
 		tentativaQuizRepository.save(tentativa);
 		log.info("Tentativa registrada: quizId={}, acertos={}, total={}, pontuacao={}", quizId, acertos, total, pontuacao);
 
-		return new TentativaResponseDTO(pontuacao, acertos, total);
+		return new TentativaResponseDTO(pontuacao, acertos, total, montarRevisaoQuestoes(tentativa));
+	}
+
+	/**
+	 * UC27/RN35 — gera uma prova personalizada via IA a partir de flashcards
+	 * escolhidos pelo usuário (validados contra o deck — RN01) e de um
+	 * estilo de prova. Reaproveita Quiz/QuestaoQuiz (origem=IA_PERSONALIZADA)
+	 * e os endpoints já existentes de resposta/histórico.
+	 */
+	@Transactional
+	public QuizResponseDTO gerarProvaPersonalizada(Long deckId, GerarProvaRequestDTO request) {
+		Deck deck = deckService.buscarDeckDoUsuarioAutenticado(deckId);
+
+		List<Flashcard> flashcardsBase = flashcardRepository.findByIdInAndDeckId(request.flashcardIds(), deckId);
+		if (flashcardsBase.size() != request.flashcardIds().size()) {
+			throw new FlashcardsInvalidosException("Um ou mais flashcards informados não pertencem a este deck");
+		}
+
+		List<ProvaSugestaoDTO> sugestoes = provaGenerationService.gerarQuestoes(flashcardsBase, request.estilo());
+
+		Quiz quiz = new Quiz();
+		quiz.setDeck(deck);
+		quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
+		quiz.setEstilo(request.estilo());
+		quiz.setTitulo("Prova " + request.estilo().getRotulo() + " — " + deck.getTitulo());
+
+		for (ProvaSugestaoDTO sugestao : sugestoes) {
+			quiz.getQuestoes().add(montarQuestaoPersonalizada(sugestao, quiz));
+		}
+
+		Quiz salvo = quizRepository.save(quiz);
+		log.info("Prova personalizada gerada: quizId={}, deckId={}, estilo={}, totalQuestoes={}",
+				salvo.getId(), deckId, request.estilo(), salvo.getQuestoes().size());
+
+		return QuizResponseDTO.fromEntity(salvo);
+	}
+
+	/** UC28/RN36 — histórico de provas do usuário autenticado, mais recentes primeiro. */
+	@Transactional(readOnly = true)
+	public List<HistoricoProvaResumoDTO> listarHistoricoProvas() {
+		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
+
+		return tentativaQuizRepository.buscarHistoricoDoUsuario(usuarioId).stream()
+				.map(this::montarResumoHistorico)
+				.toList();
+	}
+
+	/** UC28/RN01/RN36 — detalhe de uma tentativa, com revisão questão a questão. */
+	@Transactional(readOnly = true)
+	public HistoricoProvaDetalheDTO buscarDetalheTentativa(Long tentativaId) {
+		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
+
+		TentativaQuiz tentativa = tentativaQuizRepository.buscarDetalheDoUsuario(tentativaId, usuarioId)
+				.orElseGet(() -> {
+					if (tentativaQuizRepository.existsById(tentativaId)) {
+						throw new AcessoNegadoException("Você não tem permissão para acessar esta tentativa");
+					}
+					throw new RecursoNaoEncontradoException("Tentativa não encontrada");
+				});
+
+		Quiz quiz = tentativa.getQuiz();
+		return new HistoricoProvaDetalheDTO(tentativa.getId(), quiz.getId(), quiz.getTitulo(), quiz.getOrigem(),
+				quiz.getEstilo(), tentativa.getDataTentativa(), tentativa.getPontuacao(), montarRevisaoQuestoes(tentativa));
 	}
 
 	/**
@@ -159,6 +235,43 @@ public class QuizService {
 		return BigDecimal.valueOf(acertos)
 				.multiply(BigDecimal.valueOf(100))
 				.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+	}
+
+	private QuestaoQuiz montarQuestaoPersonalizada(ProvaSugestaoDTO sugestao, Quiz quiz) {
+		List<AlternativaQuiz> alternativas = sugestao.alternativas().stream()
+				.map(texto -> new AlternativaQuiz(texto, texto.equals(sugestao.respostaCorreta())))
+				.toList();
+
+		QuestaoQuiz questao = new QuestaoQuiz();
+		questao.setQuiz(quiz);
+		questao.setEnunciado(sugestao.enunciado());
+		questao.setAlternativas(alternativas);
+		questao.setRespostaCorreta(sugestao.respostaCorreta());
+		questao.setExplicacao(sugestao.explicacao());
+		return questao;
+	}
+
+	private HistoricoProvaResumoDTO montarResumoHistorico(TentativaQuiz tentativa) {
+		int total = tentativa.getRespostas().size();
+		int acertos = (int) tentativa.getRespostas().stream().filter(RespostaTentativaQuiz::isCorreta).count();
+		Quiz quiz = tentativa.getQuiz();
+
+		return new HistoricoProvaResumoDTO(tentativa.getId(), quiz.getId(), quiz.getTitulo(), quiz.getOrigem(),
+				quiz.getEstilo(), tentativa.getDataTentativa(), tentativa.getPontuacao(), acertos, total);
+	}
+
+	/** Revela resposta correta, alternativa escolhida e explicação — só chamado depois de a tentativa existir. */
+	private List<QuestaoRevisadaDTO> montarRevisaoQuestoes(TentativaQuiz tentativa) {
+		return tentativa.getRespostas().stream()
+				.map(resposta -> {
+					QuestaoQuiz questao = resposta.getQuestao();
+					List<String> alternativas = questao.getAlternativas().stream().map(AlternativaQuiz::texto).toList();
+
+					return new QuestaoRevisadaDTO(questao.getId(), questao.getEnunciado(), alternativas,
+							questao.getRespostaCorreta(), resposta.getAlternativaEscolhida(), resposta.isCorreta(),
+							questao.getExplicacao());
+				})
+				.toList();
 	}
 
 }

@@ -7,8 +7,20 @@
 |---|---|---|
 | id | BIGINT | PK, auto_increment |
 | nome | VARCHAR(120) | NOT NULL |
+| nome_usuario | VARCHAR(30) | NOT NULL, UNIQUE (RN22) |
 | email | VARCHAR(180) | NOT NULL, UNIQUE |
 | senha_hash | VARCHAR(255) | NOT NULL |
+| papel | VARCHAR(20) | NOT NULL, DEFAULT 'ESTUDANTE' (RN23) |
+| criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
+
+### TOKEN_REDEFINICAO_SENHA
+| Atributo | Tipo | Restrições |
+|---|---|---|
+| id | BIGINT | PK, auto_increment |
+| usuario_id | BIGINT | NOT NULL, FK → USUARIO(id) |
+| token | VARCHAR(64) | NOT NULL, UNIQUE |
+| expira_em | TIMESTAMP | NOT NULL |
+| usado | BOOLEAN | NOT NULL, DEFAULT FALSE |
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 
 ### DECK
@@ -94,6 +106,7 @@ DECK    (1) ──< (N) QUIZ                  um deck pode gerar vários quizzes
 QUIZ    (1) ──< (N) QUESTAO_QUIZ          um quiz contém várias questões
 QUIZ    (1) ──< (N) TENTATIVA_QUIZ        um quiz é respondido em várias tentativas
 USUARIO (1) ──< (N) TENTATIVA_QUIZ        um usuário realiza várias tentativas
+USUARIO (1) ──< (N) TOKEN_REDEFINICAO_SENHA  um usuário pode ter vários tokens de redefinição (histórico)
 ```
 
 Todas as relações são 1:N (sem N:N neste modelo) e obrigatórias do lado N —
@@ -105,8 +118,19 @@ toda FK é `NOT NULL`.
 CREATE TABLE usuario (
     id BIGSERIAL PRIMARY KEY,
     nome VARCHAR(120) NOT NULL,
+    nome_usuario VARCHAR(30) NOT NULL UNIQUE,
     email VARCHAR(180) NOT NULL UNIQUE,
     senha_hash VARCHAR(255) NOT NULL,
+    papel VARCHAR(20) NOT NULL DEFAULT 'ESTUDANTE',
+    criado_em TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE token_redefinicao_senha (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuario(id),
+    token VARCHAR(64) NOT NULL UNIQUE,
+    expira_em TIMESTAMP NOT NULL,
+    usado BOOLEAN NOT NULL DEFAULT FALSE,
     criado_em TIMESTAMP NOT NULL DEFAULT now()
 );
 

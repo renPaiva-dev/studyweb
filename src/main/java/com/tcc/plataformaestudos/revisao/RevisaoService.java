@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
+import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 import com.tcc.plataformaestudos.flashcard.FlashcardService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,22 +31,29 @@ public class RevisaoService {
 	private static final Logger log = LoggerFactory.getLogger(RevisaoService.class);
 
 	private final RevisaoFlashcardRepository revisaoFlashcardRepository;
+	private final FlashcardRepository flashcardRepository;
 	private final DeckService deckService;
 	private final FlashcardService flashcardService;
 	private final Sm2CalculatorService sm2CalculatorService;
 
 	/**
-	 * UC07 — fila de flashcards pendentes de revisão de um deck (RN10),
-	 * ordenada pelos mais atrasados primeiro. Flashcards sem histórico de
-	 * revisão (nunca estudados) são tratados como os mais urgentes.
+	 * UC07 — fila de estudo de um deck, ordenada pelos mais atrasados
+	 * primeiro. Por padrão, só os flashcards pendentes de revisão (RN10).
+	 * Flashcards sem histórico de revisão (nunca estudados) são tratados
+	 * como os mais urgentes. Se {@code incluirTodos} for true, RN10 é
+	 * ignorada e o deck inteiro é retornado — "Revisar mesmo assim" (RN22);
+	 * as revisões geradas a partir dessa fila são reais, avaliadas pelo
+	 * mesmo {@link #avaliarResposta(Long, AvaliarRespostaRequestDTO)}.
 	 */
 	@Transactional(readOnly = true)
-	public List<FilaEstudoItemDTO> obterFilaDeEstudo(Long deckId) {
+	public List<FilaEstudoItemDTO> obterFilaDeEstudo(Long deckId, boolean incluirTodos) {
 		deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		List<Flashcard> pendentes = revisaoFlashcardRepository.findFlashcardsPendentesDeRevisao(deckId, LocalDate.now());
+		List<Flashcard> flashcards = incluirTodos
+				? flashcardRepository.findByDeckId(deckId)
+				: revisaoFlashcardRepository.findFlashcardsPendentesDeRevisao(deckId, LocalDate.now());
 
-		return pendentes.stream()
+		return flashcards.stream()
 				.sorted(Comparator.comparing(this::proximaRevisaoOuMaisAntiga))
 				.map(FilaEstudoItemDTO::fromEntity)
 				.toList();

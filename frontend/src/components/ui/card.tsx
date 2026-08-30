@@ -4,14 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  "rounded-2xl border bg-card text-card-foreground shadow-card transition-all duration-200",
+  "rounded-lg border bg-card text-card-foreground transition-colors duration-150",
   {
     variants: {
-      // Opt-in para cards clicaveis (ex.: DeckCard) - sombra mais profunda
-      // e leve scale-up no hover, "sensacao de vivo". Cards estaticos (ex.:
-      // stat cards do dashboard, faces do flashcard) ficam de fora.
+      // Opt-in para cards clicaveis (ex.: DeckCard) - a borda escurece no
+      // hover, sinalizando "clicavel" sem o efeito flutuante de
+      // sombra+escala. Cards estaticos (stat cards do dashboard, faces do
+      // flashcard) ficam de fora.
       interactive: {
-        true: "cursor-pointer hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-card-hover",
+        true: "cursor-pointer hover:border-foreground/20",
         false: "",
       },
     },

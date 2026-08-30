@@ -47,8 +47,10 @@ public class RevisaoFlashcard {
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Flashcard flashcard;
 
+	/** RN32: defesa em duas camadas (JPA via Usuario#decks, transitiva por Deck->Flashcard + banco via V6). */
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "usuario_id", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Usuario usuario;
 
 	@Column(name = "data_revisao", nullable = false)

@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
 	private final UsuarioService usuarioService;
+	private final PasswordResetService passwordResetService;
 
 	@PostMapping("/cadastro")
 	public ResponseEntity<UsuarioResponseDTO> cadastrar(@Valid @RequestBody CadastroRequestDTO request) {
@@ -27,6 +28,16 @@ public class AuthController {
 	public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
 		LoginResponseDTO resposta = usuarioService.autenticar(request);
 		return ResponseEntity.ok(resposta);
+	}
+
+	@PostMapping("/esqueci-senha")
+	public ResponseEntity<MensagemResponseDTO> esqueciSenha(@Valid @RequestBody EsqueciSenhaRequestDTO request) {
+		return ResponseEntity.ok(passwordResetService.solicitarRedefinicao(request.email()));
+	}
+
+	@PostMapping("/redefinir-senha")
+	public ResponseEntity<MensagemResponseDTO> redefinirSenha(@Valid @RequestBody RedefinirSenhaRequestDTO request) {
+		return ResponseEntity.ok(passwordResetService.redefinirSenha(request.token(), request.novaSenha()));
 	}
 
 }

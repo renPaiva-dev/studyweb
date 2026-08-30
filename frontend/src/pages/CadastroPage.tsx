@@ -4,29 +4,39 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
+import { AuthBackgroundDecor } from '@/components/AuthBackgroundDecor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ThemeToggleButton } from '@/components/ThemeToggleButton'
 import { useAuth } from '@/context/AuthContext'
+import { MENSAGEM_SENHA_FORTE, senhaEhForte } from '@/utils/senhaForte'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const NOME_USUARIO_REGEX = /^[a-zA-Z0-9]+$/
 
 interface Erros {
   nome?: string
+  nomeUsuario?: string
   email?: string
   senha?: string
+  termosAceitos?: string
 }
 
-// UC01 - Cadastrar-se. POST /api/auth/cadastro (docs/contrato-api.md).
-// RN02: 409 se o e-mail ja estiver cadastrado.
+// UC01/UC17 - Cadastrar-se, com nome de usuario (docs/contrato-api.md).
+// RN02: 409 se o e-mail ja estiver cadastrado. RN22: 409 se o nomeUsuario ja
+// estiver cadastrado (mensagem diferenciada, vinda do backend).
 export function CadastroPage() {
   const { cadastro } = useAuth()
   const navigate = useNavigate()
 
   const [nome, setNome] = useState('')
+  const [nomeUsuario, setNomeUsuario] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [termosAceitos, setTermosAceitos] = useState(false)
   const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
 
@@ -37,12 +47,22 @@ export function CadastroPage() {
       novosErros.nome = 'Informe seu nome.'
     }
 
+    if (nomeUsuario.length < 3 || nomeUsuario.length > 30) {
+      novosErros.nomeUsuario = 'O nome de usuário deve ter entre 3 e 30 caracteres.'
+    } else if (!NOME_USUARIO_REGEX.test(nomeUsuario)) {
+      novosErros.nomeUsuario = 'Use apenas letras e números, sem espaços.'
+    }
+
     if (!EMAIL_REGEX.test(email)) {
       novosErros.email = 'Informe um e-mail válido.'
     }
 
-    if (senha.length < 6) {
-      novosErros.senha = 'A senha deve ter no mínimo 6 caracteres.'
+    if (!senhaEhForte(senha)) {
+      novosErros.senha = MENSAGEM_SENHA_FORTE
+    }
+
+    if (!termosAceitos) {
+      novosErros.termosAceitos = 'É necessário aceitar os termos de uso para se cadastrar.'
     }
 
     setErros(novosErros)
@@ -59,8 +79,8 @@ export function CadastroPage() {
     setEnviando(true)
 
     try {
-      await cadastro(nome.trim(), email, senha)
-      navigate('/decks')
+      await cadastro(nome.trim(), nomeUsuario, email, senha, termosAceitos)
+      navigate('/')
     } catch (erro) {
       toast.error(extrairMensagemErro(erro, 'Não foi possível criar sua conta. Tente novamente.'))
     } finally {
@@ -69,17 +89,19 @@ export function CadastroPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      {/* Blobs decorativos solidos (sem gradiente) - quebram a simetria e do energia ao fundo. */}
-      <div className="pointer-events-none absolute -right-24 -top-20 h-72 w-72 rounded-full bg-coral-300/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -left-16 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#FCF8EF] px-4 dark:bg-background">
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggleButton />
+      </div>
 
-      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary duration-500">
+      <AuthBackgroundDecor />
+
+      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary shadow-xl duration-500">
         <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <GraduationCap className="h-7 w-7" />
+          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-coral-300/30">
+            <GraduationCap className="h-8 w-8" />
           </span>
-          <CardTitle className="font-heading text-2xl">Criar conta</CardTitle>
+          <CardTitle className="font-heading text-3xl">Criar conta</CardTitle>
           <CardDescription>Comece a organizar seus estudos com IA</CardDescription>
         </CardHeader>
         <form onSubmit={aoSubmeter} noValidate>
@@ -96,6 +118,19 @@ export function CadastroPage() {
                 aria-invalid={Boolean(erros.nome)}
               />
               {erros.nome && <p className="text-sm text-destructive">{erros.nome}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="nomeUsuario">Nome de usuário</Label>
+              <Input
+                id="nomeUsuario"
+                className="h-10"
+                placeholder="seunomedeusuario"
+                autoComplete="username"
+                value={nomeUsuario}
+                onChange={(evento) => setNomeUsuario(evento.target.value)}
+                aria-invalid={Boolean(erros.nomeUsuario)}
+              />
+              {erros.nomeUsuario && <p className="text-sm text-destructive">{erros.nomeUsuario}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
@@ -124,6 +159,28 @@ export function CadastroPage() {
                 aria-invalid={Boolean(erros.senha)}
               />
               {erros.senha && <p className="text-sm text-destructive">{erros.senha}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="termosAceitos"
+                  className="mt-0.5"
+                  checked={termosAceitos}
+                  onCheckedChange={(marcado) => setTermosAceitos(marcado === true)}
+                  aria-invalid={Boolean(erros.termosAceitos)}
+                />
+                <Label htmlFor="termosAceitos" className="text-sm font-normal leading-snug text-muted-foreground">
+                  Li e concordo com os{' '}
+                  <Link to="/termos-de-uso" target="_blank" className="font-medium text-primary hover:underline">
+                    Termos de Uso
+                  </Link>{' '}
+                  e a{' '}
+                  <Link to="/politica-de-privacidade" target="_blank" className="font-medium text-primary hover:underline">
+                    Política de Privacidade
+                  </Link>
+                </Label>
+              </div>
+              {erros.termosAceitos && <p className="text-sm text-destructive">{erros.termosAceitos}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={enviando}>
               {enviando ? 'Criando conta...' : 'Criar conta'}

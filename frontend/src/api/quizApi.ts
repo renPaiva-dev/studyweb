@@ -19,10 +19,24 @@ export interface RespostaEnvio {
   alternativaEscolhida: string
 }
 
+// UC27/RN36 - revisao de uma questao ja respondida (resposta correta,
+// alternativa escolhida, se acertou e a explicacao), nunca exposta antes de
+// a questao ser respondida.
+export interface QuestaoRevisada {
+  questaoId: number
+  enunciado: string
+  alternativas: string[]
+  respostaCorreta: string
+  alternativaEscolhida: string
+  correta: boolean
+  explicacao: string | null
+}
+
 export interface ResultadoTentativa {
   pontuacao: number
   acertos: number
   total: number
+  questoes: QuestaoRevisada[]
 }
 
 /** POST /api/decks/{id}/quizzes -> 201 (400 flashcards insuficientes) */

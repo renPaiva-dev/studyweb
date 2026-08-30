@@ -4,10 +4,12 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
+import { AuthBackgroundDecor } from '@/components/AuthBackgroundDecor'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ThemeToggleButton } from '@/components/ThemeToggleButton'
 import { useAuth } from '@/context/AuthContext'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -53,7 +55,7 @@ export function LoginPage() {
 
     try {
       await login(email, senha)
-      navigate('/decks')
+      navigate('/')
     } catch (erro) {
       // 401 (RN: credenciais invalidas) e demais falhas caem no mesmo
       // tratamento amigavel - nunca expor o JSON cru do erro.
@@ -64,17 +66,19 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      {/* Blobs decorativos solidos (sem gradiente) - quebram a simetria e do energia ao fundo. */}
-      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full bg-coral-300/25 blur-3xl" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#FCF8EF] px-4 dark:bg-background">
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggleButton />
+      </div>
 
-      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary duration-500">
+      <AuthBackgroundDecor />
+
+      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary shadow-xl duration-500">
         <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <GraduationCap className="h-7 w-7" />
+          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-coral-300/30">
+            <GraduationCap className="h-8 w-8" />
           </span>
-          <CardTitle className="font-heading text-2xl">Entrar</CardTitle>
+          <CardTitle className="font-heading text-3xl">Entrar</CardTitle>
           <CardDescription>Acesse sua conta para continuar estudando</CardDescription>
         </CardHeader>
         <form onSubmit={aoSubmeter} noValidate>
@@ -106,6 +110,11 @@ export function LoginPage() {
                 aria-invalid={Boolean(erros.senha)}
               />
               {erros.senha && <p className="text-sm text-destructive">{erros.senha}</p>}
+              <div className="text-right">
+                <Link to="/esqueci-senha" className="text-sm text-muted-foreground hover:text-primary hover:underline">
+                  Esqueci minha senha
+                </Link>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={enviando}>
               {enviando ? 'Entrando...' : 'Entrar'}

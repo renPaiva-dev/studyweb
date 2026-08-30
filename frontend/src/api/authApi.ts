@@ -4,14 +4,18 @@ import { apiClient } from './client'
 
 export interface CadastroRequest {
   nome: string
+  nomeUsuario: string
   email: string
   senha: string
+  termosAceitos: boolean
 }
 
 export interface CadastroResponse {
   id: number
   nome: string
+  nomeUsuario: string
   email: string
+  papel: string
   criadoEm: string
 }
 
@@ -35,5 +39,23 @@ export async function cadastrar(dados: CadastroRequest): Promise<CadastroRespons
 /** POST /api/auth/login -> 200 (401 se credenciais invalidas) */
 export async function login(dados: LoginRequest): Promise<LoginResponse> {
   const { data } = await apiClient.post<LoginResponse>('/api/auth/login', dados)
+  return data
+}
+
+// UC18 - Esqueci/Redefinir senha (RN24: resposta sempre generica).
+
+export interface MensagemResponse {
+  mensagem: string
+}
+
+/** POST /api/auth/esqueci-senha -> 200, sempre a mesma mensagem (RN24) */
+export async function esqueciSenha(email: string): Promise<MensagemResponse> {
+  const { data } = await apiClient.post<MensagemResponse>('/api/auth/esqueci-senha', { email })
+  return data
+}
+
+/** POST /api/auth/redefinir-senha -> 200 (400 token invalido/expirado/usado) */
+export async function redefinirSenha(token: string, novaSenha: string): Promise<MensagemResponse> {
+  const { data } = await apiClient.post<MensagemResponse>('/api/auth/redefinir-senha', { token, novaSenha })
   return data
 }

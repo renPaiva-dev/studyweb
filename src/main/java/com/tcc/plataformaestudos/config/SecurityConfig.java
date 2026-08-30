@@ -66,7 +66,8 @@ public class SecurityConfig {
 			.exceptionHandling(handling -> handling.authenticationEntryPoint(jwtAuthenticationEntryPoint))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login").permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login",
+						"/api/auth/esqueci-senha", "/api/auth/redefinir-senha").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health").permitAll()
 				// /error é a página de erro interna do Spring Boot, não um recurso de negócio —
 				// liberá-la evita que um forward interno (ex.: exceção não tratada em algum

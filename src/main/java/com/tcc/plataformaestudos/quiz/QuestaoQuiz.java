@@ -46,4 +46,8 @@ public class QuestaoQuiz {
 	@Column(name = "resposta_correta", nullable = false, length = 500)
 	private String respostaCorreta;
 
+	/** UC27/RN35 — explicação da resposta correta, revelada só depois de respondida (quiz determinístico não usa). */
+	@Column(name = "explicacao", columnDefinition = "TEXT")
+	private String explicacao;
+
 }

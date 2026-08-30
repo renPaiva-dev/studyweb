@@ -43,6 +43,7 @@ class FlashcardExclusaoCascataTest {
 	void deveRemoverRevisoesAssociadasQuandoFlashcardForExcluido() {
 		Usuario usuario = new Usuario();
 		usuario.setNome("Ana Estudante");
+		usuario.setNomeUsuario("ana_revisao");
 		usuario.setEmail("ana.revisao@email.com");
 		usuario.setSenhaHash("hash-fake");
 		entityManager.persist(usuario);

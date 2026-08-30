@@ -8,4 +8,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
 	Optional<Usuario> findByEmail(String email);
 
+	// RN34: unicidade de nomeUsuario e case-insensitive - "Renato" e "renato"
+	// sao o mesmo nome de usuario para fins de cadastro/edicao (RN22).
+	Optional<Usuario> findByNomeUsuarioIgnoreCase(String nomeUsuario);
+
 }

@@ -25,6 +25,7 @@ import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
+import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 import com.tcc.plataformaestudos.flashcard.FlashcardService;
 import com.tcc.plataformaestudos.usuario.Usuario;
 
@@ -36,6 +37,9 @@ class RevisaoServiceTest {
 
 	@Mock
 	private RevisaoFlashcardRepository revisaoFlashcardRepository;
+
+	@Mock
+	private FlashcardRepository flashcardRepository;
 
 	@Mock
 	private DeckService deckService;
@@ -91,7 +95,7 @@ class RevisaoServiceTest {
 		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(3L))
 				.thenReturn(Optional.empty());
 
-		List<FilaEstudoItemDTO> fila = revisaoService.obterFilaDeEstudo(DECK_ID);
+		List<FilaEstudoItemDTO> fila = revisaoService.obterFilaDeEstudo(DECK_ID, false);
 
 		assertThat(fila).extracting(FilaEstudoItemDTO::flashcardId)
 				.containsExactly(3L, 1L, 2L);
@@ -102,9 +106,25 @@ class RevisaoServiceTest {
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID))
 				.thenThrow(new AcessoNegadoException("Você não tem permissão para acessar este deck"));
 
-		assertThatThrownBy(() -> revisaoService.obterFilaDeEstudo(DECK_ID))
+		assertThatThrownBy(() -> revisaoService.obterFilaDeEstudo(DECK_ID, false))
 				.isInstanceOf(AcessoNegadoException.class);
 
+		verify(revisaoFlashcardRepository, never()).findFlashcardsPendentesDeRevisao(any(), any());
+	}
+
+	@Test
+	void deveIgnorarRn10ETrazerDeckInteiroQuandoIncluirTodosForVerdadeiro() {
+		Flashcard flashcard1 = flashcardComId(1L);
+		Flashcard flashcard2 = flashcardComId(2L);
+
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(new Deck());
+		when(flashcardRepository.findByDeckId(DECK_ID)).thenReturn(List.of(flashcard1, flashcard2));
+		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(1L)).thenReturn(Optional.empty());
+		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(2L)).thenReturn(Optional.empty());
+
+		List<FilaEstudoItemDTO> fila = revisaoService.obterFilaDeEstudo(DECK_ID, true);
+
+		assertThat(fila).extracting(FilaEstudoItemDTO::flashcardId).containsExactlyInAnyOrder(1L, 2L);
 		verify(revisaoFlashcardRepository, never()).findFlashcardsPendentesDeRevisao(any(), any());
 	}
 

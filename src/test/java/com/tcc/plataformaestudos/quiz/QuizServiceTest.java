@@ -21,10 +21,13 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
+import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
+import com.tcc.plataformaestudos.ia.ProvaGenerationService;
+import com.tcc.plataformaestudos.ia.ProvaSugestaoDTO;
 import com.tcc.plataformaestudos.usuario.Usuario;
 import com.tcc.plataformaestudos.usuario.UsuarioAutenticado;
 
@@ -46,6 +49,9 @@ class QuizServiceTest {
 
 	@Mock
 	private TentativaQuizRepository tentativaQuizRepository;
+
+	@Mock
+	private ProvaGenerationService provaGenerationService;
 
 	@InjectMocks
 	private QuizService quizService;
@@ -208,6 +214,114 @@ class QuizServiceTest {
 		assertThat(resposta.acertos()).isEqualTo(2);
 		assertThat(resposta.total()).isEqualTo(3);
 		assertThat(resposta.pontuacao()).isEqualByComparingTo("66.67");
+		assertThat(resposta.questoes()).hasSize(3);
+		assertThat(resposta.questoes())
+				.filteredOn(questaoRevisada -> questaoRevisada.questaoId().equals(2L))
+				.singleElement()
+				.satisfies(questaoRevisada -> {
+					assertThat(questaoRevisada.correta()).isFalse();
+					assertThat(questaoRevisada.alternativaEscolhida()).isEqualTo("Errada");
+					assertThat(questaoRevisada.respostaCorreta()).isEqualTo("Resposta 2");
+				});
+	}
+
+	@Test
+	void deveGerarProvaPersonalizadaComSucessoQuandoFlashcardsPertencemAoDeck() {
+		Usuario usuario = new Usuario();
+		usuario.setId(USUARIO_ID);
+
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		deck.setUsuario(usuario);
+		deck.setTitulo("Anatomia");
+
+		Flashcard flashcard = flashcard(1L, "O que é a aorta?", "A maior artéria do corpo");
+
+		GerarProvaRequestDTO request = new GerarProvaRequestDTO(List.of(1L), EstiloProva.ENEM);
+
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+		when(flashcardRepository.findByIdInAndDeckId(List.of(1L), DECK_ID)).thenReturn(List.of(flashcard));
+		when(provaGenerationService.gerarQuestoes(List.of(flashcard), EstiloProva.ENEM)).thenReturn(List.of(
+				new ProvaSugestaoDTO(
+						"Qual estrutura conduz o sangue oxigenado do coração para o corpo?",
+						List.of("Aorta", "Veia cava", "Artéria pulmonar", "Veia porta"),
+						"Aorta",
+						"A aorta é a maior artéria e parte do ventrículo esquerdo levando sangue oxigenado ao corpo.")));
+		when(quizRepository.save(any(Quiz.class))).thenAnswer(invocation -> {
+			Quiz quiz = invocation.getArgument(0);
+			quiz.setId(QUIZ_ID);
+			return quiz;
+		});
+
+		QuizResponseDTO resposta = quizService.gerarProvaPersonalizada(DECK_ID, request);
+
+		assertThat(resposta.id()).isEqualTo(QUIZ_ID);
+		assertThat(resposta.titulo()).contains(EstiloProva.ENEM.getRotulo()).contains("Anatomia");
+		assertThat(resposta.questoes()).hasSize(1);
+		assertThat(resposta.questoes().get(0).alternativas())
+				.containsExactlyInAnyOrder("Aorta", "Veia cava", "Artéria pulmonar", "Veia porta");
+	}
+
+	@Test
+	void deveLancarFlashcardsInvalidosExceptionQuandoFlashcardNaoPertenceAoDeck() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+
+		GerarProvaRequestDTO request = new GerarProvaRequestDTO(List.of(1L, 2L), EstiloProva.GERAL);
+
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+		when(flashcardRepository.findByIdInAndDeckId(List.of(1L, 2L), DECK_ID))
+				.thenReturn(List.of(flashcard(1L, "Pergunta", "Resposta")));
+
+		assertThatThrownBy(() -> quizService.gerarProvaPersonalizada(DECK_ID, request))
+				.isInstanceOf(FlashcardsInvalidosException.class);
+
+		verify(provaGenerationService, never()).gerarQuestoes(any(), any());
+		verify(quizRepository, never()).save(any());
+	}
+
+	@Test
+	void deveListarHistoricoDeProvasDoUsuarioAutenticado() {
+		Quiz quiz = quizComTresQuestoes();
+		quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
+		quiz.setEstilo(EstiloProva.VESTIBULAR);
+
+		TentativaQuiz tentativa = new TentativaQuiz();
+		tentativa.setId(100L);
+		tentativa.setQuiz(quiz);
+		tentativa.setPontuacao(new java.math.BigDecimal("66.67"));
+
+		RespostaTentativaQuiz certa = new RespostaTentativaQuiz();
+		certa.setCorreta(true);
+		RespostaTentativaQuiz errada = new RespostaTentativaQuiz();
+		errada.setCorreta(false);
+		tentativa.setRespostas(List.of(certa, errada));
+
+		when(tentativaQuizRepository.buscarHistoricoDoUsuario(USUARIO_ID)).thenReturn(List.of(tentativa));
+
+		List<HistoricoProvaResumoDTO> historico = quizService.listarHistoricoProvas();
+
+		assertThat(historico).hasSize(1);
+		assertThat(historico.get(0).tentativaId()).isEqualTo(100L);
+		assertThat(historico.get(0).acertos()).isEqualTo(1);
+		assertThat(historico.get(0).total()).isEqualTo(2);
+		assertThat(historico.get(0).estilo()).isEqualTo(EstiloProva.VESTIBULAR);
+	}
+
+	@Test
+	void deveAplicarRn01AoBuscarDetalheDeTentativaDeOutroUsuario() {
+		when(tentativaQuizRepository.buscarDetalheDoUsuario(100L, USUARIO_ID)).thenReturn(Optional.empty());
+		when(tentativaQuizRepository.existsById(100L)).thenReturn(true);
+
+		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(100L)).isInstanceOf(AcessoNegadoException.class);
+	}
+
+	@Test
+	void deveLancarRecursoNaoEncontradoAoBuscarDetalheDeTentativaInexistente() {
+		when(tentativaQuizRepository.buscarDetalheDoUsuario(999L, USUARIO_ID)).thenReturn(Optional.empty());
+		when(tentativaQuizRepository.existsById(999L)).thenReturn(false);
+
+		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(999L)).isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 }

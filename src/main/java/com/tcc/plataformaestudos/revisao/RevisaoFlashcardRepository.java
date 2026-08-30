@@ -19,6 +19,9 @@ public interface RevisaoFlashcardRepository extends JpaRepository<RevisaoFlashca
 	 */
 	Optional<RevisaoFlashcard> findFirstByFlashcardIdOrderByDataRevisaoDesc(Long flashcardId);
 
+	/** UC24/RN31 — todas as revisões de um conjunto de flashcards numa única consulta (evita N+1 por flashcard). */
+	List<RevisaoFlashcard> findByFlashcardIdIn(List<Long> flashcardIds);
+
 	/**
 	 * RN10 — flashcards de um deck pendentes de revisão: aqueles cuja última
 	 * revisão tem {@code proxima_revisao <= hoje}, ou que nunca foram

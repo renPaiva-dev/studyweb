@@ -61,6 +61,7 @@ class DeckExclusaoCascataTest {
 	void deveRemoverMateriaisAssociadosQuandoDeckForExcluido() {
 		Usuario usuario = new Usuario();
 		usuario.setNome("Ana Estudante");
+		usuario.setNomeUsuario("ana");
 		usuario.setEmail("ana@email.com");
 		usuario.setSenhaHash("hash-fake");
 		entityManager.persist(usuario);
@@ -93,6 +94,7 @@ class DeckExclusaoCascataTest {
 	void deveRemoverFlashcardsAssociadosQuandoDeckForExcluido() {
 		Usuario usuario = new Usuario();
 		usuario.setNome("Bia Estudante");
+		usuario.setNomeUsuario("bia");
 		usuario.setEmail("bia@email.com");
 		usuario.setSenhaHash("hash-fake");
 		entityManager.persist(usuario);
@@ -125,6 +127,7 @@ class DeckExclusaoCascataTest {
 	void deveRemoverQuizzesQuestoesETentativasAssociadosQuandoDeckForExcluido() {
 		Usuario usuario = new Usuario();
 		usuario.setNome("Carlos Estudante");
+		usuario.setNomeUsuario("carlos");
 		usuario.setEmail("carlos@email.com");
 		usuario.setSenhaHash("hash-fake");
 		entityManager.persist(usuario);

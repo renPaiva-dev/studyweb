@@ -27,7 +27,10 @@ import tools.jackson.databind.ObjectMapper;
 public class GeminiClient {
 
 	private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
-	private static final Duration TIMEOUT = Duration.ofSeconds(30);
+	// UC27: a geração de prova (várias questões com raciocínio/explicação)
+	// mede-se, na prática, em até ~80s com o modelo configurado — 30s
+	// cortava a chamada no meio antes de completar (HttpTimeoutException).
+	private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
 	private final ObjectMapper objectMapper;

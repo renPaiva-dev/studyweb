@@ -18,6 +18,16 @@ export default {
         // tipografica do corpo (identidade visual "energetico e gamificado").
         heading: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
       },
+      fontSize: {
+        // Escala de display para titulos de pagina (font-heading) - a
+        // hierarquia principal do produto vem de peso tipografico, nao de
+        // caixas/sombras. "display" e o h1 padrao de toda tela.
+        display: ['2.25rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
+        'display-lg': ['3.5rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
+        // Rotulo pequeno em uppercase (letter-spacing) - recurso editorial
+        // para marcar secoes sem precisar de mais uma caixa/cartao.
+        eyebrow: ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.08em', fontWeight: '600' }],
+      },
       colors: {
         // Paleta positiva/conquista: coral-laranja (#FB923C = coral-400),
         // usado para streak/dominado/sucesso - nunca para marca ou erro.
@@ -104,10 +114,6 @@ export default {
       },
       boxShadow: {
         subtle: '0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
-        // Sombras com leve tom violeta (nao cinza puro) - repouso sutil,
-        // hover mais profundo. Usadas pelo Card compartilhado.
-        card: '0 1px 2px 0 rgb(124 58 237 / 0.06), 0 2px 8px -2px rgb(124 58 237 / 0.08)',
-        'card-hover': '0 16px 32px -8px rgb(124 58 237 / 0.28), 0 4px 8px -2px rgb(124 58 237 / 0.15)',
         // Glow coral para conquistas/sucesso (streak, dominado) em fases futuras.
         'glow-coral': '0 8px 20px -4px rgb(251 146 60 / 0.35)',
       },

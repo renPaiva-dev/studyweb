@@ -204,3 +204,151 @@
   6. Sistema retorna a explicação.
 - **Fluxos de exceção:** E1 — falha na API de IA → mensagem de erro amigável.
 - **Regras relacionadas:** RN19
+
+## UC15 — Visualizar evolução detalhada do dashboard (extensão de UC11)
+
+- **Ator:** Estudante
+- **Objetivo:** Entender a evolução do próprio desempenho ao longo do tempo e por tópico, além do retrato agregado de UC11.
+- **Pré-condições:** Deck existente, pertencente ao usuário autenticado.
+- **Pós-condições:** Dados de evolução, por tópico e de atividade exibidos.
+- **Fluxo principal:**
+  1. Estudante acessa a visão detalhada do dashboard, opcionalmente escolhendo um período (7/30/90 dias).
+  2. Sistema aplica RN01.
+  3. Sistema calcula a evolução temporal (média de qualidade por dia).
+  4. Sistema calcula o detalhamento por tópico (RN17).
+  5. Sistema calcula os flashcards mais revisados e a distribuição por dia da semana.
+- **Regras relacionadas:** RN20
+
+## UC16 — Gerar prova personalizada via IA (substituído por UC27)
+
+- **Ator:** Estudante
+- **Objetivo:** ~~Obter uma avaliação de múltipla escolha focada nos tópicos de pior desempenho real~~ — substituído por UC27: o usuário escolhe manualmente os flashcards e o estilo, em vez de o sistema detectar tópicos em risco automaticamente.
+- **Regras relacionadas:** RN21 (substituída por RN35)
+
+## UC27 — Gerar prova personalizada por seleção de flashcards e estilo
+
+- **Ator:** Estudante
+- **Objetivo:** Obter uma avaliação de múltipla escolha inédita, sobre o tema de flashcards escolhidos pelo próprio estudante, no estilo de prova de sua preferência (ENEM, Vestibular ou Conhecimentos Gerais).
+- **Pré-condições:** Deck com ao menos um flashcard.
+- **Pós-condições:** Quiz criado e persistido (reaproveitando Quiz/QuestaoQuiz, origem=IA_PERSONALIZADA), com questões geradas por IA.
+- **Fluxo principal:**
+  1. Estudante acessa a aba "Provas" e escolhe "Nova prova".
+  2. Estudante seleciona um deck, um ou mais flashcards desse deck, e um estilo de prova.
+  3. Sistema aplica RN01 (deck e flashcards pertencem ao usuário autenticado).
+  4. Sistema monta prompt pedindo questões originais sobre o tema dos flashcards escolhidos, no estilo pedido, cada uma com uma explicação da resposta correta.
+  5. Sistema valida e persiste as questões geradas.
+  6. Estudante responde pelo endpoint já existente de UC10 (`POST /api/quizzes/{id}/tentativas`), que passa a devolver também a revisão questão a questão (RN36).
+- **Fluxos alternativos:** A1 — nenhum flashcard selecionado → 400, sem chamar a IA.
+- **Fluxos de exceção:** E1 — flashcard selecionado não pertence ao deck informado → 400. E2 — falha na IA/JSON malformado → 502.
+- **Regras relacionadas:** RN35, RN15
+
+## UC28 — Consultar histórico de provas
+
+- **Ator:** Estudante
+- **Objetivo:** Revisar o desempenho em provas já respondidas, questão a questão.
+- **Pré-condições:** Ao menos uma tentativa de quiz/prova registrada.
+- **Fluxo principal:**
+  1. Estudante acessa a aba "Provas".
+  2. Sistema lista as tentativas do estudante, mais recentes primeiro (RN01: só as do próprio usuário).
+  3. Estudante abre uma tentativa específica.
+  4. Sistema exibe cada questão com o que foi respondido, se acertou, a resposta correta e a explicação.
+- **Regras relacionadas:** RN36, RN01
+
+## UC17 — Cadastro com nome de usuário (extensão de UC01)
+
+- **Ator:** Estudante
+- **Objetivo:** Registrar-se com identidade pública própria (nomeUsuario), além do e-mail.
+- **Fluxo principal:** Mesmo fluxo de UC01, com o campo `nomeUsuario` adicional, validado quanto a formato e unicidade (RN22).
+- **Fluxos de exceção:** E2 — nome de usuário já em uso → 409.
+- **Regras relacionadas:** RN22, RN23
+
+## UC18 — Esqueci/Redefinir senha
+
+- **Ator:** Estudante
+- **Objetivo:** Recuperar acesso à conta em caso de esquecimento de senha.
+- **Fluxo principal:**
+  1. Estudante informa o e-mail.
+  2. Sistema gera token de uso único (1h), se o e-mail existir.
+  3. Sistema envia por e-mail (ou loga em modo desenvolvimento).
+  4. Sistema responde com mensagem genérica, independente de o e-mail existir (RN24).
+  5. Estudante informa token + nova senha.
+  6. Sistema valida o token e atualiza a senha.
+- **Fluxos de exceção:** E1 — token inválido/expirado/usado → 400.
+- **Regras relacionadas:** RN24
+
+## UC19 — Editar perfil
+
+- **Ator:** Estudante
+- **Objetivo:** Atualizar nome de exibição e/ou nome de usuário.
+- **Fluxo principal:** Estudante edita nome e/ou nomeUsuario; sistema valida unicidade (RN22) e persiste.
+- **Fluxos de exceção:** E1 — novo nomeUsuario já em uso → 409.
+- **Regras relacionadas:** RN22
+
+## UC20 — Visualizar dashboard geral consolidado
+
+- **Ator:** Estudante
+- **Objetivo:** Ter uma visão única de todo o progresso no sistema, não limitada a um deck específico.
+- **Fluxo principal:**
+  1. Estudante acessa o dashboard geral.
+  2. Sistema agrega dados de todos os decks do usuário.
+  3. Sistema calcula o streak de dias consecutivos de estudo.
+  4. Sistema exibe ranking de decks por desempenho.
+- **Regras relacionadas:** RN25
+
+## UC21 — Verificar e-mail de cadastro
+
+- **Ator:** Estudante
+- **Objetivo:** Confirmar a posse real do e-mail informado no cadastro.
+- **Fluxo principal:**
+  1. Ao se cadastrar, sistema gera token de verificação (24h) e envia por e-mail (ou loga em dev).
+  2. Estudante acessa o link/token.
+  3. Sistema valida e marca `emailVerificado=true`.
+  4. Estudante pode logar normalmente.
+- **Fluxos alternativos:** A1 — login antes de verificar → 403, com opção de reenviar token.
+- **Fluxos de exceção:** E1 — token inválido/expirado → mensagem clara.
+- **Regras relacionadas:** RN26
+
+## UC22 — Excluir material de origem
+
+- **Ator:** Estudante
+- **Objetivo:** Remover um PDF enviado que não é mais necessário.
+- **Fluxo principal:**
+  1. Estudante seleciona excluir um material.
+  2. Sistema pede confirmação (frontend).
+  3. Sistema aplica RN01.
+  4. Sistema remove registro e arquivo físico.
+- **Regras relacionadas:** RN01, RN29
+
+## UC23 — Aceitar termos de uso no cadastro (extensão de UC01/UC17)
+
+- **Ator:** Estudante
+- **Objetivo:** Formalizar o consentimento do usuário para tratamento de dados pessoais (LGPD).
+- **Fluxo principal:** No cadastro, o estudante marca aceite dos termos antes de submeter; sistema rejeita sem essa marcação; ao aceitar, registra versão do termo e timestamp.
+- **Regras relacionadas:** RN30
+
+## UC24 — Exportar meus dados
+
+- **Ator:** Estudante
+- **Objetivo:** Obter cópia estruturada de todos os próprios dados (LGPD, acesso/portabilidade).
+- **Fluxo principal:** Estudante solicita exportação; sistema monta objeto com perfil, decks, flashcards, revisões, quizzes e tentativas; retorna JSON completo.
+- **Regras relacionadas:** RN31
+
+## UC25 — Excluir conta permanentemente
+
+- **Ator:** Estudante
+- **Objetivo:** Exercer o direito ao esquecimento (LGPD).
+- **Fluxo principal:**
+  1. Estudante solicita exclusão da conta.
+  2. Sistema exige confirmação (senha atual).
+  3. Sistema valida a senha.
+  4. Sistema remove permanentemente usuário e dados em cascata.
+- **Fluxos de exceção:** E1 — senha incorreta → 401, nada excluído.
+- **Regras relacionadas:** RN32
+
+## UC26 — Trocar senha (autenticado)
+
+- **Ator:** Estudante
+- **Objetivo:** Alterar a própria senha por escolha, sem tê-la esquecido.
+- **Fluxo principal:** Estudante informa senha atual e nova senha; sistema valida a atual e a força da nova (RN27); atualiza o hash.
+- **Fluxos de exceção:** E1 — senha atual incorreta → erro claro.
+- **Regras relacionadas:** RN33, RN27

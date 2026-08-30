@@ -11,4 +11,7 @@ public interface MaterialOrigemRepository extends JpaRepository<MaterialOrigem, 
 
 	List<MaterialOrigem> findByDeckIdOrderByCriadoEmDesc(Long deckId);
 
+	/** UC24/RN31 — todos os materiais de um conjunto de decks numa única consulta (evita N+1 por deck). */
+	List<MaterialOrigem> findByDeckIdIn(List<Long> deckIds);
+
 }

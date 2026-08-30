@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 
 import * as authApi from '@/api/authApi'
+import { buscarPerfil, type Perfil } from '@/api/usuarioApi'
 import {
   clearStoredUsuario,
   clearToken,
@@ -15,11 +16,16 @@ interface AuthContextValue {
   usuario: UsuarioArmazenado | null
   token: string | null
   login: (email: string, senha: string) => Promise<void>
-  cadastro: (nome: string, email: string, senha: string) => Promise<void>
+  cadastro: (nome: string, nomeUsuario: string, email: string, senha: string, termosAceitos: boolean) => Promise<void>
   logout: () => void
+  atualizarUsuarioLocal: (perfil: Perfil) => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+function paraUsuarioArmazenado(perfil: Perfil): UsuarioArmazenado {
+  return { email: perfil.email, nome: perfil.nome, nomeUsuario: perfil.nomeUsuario, papel: perfil.papel }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(() => getToken())
@@ -31,13 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(resposta.token)
     setTokenState(resposta.token)
 
-    const usuarioLogado: UsuarioArmazenado = { email }
+    // UC19 - GET /api/usuario/perfil traz os dados completos (nome,
+    // nomeUsuario, papel) para exibicao na UI - o login (RF02) so devolve o
+    // token.
+    const perfil = await buscarPerfil()
+    const usuarioLogado = paraUsuarioArmazenado(perfil)
     setStoredUsuario(usuarioLogado)
     setUsuarioState(usuarioLogado)
   }
 
-  async function cadastro(nome: string, email: string, senha: string) {
-    await authApi.cadastrar({ nome, email, senha })
+  async function cadastro(nome: string, nomeUsuario: string, email: string, senha: string, termosAceitos: boolean) {
+    await authApi.cadastrar({ nome, nomeUsuario, email, senha, termosAceitos })
 
     // UC01: o cadastro (POST /api/auth/cadastro) nao devolve token - so
     // o login (POST /api/auth/login) devolve. Para cumprir o fluxo
@@ -55,8 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuarioState(null)
   }
 
+  // UC19 - apos editar o perfil (PUT /api/usuario/perfil), atualiza o cache
+  // local sem precisar de um novo login.
+  function atualizarUsuarioLocal(perfil: Perfil) {
+    const usuarioAtualizado = paraUsuarioArmazenado(perfil)
+    setStoredUsuario(usuarioAtualizado)
+    setUsuarioState(usuarioAtualizado)
+  }
+
   return (
-    <AuthContext.Provider value={{ usuario, token, login, cadastro, logout }}>
+    <AuthContext.Provider value={{ usuario, token, login, cadastro, logout, atualizarUsuarioLocal }}>
       {children}
     </AuthContext.Provider>
   )

@@ -17,9 +17,15 @@ export interface ResultadoRevisao {
   proximaRevisao: string
 }
 
-/** GET /api/decks/{id}/fila-estudo -> 200, so flashcards com proxima_revisao <= hoje (RN10) */
-export async function buscarFilaEstudo(deckId: number): Promise<ItemFilaEstudo[]> {
-  const { data } = await apiClient.get<ItemFilaEstudo[]>(`/api/decks/${deckId}/fila-estudo`)
+/**
+ * GET /api/decks/{id}/fila-estudo?incluirTodos -> 200, so flashcards com
+ * proxima_revisao <= hoje (RN10), a menos que incluirTodos=true, que ignora
+ * RN10 e traz o deck inteiro para "Revisar mesmo assim" (RN22).
+ */
+export async function buscarFilaEstudo(deckId: number, incluirTodos = false): Promise<ItemFilaEstudo[]> {
+  const { data } = await apiClient.get<ItemFilaEstudo[]>(`/api/decks/${deckId}/fila-estudo`, {
+    params: { incluirTodos },
+  })
   return data
 }
 

@@ -23,6 +23,9 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
+
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -38,8 +41,10 @@ public class Deck {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	/** RN32: defesa em duas camadas (JPA via Usuario#decks + banco via V6) - ver Deck.java doc. */
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "usuario_id", nullable = false)
+	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Usuario usuario;
 
 	@Column(name = "titulo", nullable = false, length = 150)

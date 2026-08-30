@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
@@ -26,8 +27,10 @@ public class RevisaoController {
 	private final RevisaoService revisaoService;
 
 	@GetMapping("/api/decks/{id}/fila-estudo")
-	public ResponseEntity<List<FilaEstudoItemDTO>> filaDeEstudo(@PathVariable("id") Long deckId) {
-		return ResponseEntity.ok(revisaoService.obterFilaDeEstudo(deckId));
+	public ResponseEntity<List<FilaEstudoItemDTO>> filaDeEstudo(
+			@PathVariable("id") Long deckId,
+			@RequestParam(name = "incluirTodos", defaultValue = "false") boolean incluirTodos) {
+		return ResponseEntity.ok(revisaoService.obterFilaDeEstudo(deckId, incluirTodos));
 	}
 
 	@PostMapping("/api/flashcards/{id}/revisoes")
