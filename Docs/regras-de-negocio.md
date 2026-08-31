@@ -35,7 +35,7 @@
 |---|---|---|
 | RNF01 | Desempenho | Geração via IA deve responder em < 15s em 90% dos casos, para PDFs de até 15 páginas. |
 | RNF02 | Segurança | Senhas armazenadas com hash (bcrypt), nunca em texto plano. |
-| RNF03 | Segurança | Todas as rotas, exceto cadastro/login, exigem token JWT válido. |
+| RNF03 | Segurança | Todas as rotas exigem token JWT válido, exceto as explicitamente públicas: cadastro, login, recuperação de senha, health-check e o acesso a deck compartilhado por link (RN37). |
 | RNF04 | Usabilidade | Interface responsiva (desktop e mobile). |
 | RNF05 | Portabilidade | Backend deve permitir trocar o provedor de IA sem alterações estruturais relevantes (via abstração). |
 | RNF06 | Confiabilidade | Falhas na API de IA não devem impedir o uso das demais funcionalidades (RN07). |
@@ -82,3 +82,5 @@
 | RN34 | A unicidade do nome de usuário (RN22) é verificada de forma case-insensitive. O valor é armazenado com a capitalização original, mas comparado sempre em minúsculas. |
 | RN35 | O usuário pode gerar uma prova personalizada via IA (aba "Provas") selecionando manualmente um ou mais flashcards de um deck como base de conteúdo, e escolhendo um estilo de prova (ENEM, Vestibular ou Conhecimentos Gerais), que orienta o tom/formato das questões geradas. As questões são inéditas — não repetem literalmente a pergunta/resposta dos flashcards selecionados, apenas o tema — e cada questão traz uma explicação da resposta correta, revelada somente após a questão ser respondida. RN15 aplica-se igualmente (só pontua se todas as questões forem respondidas). Substitui RN21. |
 | RN36 | O usuário pode consultar o histórico de todas as provas (determinísticas de UC10 e personalizadas de RN35) que já respondeu, mais recentes primeiro, e o detalhe de cada tentativa: questão a questão, com a alternativa escolhida, se acertou, a resposta correta e a explicação (quando houver). |
+| RN37 | O dono de um deck pode gerar um link público de compartilhamento, identificado por um token único. Quem acessa o link, mesmo sem conta, vê o deck (título, descrição e flashcards) em modo somente leitura — não pode editar, excluir nem duplicar o deck, e o acesso não passa por RN01 (é público por token, não por dono). Um token inexistente ou desativado responde 404, sem distinguir os dois casos (evita enumeração). |
+| RN38 | Cada deck tem no máximo um link de compartilhamento ativo por vez. O dono pode desativá-lo a qualquer momento, invalidando o acesso imediatamente. Gerar um novo link após desativado (ou reativar) sempre cria um token novo, invalidando qualquer token anterior. |

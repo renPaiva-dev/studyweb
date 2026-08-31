@@ -7,6 +7,7 @@ import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { CadastroPage } from '@/pages/CadastroPage'
 import { DashboardGeralPage } from '@/pages/DashboardGeralPage'
+import { DeckCompartilhadoPage } from '@/pages/DeckCompartilhadoPage'
 import { DeckDetalhePage } from '@/pages/DeckDetalhePage'
 import { DecksPage } from '@/pages/DecksPage'
 import { EsqueciSenhaPage } from '@/pages/EsqueciSenhaPage'
@@ -32,6 +33,7 @@ function App() {
             <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
             <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
             <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidadePage />} />
+            <Route path="/compartilhado/:token" element={<DeckCompartilhadoPage />} />
 
             <Route element={<RotaProtegida />}>
               <Route element={<Layout />}>

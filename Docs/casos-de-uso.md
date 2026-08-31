@@ -254,6 +254,20 @@
   4. Sistema exibe cada questão com o que foi respondido, se acertou, a resposta correta e a explicação.
 - **Regras relacionadas:** RN36, RN01
 
+## UC29 — Compartilhar deck via link público
+
+- **Ator:** Estudante (dono do deck)
+- **Objetivo:** Permitir que qualquer pessoa, mesmo sem conta, visualize os flashcards de um deck através de um link, sem poder editá-lo ou duplicá-lo.
+- **Pré-condições:** Deck pertence ao usuário autenticado (RN01).
+- **Fluxo principal:**
+  1. Estudante abre um deck e escolhe "Compartilhar".
+  2. Sistema gera um token único e devolve o link público correspondente.
+  3. Estudante envia o link para quem quiser.
+  4. Qualquer pessoa que acesse o link vê o título, a descrição e os flashcards do deck, em modo somente leitura, sem precisar autenticar (RN37).
+- **Fluxos alternativos:** A1 — deck já possui um link ativo → sistema devolve o mesmo status; gerar novamente regenera o token, invalidando o anterior (RN38). A2 — dono desativa o compartilhamento → o link deixa de funcionar imediatamente.
+- **Fluxos de exceção:** E1 — token inexistente ou desativado → 404, sem distinguir os dois casos.
+- **Regras relacionadas:** RN37, RN38, RN01
+
 ## UC17 — Cadastro com nome de usuário (extensão de UC01)
 
 - **Ator:** Estudante

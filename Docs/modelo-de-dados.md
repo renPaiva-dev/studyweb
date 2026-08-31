@@ -33,6 +33,16 @@
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 | atualizado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 
+### COMPARTILHAMENTO_DECK
+| Atributo | Tipo | Restrições |
+|---|---|---|
+| id | BIGINT | PK, auto_increment |
+| deck_id | BIGINT | NOT NULL, UNIQUE, FK → DECK(id) (no máximo um por deck — RN38) |
+| token | VARCHAR(36) | NOT NULL, UNIQUE |
+| ativo | BOOLEAN | NOT NULL, DEFAULT true |
+| criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
+| revogado_em | TIMESTAMP | NULL |
+
 ### MATERIAL_ORIGEM
 | Atributo | Tipo | Restrições |
 |---|---|---|
@@ -107,6 +117,7 @@ QUIZ    (1) ──< (N) QUESTAO_QUIZ          um quiz contém várias questões
 QUIZ    (1) ──< (N) TENTATIVA_QUIZ        um quiz é respondido em várias tentativas
 USUARIO (1) ──< (N) TENTATIVA_QUIZ        um usuário realiza várias tentativas
 USUARIO (1) ──< (N) TOKEN_REDEFINICAO_SENHA  um usuário pode ter vários tokens de redefinição (histórico)
+DECK    (1) ──< (1) COMPARTILHAMENTO_DECK    um deck tem no máximo um link de compartilhamento (RN38)
 ```
 
 Todas as relações são 1:N (sem N:N neste modelo) e obrigatórias do lado N —
@@ -141,6 +152,15 @@ CREATE TABLE deck (
     descricao VARCHAR(500),
     criado_em TIMESTAMP NOT NULL DEFAULT now(),
     atualizado_em TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE TABLE compartilhamento_deck (
+    id BIGSERIAL PRIMARY KEY,
+    deck_id BIGINT NOT NULL UNIQUE REFERENCES deck(id) ON DELETE CASCADE,
+    token VARCHAR(36) NOT NULL UNIQUE,
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    criado_em TIMESTAMP NOT NULL DEFAULT now(),
+    revogado_em TIMESTAMP
 );
 
 CREATE TABLE material_origem (

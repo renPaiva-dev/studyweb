@@ -13,7 +13,7 @@ implementação. Os documentos completos de especificação estão em `docs/`.
 
 ## Convenções
 
-- Pacotes Java organizados por feature: `com.tcc.plataformaestudos.{usuario,deck,flashcard,revisao,ia,quiz}`
+- Pacotes Java organizados por feature: `com.tcc.plataformaestudos.{usuario,deck,flashcard,revisao,ia,quiz,material,dashboard,compartilhamento,config}`
 - Atributos Java em camelCase; colunas de banco em snake_case (mapeadas via `@Column(name = "...")`)
 - DTOs como `record` sempre que possível
 - Toda exceção de negócio estende uma exceção customizada tratada via `@RestControllerAdvice`

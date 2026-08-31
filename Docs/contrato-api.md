@@ -185,3 +185,14 @@ POST /api/flashcards/57/revisoes
 | DELETE | `/api/usuario/conta` | `{ senha }` | `204` | `401` (senha incorreta) |
 
 `POST /api/auth/cadastro` ganha o campo `termosAceitos: boolean` (obrigatório `true`, RN30).
+
+## Compartilhamento de Deck (UC29)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| GET | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo, token, criadoEm }` (RN37/RN38) | `401` · `403` (RN01) · `404` |
+| POST | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo: true, token, criadoEm }` (gera/regenera o token — RN38) | `401` · `403` (RN01) · `404` |
+| DELETE | `/api/decks/{id}/compartilhamento` | — | `204` (desativa o link — RN38) | `401` · `403` (RN01) · `404` (nenhum link existente) |
+| GET | `/api/compartilhamentos/{token}` (\*\*) | — | `200` — `{ titulo, descricao, flashcards: [...] }` (RN37, somente leitura) | `404` (token inválido ou desativado) |
+
+(\*\*) Endpoint público — não exige JWT (RNF03, exceção documentada em `docs/regras-de-negocio.md`, RN37).

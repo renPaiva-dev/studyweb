@@ -22,7 +22,8 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * RNF03: todas as rotas exigem JWT, exceto POST /api/auth/cadastro,
- * POST /api/auth/login (marcadas com (**) no contrato de API) e /api/health.
+ * POST /api/auth/login (marcadas com (**) no contrato de API), /api/health
+ * e GET /api/compartilhamentos/** (UC29 — acesso público a deck compartilhado).
  */
 @Configuration
 @RequiredArgsConstructor
@@ -69,6 +70,8 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login",
 						"/api/auth/esqueci-senha", "/api/auth/redefinir-senha").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health").permitAll()
+				// UC29: acesso publico ao deck compartilhado nao exige conta/JWT.
+				.requestMatchers(HttpMethod.GET, "/api/compartilhamentos/**").permitAll()
 				// /error é a página de erro interna do Spring Boot, não um recurso de negócio —
 				// liberá-la evita que um forward interno (ex.: exceção não tratada em algum
 				// controller) seja mascarado como 401 por essa rota exigir autenticação.

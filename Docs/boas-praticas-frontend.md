@@ -51,7 +51,7 @@ export async function avaliarRevisao(flashcardId, qualidade) { /* POST /api/flas
 ## 6. Autenticação e rotas protegidas
 
 - Token JWT armazenado (ex.: `localStorage` ou cookie, conforme decisão do projeto) e anexado automaticamente pelo interceptor da camada de API (seção 2).
-- Rotas que exigem login (tudo exceto cadastro/login) devem ser protegidas por um componente de rota (`<RotaProtegida>` ou equivalente) que redireciona para login se não houver token válido.
+- Rotas que exigem login (tudo exceto cadastro/login e as explicitamente públicas, como o deck compartilhado por link — UC29) devem ser protegidas por um componente de rota (`<RotaProtegida>` ou equivalente) que redireciona para login se não houver token válido.
 - Nunca guardar dados sensíveis (senha) em estado do React ou em `localStorage`.
 
 ## 7. Formulários
