@@ -40,8 +40,11 @@ public class EmailService {
 
 	public void enviarEmail(String destinatario, String assunto, String corpo) {
 		if (!smtpConfigurado) {
+			// O corpo pode conter dados sensíveis (ex.: token de redefinição de
+			// senha, RN24) — nunca em INFO, que fica ligado por padrão em produção.
+			// Só o indicativo de que o envio foi simulado vai em INFO.
 			log.info("MODO DESENVOLVIMENTO — sem envio real de e-mail. destinatario={}, assunto=\"{}\"", destinatario, assunto);
-			log.info("MODO DESENVOLVIMENTO — corpo do e-mail: {}", corpo);
+			log.debug("MODO DESENVOLVIMENTO — corpo do e-mail: {}", corpo);
 			return;
 		}
 

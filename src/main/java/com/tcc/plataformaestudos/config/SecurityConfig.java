@@ -31,6 +31,7 @@ public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+	private final RateLimitingFilter rateLimitingFilter = new RateLimitingFilter();
 
 	@Value("${app.cors.allowed-origins}")
 	private String allowedOrigins;
@@ -77,7 +78,10 @@ public class SecurityConfig {
 				// controller) seja mascarado como 401 por essa rota exigir autenticação.
 				.requestMatchers("/error").permitAll()
 				.anyRequest().authenticated())
-			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+			.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+			// Roda depois do filtro JWT para poder limitar os endpoints de geração
+			// via IA por usuário autenticado (mais preciso que IP, ver RateLimitingFilter).
+			.addFilterAfter(rateLimitingFilter, JwtAuthenticationFilter.class);
 
 		return http.build();
 	}
