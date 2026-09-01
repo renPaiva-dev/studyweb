@@ -1,0 +1,19 @@
+target/
+.git/
+.gitignore
+.idea/
+.vscode/
+*.iml
+uploads/
+
+# Nunca copiar o application.properties real (secrets locais) para a
+# imagem — o profile "docker" (application-docker.properties, versionado
+# e sem segredos reais) e quem configura o container.
+src/main/resources/application.properties
+src/main/resources/application-*.local.properties
+
+# Frontend tem seu proprio contexto/Dockerfile — nao precisa entrar aqui.
+frontend/
+
+Docs/
+*.md
