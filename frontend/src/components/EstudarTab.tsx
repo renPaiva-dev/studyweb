@@ -150,7 +150,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
         <Progress value={progresso} />
       </div>
 
-      <FlashcardEstudoCard item={itemAtual} virado={virado} />
+      <FlashcardEstudoCard key={itemAtual.flashcardId} item={itemAtual} virado={virado} />
 
       {!virado ? (
         <div className="flex justify-center">

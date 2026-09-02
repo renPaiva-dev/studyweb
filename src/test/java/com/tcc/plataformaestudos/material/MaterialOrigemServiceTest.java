@@ -9,7 +9,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -212,6 +214,54 @@ class MaterialOrigemServiceTest {
 				.isInstanceOf(AcessoNegadoException.class);
 
 		verifyNoInteractions(materialOrigemRepository);
+	}
+
+	@Test
+	void deveExcluirMaterialERemoverOArquivoFisicoQuandoPertenceAoUsuario() throws IOException {
+		Path arquivoFisico = tempDir.resolve("apostila.pdf");
+		Files.writeString(arquivoFisico, "conteudo-fake");
+
+		MaterialOrigem material = new MaterialOrigem();
+		material.setId(5L);
+		material.setCaminhoArquivo(arquivoFisico.toString());
+		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.of(material));
+
+		materialOrigemService.excluir(5L);
+
+		assertThat(Files.exists(arquivoFisico)).isFalse();
+		verify(materialOrigemRepository).delete(material);
+	}
+
+	@Test
+	void deveExcluirRegistroMesmoQuandoArquivoFisicoJaNaoExisteMais() {
+		MaterialOrigem material = new MaterialOrigem();
+		material.setId(5L);
+		material.setCaminhoArquivo(tempDir.resolve("nao-existe-mais.pdf").toString());
+		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.of(material));
+
+		materialOrigemService.excluir(5L);
+
+		verify(materialOrigemRepository).delete(material);
+	}
+
+	@Test
+	void deveLancarAcessoNegadoExceptionAoExcluirMaterialDeOutroUsuario() {
+		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
+		when(materialOrigemRepository.existsById(5L)).thenReturn(true);
+
+		assertThatThrownBy(() -> materialOrigemService.excluir(5L))
+				.isInstanceOf(AcessoNegadoException.class);
+
+		verify(materialOrigemRepository, never()).delete(any());
+	}
+
+	@Test
+	void deveLancarRecursoNaoEncontradoExceptionAoExcluirMaterialInexistente() {
+		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
+		when(materialOrigemRepository.existsById(5L)).thenReturn(false);
+
+		assertThatThrownBy(() -> materialOrigemService.excluir(5L))
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 }

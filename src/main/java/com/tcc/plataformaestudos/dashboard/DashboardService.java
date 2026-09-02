@@ -30,10 +30,10 @@ import lombok.RequiredArgsConstructor;
  * temporal, detalhamento por tópico, atividade — RN20). RN01 é garantida por
  * {@link DeckService#buscarDeckDoUsuarioAutenticado(Long)}. RN14 define
  * "dominado" com precisão (repeticoes >= 3 e última qualidade_resposta >=
- * 4); o critério de "em risco" não é especificado pela RN14, então é
- * definido e documentado em {@link #estaEmRisco(Integer, LocalDate)} —
- * ambos os critérios são reaproveitados pelo detalhamento por tópico
- * (RN17/RN20).
+ * 4); o critério de "em risco" não é especificado pela RN14. Ambos os
+ * critérios vivem em {@link CriterioDesempenhoFlashcard}, reaproveitados
+ * pelo detalhamento por tópico (RN17/RN20) e por
+ * {@code RecomendacaoEstudoService} (UC13/RN18).
  *
  * <p>Fica num pacote próprio (em vez de dentro de {@code deck} ou
  * {@code revisao}) porque agrega dados de Flashcard e RevisaoFlashcard só
@@ -45,7 +45,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DashboardService {
 
-	private static final int DIAS_PARA_CONSIDERAR_EM_RISCO_POR_ATRASO = 7;
 	private static final String SEM_CATEGORIA = "Sem categoria";
 	private static final int TOP_FLASHCARDS_MAIS_REVISADOS = 5;
 
@@ -65,8 +64,8 @@ public class DashboardService {
 			return new DashboardResponseDTO(0, BigDecimal.ZERO.setScale(2), BigDecimal.ZERO.setScale(2));
 		}
 
-		long dominados = estados.stream().filter(e -> estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
-		long emRisco = estados.stream().filter(e -> estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
+		long dominados = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
+		long emRisco = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
 
 		return new DashboardResponseDTO(total, calcularPercentual(dominados, total), calcularPercentual(emRisco, total));
 	}
@@ -102,8 +101,8 @@ public class DashboardService {
 
 	/**
 	 * UC15/RN20/RN17 — mesmo critério de dominado/em risco de RN14
-	 * ({@link #estaDominado(Integer, Integer)}/{@link #estaEmRisco(Integer, LocalDate)}),
-	 * agrupado por {@code Flashcard.topico} (nulo → "Sem categoria").
+	 * ({@link CriterioDesempenhoFlashcard}), agrupado por
+	 * {@code Flashcard.topico} (nulo → "Sem categoria").
 	 */
 	@Transactional(readOnly = true)
 	public TopicosResponseDTO obterDetalhamentoPorTopico(Long deckId) {
@@ -151,9 +150,8 @@ public class DashboardService {
 
 	/**
 	 * UC20/RN25 — visão consolidada de todos os decks do usuário autenticado:
-	 * reaproveita {@link #estaDominado(Integer, Integer)}/{@link
-	 * #estaEmRisco(Integer, LocalDate)} (mesmos critérios de RN14) sobre uma
-	 * única consulta cobrindo todos os decks (RN20 já tinha o precedente de
+	 * reaproveita {@link CriterioDesempenhoFlashcard} (mesmos critérios de
+	 * RN14) sobre uma única consulta cobrindo todos os decks (RN20 já tinha o precedente de
 	 * projeção "última revisão", aqui estendida por usuário em vez de por
 	 * deck — evita um loop de uma query por deck). O percentual geral é a
 	 * média ponderada pelo total de flashcards (calculada direto sobre a
@@ -175,8 +173,8 @@ public class DashboardService {
 				.toList();
 
 		int totalFlashcards = estados.size();
-		long dominadosGeral = estados.stream().filter(e -> estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
-		long emRiscoGeral = estados.stream().filter(e -> estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
+		long dominadosGeral = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
+		long emRiscoGeral = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
 
 		BigDecimal percentualDominadoGeral = totalFlashcards == 0
 				? BigDecimal.ZERO.setScale(2)
@@ -208,8 +206,8 @@ public class DashboardService {
 			return new RankingDeckDTO(deck.getId(), deck.getTitulo(), BigDecimal.ZERO.setScale(2), BigDecimal.ZERO.setScale(2));
 		}
 
-		long dominados = estados.stream().filter(e -> estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
-		long emRisco = estados.stream().filter(e -> estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
+		long dominados = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
+		long emRisco = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
 
 		return new RankingDeckDTO(deck.getId(), deck.getTitulo(), calcularPercentual(dominados, total), calcularPercentual(emRisco, total));
 	}
@@ -236,44 +234,10 @@ public class DashboardService {
 
 	private TopicoDashboardDTO montarTopicoDashboard(String topico, List<UltimaRevisaoComTopicoProjecao> estados) {
 		int total = estados.size();
-		long dominados = estados.stream().filter(e -> estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
-		long emRisco = estados.stream().filter(e -> estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
+		long dominados = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaDominado(e.repeticoes(), e.qualidadeResposta())).count();
+		long emRisco = estados.stream().filter(e -> CriterioDesempenhoFlashcard.estaEmRisco(e.qualidadeResposta(), e.proximaRevisao())).count();
 
 		return new TopicoDashboardDTO(topico, total, calcularPercentual(dominados, total), calcularPercentual(emRisco, total));
-	}
-
-	/**
-	 * RN14: flashcard "dominado" = repeticoes >= 3 (da última revisão) E
-	 * última qualidade_resposta >= 4. Flashcard nunca revisado não é
-	 * dominado.
-	 */
-	private boolean estaDominado(Integer repeticoes, Integer qualidadeResposta) {
-		return repeticoes != null && repeticoes >= 3
-				&& qualidadeResposta != null && qualidadeResposta >= 4;
-	}
-
-	/**
-	 * Critério de "em risco" adotado (RN14 não define o cálculo exato):
-	 * flashcard já revisado ao menos uma vez, e a última revisão indica que
-	 * o conhecimento está frágil — última qualidade_resposta &lt; 3 (o
-	 * mesmo limiar de RN11 que reinicia a repetição espaçada) OU a
-	 * proxima_revisao está vencida há mais de {@value
-	 * #DIAS_PARA_CONSIDERAR_EM_RISCO_POR_ATRASO} dias sem uma nova revisão
-	 * registrada, sinal de que o estudante provavelmente já esqueceu o
-	 * conteúdo. Flashcard nunca revisado não conta como em risco: ainda não
-	 * há nenhuma evidência de desempenho sobre ele (nem dominado, nem em
-	 * risco).
-	 */
-	private boolean estaEmRisco(Integer qualidadeResposta, LocalDate proximaRevisao) {
-		if (qualidadeResposta == null) {
-			return false;
-		}
-
-		boolean ultimaQualidadeBaixa = qualidadeResposta < 3;
-		boolean atrasadoHaMuitoTempo = proximaRevisao != null
-				&& proximaRevisao.isBefore(LocalDate.now().minusDays(DIAS_PARA_CONSIDERAR_EM_RISCO_POR_ATRASO));
-
-		return ultimaQualidadeBaixa || atrasadoHaMuitoTempo;
 	}
 
 	private BigDecimal calcularPercentual(long quantidade, int total) {

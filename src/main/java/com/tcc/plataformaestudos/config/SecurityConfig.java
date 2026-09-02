@@ -22,8 +22,11 @@ import lombok.RequiredArgsConstructor;
 
 /**
  * RNF03: todas as rotas exigem JWT, exceto POST /api/auth/cadastro,
- * POST /api/auth/login (marcadas com (**) no contrato de API), /api/health
- * e GET /api/compartilhamentos/** (UC29 — acesso público a deck compartilhado).
+ * POST /api/auth/login, POST /api/auth/esqueci-senha,
+ * POST /api/auth/redefinir-senha, POST /api/auth/verificar-email e
+ * POST /api/auth/reenviar-verificacao (todas marcadas com (**) no contrato
+ * de API), /api/health e GET /api/compartilhamentos/** (UC29 — acesso
+ * público a deck compartilhado).
  */
 @Configuration
 @RequiredArgsConstructor
@@ -69,7 +72,8 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login",
-						"/api/auth/esqueci-senha", "/api/auth/redefinir-senha").permitAll()
+						"/api/auth/esqueci-senha", "/api/auth/redefinir-senha",
+						"/api/auth/verificar-email", "/api/auth/reenviar-verificacao").permitAll()
 				.requestMatchers(HttpMethod.GET, "/api/health").permitAll()
 				// UC29: acesso publico ao deck compartilhado nao exige conta/JWT.
 				.requestMatchers(HttpMethod.GET, "/api/compartilhamentos/**").permitAll()
