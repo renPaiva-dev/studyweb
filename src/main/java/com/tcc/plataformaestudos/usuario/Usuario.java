@@ -62,6 +62,14 @@ public class Usuario {
 	private String termosVersao;
 
 	/**
+	 * UC21/RN26 — toda conta criada permanece false até confirmar a posse do
+	 * e-mail via {@link TokenVerificacaoEmail}; login com este campo false
+	 * é bloqueado (403) em {@link UsuarioService#autenticar(LoginRequestDTO)}.
+	 */
+	@Column(name = "email_verificado", nullable = false)
+	private boolean emailVerificado = false;
+
+	/**
 	 * RN32 (LGPD, direito ao esquecimento) — excluir o usuário remove em
 	 * cascata seus decks e, por extensão (ver {@code Deck#materiais}/
 	 * {@code Deck#flashcards}/{@code Deck#quizzes}), todo o restante da

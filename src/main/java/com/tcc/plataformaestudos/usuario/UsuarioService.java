@@ -17,16 +17,19 @@ public class UsuarioService {
 	private final UsuarioRepository usuarioRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
+	private final VerificacaoEmailService verificacaoEmailService;
 	private final String termosVersaoAtual;
 
 	public UsuarioService(
 			UsuarioRepository usuarioRepository,
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
+			VerificacaoEmailService verificacaoEmailService,
 			@Value("${app.termos.versao-atual}") String termosVersaoAtual) {
 		this.usuarioRepository = usuarioRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
+		this.verificacaoEmailService = verificacaoEmailService;
 		this.termosVersaoAtual = termosVersaoAtual;
 	}
 
@@ -51,6 +54,10 @@ public class UsuarioService {
 
 		Usuario salvo = usuarioRepository.save(usuario);
 		log.info("Usuário cadastrado com sucesso: usuarioId={}", salvo.getId());
+
+		// UC21/RN26: emailVerificado nasce false (default do campo); dispara o
+		// token de confirmação no mesmo fluxo do cadastro.
+		verificacaoEmailService.enviarTokenVerificacao(salvo);
 
 		return UsuarioResponseDTO.fromEntity(salvo);
 	}
@@ -138,6 +145,12 @@ public class UsuarioService {
 
 		if (!passwordEncoder.matches(request.senha(), usuario.getSenhaHash())) {
 			throw new CredenciaisInvalidasException();
+		}
+
+		// UC21/RN26: checado depois da senha (nunca antes) - revelar "e-mail
+		// não verificado" para uma senha errada vazaria que aquele e-mail existe.
+		if (!usuario.isEmailVerificado()) {
+			throw new EmailNaoVerificadoException();
 		}
 
 		log.info("Login realizado com sucesso: usuarioId={}", usuario.getId());

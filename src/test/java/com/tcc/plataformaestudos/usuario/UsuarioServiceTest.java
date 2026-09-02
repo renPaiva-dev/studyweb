@@ -37,6 +37,9 @@ class UsuarioServiceTest {
 	@Mock
 	private JwtService jwtService;
 
+	@Mock
+	private VerificacaoEmailService verificacaoEmailService;
+
 	@InjectMocks
 	private UsuarioService usuarioService;
 
@@ -82,6 +85,8 @@ class UsuarioServiceTest {
 		assertThat(resposta.email()).isEqualTo("ana@email.com");
 		assertThat(resposta.papel()).isEqualTo(PapelUsuario.ESTUDANTE);
 		verify(passwordEncoder).encode("senha123");
+		// UC21/RN26: cadastro dispara o token de verificação de e-mail.
+		verify(verificacaoEmailService).enviarTokenVerificacao(any());
 	}
 
 	@Test
@@ -175,6 +180,7 @@ class UsuarioServiceTest {
 		usuario.setId(1L);
 		usuario.setEmail("ana@email.com");
 		usuario.setSenhaHash("hash-fake");
+		usuario.setEmailVerificado(true);
 
 		JwtService.TokenGerado tokenGerado = new JwtService.TokenGerado("token-fake", Instant.now().plusSeconds(3600));
 
@@ -186,6 +192,24 @@ class UsuarioServiceTest {
 
 		assertThat(resposta.token()).isEqualTo("token-fake");
 		assertThat(resposta.tipo()).isEqualTo("Bearer");
+	}
+
+	@Test
+	void deveLancarEmailNaoVerificadoExceptionQuandoEmailAindaNaoFoiVerificado() {
+		LoginRequestDTO request = new LoginRequestDTO("ana@email.com", "senha123");
+		Usuario usuario = new Usuario();
+		usuario.setId(1L);
+		usuario.setEmail("ana@email.com");
+		usuario.setSenhaHash("hash-fake");
+		usuario.setEmailVerificado(false);
+
+		when(usuarioRepository.findByEmail(request.email())).thenReturn(Optional.of(usuario));
+		when(passwordEncoder.matches("senha123", "hash-fake")).thenReturn(true);
+
+		assertThatThrownBy(() -> usuarioService.autenticar(request))
+				.isInstanceOf(EmailNaoVerificadoException.class);
+
+		verify(jwtService, never()).gerarToken(any());
 	}
 
 	@Test

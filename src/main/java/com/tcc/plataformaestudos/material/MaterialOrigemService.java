@@ -30,7 +30,10 @@ import com.tcc.plataformaestudos.usuario.SecurityUtils;
  * busca por id). RN06
  * (formato/tamanho) é validada antes de qualquer processamento. RN07 (falha
  * de extração não deve acionar a IA) é implementada marcando o material com
- * status ERRO em vez de propagar a falha.
+ * status ERRO em vez de propagar a falha. UC22/RN29: um material pode ser
+ * excluído a qualquer momento pelo dono; a exclusão remove o registro e o
+ * arquivo físico, sem afetar flashcards já confirmados (RN29 é explícita:
+ * eles não mantêm vínculo individual com o material de origem).
  */
 @Service
 public class MaterialOrigemService {
@@ -154,6 +157,32 @@ public class MaterialOrigemService {
 		} catch (ExtracaoTextoException e) {
 			material.setStatusProcessamento(StatusProcessamento.ERRO);
 			log.error("Falha ao extrair texto do PDF (RN07 — IA não será chamada): materialId={}", material.getId(), e);
+		}
+	}
+
+	/**
+	 * UC22/RN29 — exclui o material e seu arquivo físico. Se a remoção do
+	 * arquivo falhar (ex.: permissão, arquivo já removido manualmente),
+	 * loga o erro mas ainda assim remove o registro — mesmo espírito de
+	 * RN07 (falha num passo secundário não deve travar o fluxo principal),
+	 * já que deixar o registro "preso" por causa do arquivo seria pior
+	 * para o usuário do que um arquivo órfão no disco.
+	 */
+	@Transactional
+	public void excluir(Long materialId) {
+		MaterialOrigem material = buscarMaterialDoUsuarioAutenticado(materialId);
+
+		excluirArquivoFisico(material);
+		materialOrigemRepository.delete(material);
+		log.info("Material excluído: materialId={}", materialId);
+	}
+
+	private void excluirArquivoFisico(MaterialOrigem material) {
+		try {
+			Files.deleteIfExists(Path.of(material.getCaminhoArquivo()));
+		} catch (IOException e) {
+			log.error("Falha ao remover o arquivo físico do material (registro será removido mesmo assim): materialId={}",
+					material.getId(), e);
 		}
 	}
 
