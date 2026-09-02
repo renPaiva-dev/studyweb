@@ -196,3 +196,11 @@ POST /api/flashcards/57/revisoes
 | GET | `/api/compartilhamentos/{token}` (\*\*) | — | `200` — `{ titulo, descricao, flashcards: [...] }` (RN37, somente leitura) | `404` (token inválido ou desativado) |
 
 (\*\*) Endpoint público — não exige JWT (RNF03, exceção documentada em `docs/regras-de-negocio.md`, RN37).
+
+## Lembrete de Revisão (UC30)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| POST | `/api/usuario/lembrete-revisao/teste` | — | `200` — `{ mensagem }` (envia para o próprio e-mail, mesmo sem pendências — RN39) | `401` · `429` (limite de 3/min) |
+
+O job automático diário (RN39) não é um endpoint — roda internamente (`@Scheduled`, cron configurável via `app.lembrete-revisao.cron`).

@@ -59,6 +59,12 @@ export async function excluirConta(senha: string): Promise<void> {
   await apiClient.delete('/api/usuario/conta', { data: { senha }, skipAuthRedirect: true })
 }
 
+/** POST /api/usuario/lembrete-revisao/teste -> 200 (401, 429: limite de 3/min) */
+export async function enviarLembreteTeste(): Promise<MensagemResposta> {
+  const { data } = await apiClient.post<MensagemResposta>('/api/usuario/lembrete-revisao/teste')
+  return data
+}
+
 export interface RankingDeck {
   deckId: number
   titulo: string

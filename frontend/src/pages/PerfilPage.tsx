@@ -1,9 +1,9 @@
-import { Download } from 'lucide-react'
+import { Download, Mail } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
-import { atualizarPerfil, buscarPerfil, exportarDados, type Perfil } from '@/api/usuarioApi'
+import { atualizarPerfil, buscarPerfil, enviarLembreteTeste, exportarDados, type Perfil } from '@/api/usuarioApi'
 import { ExcluirContaDialog } from '@/components/ExcluirContaDialog'
 import { TrocarSenhaCard } from '@/components/TrocarSenhaCard'
 import { Button } from '@/components/ui/button'
@@ -34,6 +34,7 @@ export function PerfilPage() {
   const [erros, setErros] = useState<Erros>({})
   const [salvando, setSalvando] = useState(false)
   const [exportando, setExportando] = useState(false)
+  const [enviandoLembrete, setEnviandoLembrete] = useState(false)
 
   const carregar = useCallback(async () => {
     setErroCarregamento(null)
@@ -114,6 +115,21 @@ export function PerfilPage() {
     }
   }
 
+  // UC30/RN39 - dispara o lembrete de revisao pendente para o proprio
+  // e-mail, mesmo sem pendencias (util pra conferir que o e-mail chega).
+  async function aoTestarLembrete() {
+    setEnviandoLembrete(true)
+
+    try {
+      await enviarLembreteTeste()
+      toast.success('Lembrete enviado — confira seu e-mail (ou o log do backend, em ambiente sem SMTP configurado).')
+    } catch (erro) {
+      toast.error(extrairMensagemErro(erro, 'Não foi possível enviar o lembrete de teste.'))
+    } finally {
+      setEnviandoLembrete(false)
+    }
+  }
+
   if (erroCarregamento !== null) {
     return (
       <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
@@ -186,6 +202,21 @@ export function PerfilPage() {
       </Card>
 
       <TrocarSenhaCard />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Lembrete de revisão</CardTitle>
+          <CardDescription>
+            Todo dia às 8h, avisamos por e-mail quem tem flashcards pendentes de revisão
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => void aoTestarLembrete()} disabled={enviandoLembrete}>
+            <Mail className="h-4 w-4" />
+            {enviandoLembrete ? 'Enviando...' : 'Testar meu lembrete agora'}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

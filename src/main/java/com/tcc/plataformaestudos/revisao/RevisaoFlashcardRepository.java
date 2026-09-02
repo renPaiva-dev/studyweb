@@ -44,4 +44,45 @@ public interface RevisaoFlashcardRepository extends JpaRepository<RevisaoFlashca
 			""")
 	List<Flashcard> findFlashcardsPendentesDeRevisao(@Param("deckId") Long deckId, @Param("hoje") LocalDate hoje);
 
+	/**
+	 * UC30/RN39 — mesmo critério de RN10, mas escopado a um único usuário (sem
+	 * um deck específico): usado pelo lembrete de revisão sob demanda.
+	 */
+	@Query("""
+			SELECT f FROM Flashcard f
+			WHERE f.deck.usuario.id = :usuarioId
+			AND (
+				NOT EXISTS (SELECT 1 FROM RevisaoFlashcard r WHERE r.flashcard = f)
+				OR EXISTS (
+					SELECT 1 FROM RevisaoFlashcard ultima
+					WHERE ultima.flashcard = f
+					AND ultima.dataRevisao = (
+						SELECT MAX(r2.dataRevisao) FROM RevisaoFlashcard r2 WHERE r2.flashcard = f
+					)
+					AND ultima.proximaRevisao <= :hoje
+				)
+			)
+			""")
+	List<Flashcard> findPendentesDeRevisaoDoUsuario(@Param("usuarioId") Long usuarioId, @Param("hoje") LocalDate hoje);
+
+	/**
+	 * UC30/RN39 — mesmo critério de RN10, sem nenhum escopo: usado pelo job
+	 * diário de lembrete por e-mail, que depois agrupa o resultado por usuário.
+	 */
+	@Query("""
+			SELECT f FROM Flashcard f
+			WHERE (
+				NOT EXISTS (SELECT 1 FROM RevisaoFlashcard r WHERE r.flashcard = f)
+				OR EXISTS (
+					SELECT 1 FROM RevisaoFlashcard ultima
+					WHERE ultima.flashcard = f
+					AND ultima.dataRevisao = (
+						SELECT MAX(r2.dataRevisao) FROM RevisaoFlashcard r2 WHERE r2.flashcard = f
+					)
+					AND ultima.proximaRevisao <= :hoje
+				)
+			)
+			""")
+	List<Flashcard> findTodosPendentesDeRevisao(@Param("hoje") LocalDate hoje);
+
 }

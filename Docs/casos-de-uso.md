@@ -268,6 +268,18 @@
 - **Fluxos de exceção:** E1 — token inexistente ou desativado → 404, sem distinguir os dois casos.
 - **Regras relacionadas:** RN37, RN38, RN01
 
+## UC30 — Lembrete de revisão pendente por e-mail
+
+- **Ator:** Sistema (interno) / Estudante
+- **Objetivo:** Avisar o estudante de que há flashcards pendentes de revisão, fechando o loop da repetição espaçada (RN10) — sem isso, o sistema calcula quando revisar mas depende inteiramente de o estudante lembrar sozinho de abrir a plataforma.
+- **Pré-condições:** Nenhuma (job automático) ou usuário autenticado (disparo manual de teste).
+- **Fluxo principal (automático):**
+  1. Uma vez por dia, o sistema identifica todos os flashcards pendentes de revisão (mesmo critério de RN10), de todos os usuários.
+  2. Agrupa por usuário e, para cada um com pelo menos um flashcard pendente, envia um e-mail resumindo a quantidade por deck.
+  3. Usuários sem pendências não recebem e-mail.
+- **Fluxo alternativo:** Estudante aciona manualmente o envio do próprio lembrete (para conferir o conteúdo), recebendo o e-mail mesmo sem pendências (mensagem de "em dia").
+- **Regras relacionadas:** RN39, RN10
+
 ## UC17 — Cadastro com nome de usuário (extensão de UC01)
 
 - **Ator:** Estudante

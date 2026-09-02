@@ -49,7 +49,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 			new Regra("POST", "/api/auth/redefinir-senha", 5, 60_000, false),
 			new Regra("POST", "/api/materiais/*/gerar-flashcards", 10, 60_000, true),
 			new Regra("POST", "/api/decks/*/quizzes", 10, 60_000, true),
-			new Regra("POST", "/api/decks/*/provas", 10, 60_000, true));
+			new Regra("POST", "/api/decks/*/provas", 10, 60_000, true),
+			new Regra("POST", "/api/usuario/lembrete-revisao/teste", 3, 60_000, true));
 
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
