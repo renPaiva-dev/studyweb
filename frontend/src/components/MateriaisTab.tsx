@@ -142,7 +142,12 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
       {materiais !== null && materiais.length > 0 && (
         <div className="space-y-3">
           {materiais.map((material) => (
-            <MaterialItem key={material.id} material={material} onSugestoesGeradas={setSugestoesEmRevisao} />
+            <MaterialItem
+              key={material.id}
+              material={material}
+              onSugestoesGeradas={setSugestoesEmRevisao}
+              onExcluido={(materialId) => setMateriais((atual) => atual?.filter((m) => m.id !== materialId) ?? atual)}
+            />
           ))}
         </div>
       )}

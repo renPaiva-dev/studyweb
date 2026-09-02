@@ -47,3 +47,8 @@ export async function gerarFlashcards(materialId: number): Promise<SugestaoFlash
   )
   return data.sugestoes
 }
+
+/** UC22 - DELETE /api/materiais/{id} -> 204 (RN29: remove registro e arquivo físico, sem afetar flashcards já confirmados) */
+export async function excluirMaterial(id: number): Promise<void> {
+  await apiClient.delete(`/api/materiais/${id}`)
+}

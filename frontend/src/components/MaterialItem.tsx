@@ -1,23 +1,40 @@
-import { FileText, Loader2, Sparkles } from 'lucide-react'
+import { FileText, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
-import { gerarFlashcards, type Material, type SugestaoFlashcard } from '@/api/materialApi'
+import { excluirMaterial, gerarFlashcards, type Material, type SugestaoFlashcard } from '@/api/materialApi'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { MaterialStatusBadge } from '@/components/MaterialStatusBadge'
 
 interface MaterialItemProps {
   material: Material
   onSugestoesGeradas: (sugestoes: SugestaoFlashcard[]) => void
+  onExcluido: (materialId: number) => void
 }
 
 // UC03/UC04 - uma linha da lista de materiais. Quando PROCESSADO, exibe
 // o botao que dispara POST /api/materiais/{id}/gerar-flashcards (RNF01:
 // pode levar até 15s, por isso o loading e explicito). As sugestoes
 // retornadas sobem para o pai, que abre a tela de revisao (UC05).
-export function MaterialItem({ material, onSugestoesGeradas }: MaterialItemProps) {
+// UC22/RN29 - excluir remove o material (registro + arquivo fisico no
+// backend); flashcards ja confirmados nao mantem vinculo com o material e
+// nao sao afetados (mesmo aviso do dialogo de confirmacao).
+export function MaterialItem({ material, onSugestoesGeradas, onExcluido }: MaterialItemProps) {
   const [gerando, setGerando] = useState(false)
+  const [excluindo, setExcluindo] = useState(false)
+  const [dialogoAberto, setDialogoAberto] = useState(false)
 
   async function aoGerarFlashcards() {
     setGerando(true)
@@ -35,6 +52,21 @@ export function MaterialItem({ material, onSugestoesGeradas }: MaterialItemProps
       toast.error(extrairMensagemErro(erro, 'Não foi possível gerar flashcards a partir deste material.'))
     } finally {
       setGerando(false)
+    }
+  }
+
+  async function aoExcluir() {
+    setExcluindo(true)
+
+    try {
+      await excluirMaterial(material.id)
+      toast.success('Material excluído.')
+      setDialogoAberto(false)
+      onExcluido(material.id)
+    } catch (erro) {
+      toast.error(extrairMensagemErro(erro, 'Não foi possível excluir o material. Tente novamente.'))
+    } finally {
+      setExcluindo(false)
     }
   }
 
@@ -59,6 +91,37 @@ export function MaterialItem({ material, onSugestoesGeradas }: MaterialItemProps
               {gerando ? 'Gerando flashcards com IA...' : 'Gerar flashcards com IA'}
             </Button>
           )}
+
+          <AlertDialog open={dialogoAberto} onOpenChange={setDialogoAberto}>
+            <AlertDialogTrigger asChild>
+              <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-destructive" disabled={excluindo}>
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Excluir material</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir material?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Essa ação não pode ser desfeita. "{material.nomeArquivo}" será removido permanentemente. Flashcards
+                  já confirmados a partir dele não serão afetados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(evento) => {
+                    evento.preventDefault()
+                    void aoExcluir()
+                  }}
+                  disabled={excluindo}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {excluindo ? 'Excluindo...' : 'Excluir'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
