@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { GraduationCap } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -28,6 +29,7 @@ export function LoginPage() {
   const [senha, setSenha] = useState('')
   const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
+  const [emailNaoVerificado, setEmailNaoVerificado] = useState(false)
 
   function validar(): boolean {
     const novosErros: Erros = {}
@@ -52,13 +54,20 @@ export function LoginPage() {
     }
 
     setEnviando(true)
+    setEmailNaoVerificado(false)
 
     try {
       await login(email, senha)
       navigate('/')
     } catch (erro) {
       // 401 (RN: credenciais invalidas) e demais falhas caem no mesmo
-      // tratamento amigavel - nunca expor o JSON cru do erro.
+      // tratamento amigavel - nunca expor o JSON cru do erro. 403 e o caso
+      // especifico de RN26 (e-mail ainda nao confirmado), que oferece um
+      // atalho para reenviar a confirmacao em vez de so um toast de erro.
+      if (isAxiosError(erro) && erro.response?.status === 403) {
+        setEmailNaoVerificado(true)
+      }
+
       toast.error(extrairMensagemErro(erro, 'E-mail ou senha inválidos.'))
     } finally {
       setEnviando(false)
@@ -116,6 +125,16 @@ export function LoginPage() {
                 </Link>
               </div>
             </div>
+            {emailNaoVerificado && (
+              <p className="text-center text-sm text-muted-foreground">
+                <Link
+                  to={`/verificar-email?email=${encodeURIComponent(email)}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Reenviar e-mail de confirmação
+                </Link>
+              </p>
+            )}
             <Button type="submit" className="w-full" disabled={enviando}>
               {enviando ? 'Entrando...' : 'Entrar'}
             </Button>

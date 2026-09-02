@@ -80,7 +80,11 @@ export function CadastroPage() {
 
     try {
       await cadastro(nome.trim(), nomeUsuario, email, senha, termosAceitos)
-      navigate('/')
+      // UC01/UC21/RN26: a conta nasce com o e-mail nao verificado - o login
+      // so e liberado apos a confirmacao, entao aqui ainda nao ha uma area
+      // logada a redirecionar.
+      toast.success('Conta criada! Enviamos um link de confirmação para o seu e-mail.')
+      navigate(`/verificar-email?email=${encodeURIComponent(email)}`)
     } catch (erro) {
       toast.error(extrairMensagemErro(erro, 'Não foi possível criar sua conta. Tente novamente.'))
     } finally {
@@ -124,7 +128,7 @@ export function CadastroPage() {
               <Input
                 id="nomeUsuario"
                 className="h-10"
-                placeholder="seunomedeusuario"
+                placeholder="Seu nome de usuário"
                 autoComplete="username"
                 value={nomeUsuario}
                 onChange={(evento) => setNomeUsuario(evento.target.value)}

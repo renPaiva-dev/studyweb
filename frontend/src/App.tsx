@@ -20,6 +20,7 @@ import { PoliticaDePrivacidadePage } from '@/pages/PoliticaDePrivacidadePage'
 import { ProvasPage } from '@/pages/ProvasPage'
 import { RedefinirSenhaPage } from '@/pages/RedefinirSenhaPage'
 import { TermosDeUsoPage } from '@/pages/TermosDeUsoPage'
+import { VerificarEmailPage } from '@/pages/VerificarEmailPage'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
             <Route path="/cadastro" element={<CadastroPage />} />
             <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
             <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+            <Route path="/verificar-email" element={<VerificarEmailPage />} />
             <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
             <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidadePage />} />
             <Route path="/compartilhado/:token" element={<DeckCompartilhadoPage />} />

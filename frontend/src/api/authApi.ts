@@ -59,3 +59,17 @@ export async function redefinirSenha(token: string, novaSenha: string): Promise<
   const { data } = await apiClient.post<MensagemResponse>('/api/auth/redefinir-senha', { token, novaSenha })
   return data
 }
+
+// UC21 - Verificar e-mail de cadastro (RN26: login bloqueado ate confirmar).
+
+/** POST /api/auth/verificar-email -> 200 (400 token invalido/expirado/usado) */
+export async function verificarEmail(token: string): Promise<MensagemResponse> {
+  const { data } = await apiClient.post<MensagemResponse>('/api/auth/verificar-email', { token })
+  return data
+}
+
+/** POST /api/auth/reenviar-verificacao -> 200, sempre a mesma mensagem generica */
+export async function reenviarVerificacao(email: string): Promise<MensagemResponse> {
+  const { data } = await apiClient.post<MensagemResponse>('/api/auth/reenviar-verificacao', { email })
+  return data
+}

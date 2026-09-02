@@ -5,10 +5,9 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import lombok.RequiredArgsConstructor;
 
 /**
  * UC21 — Verificar e-mail de cadastro. RN26: toda conta criada permanece
@@ -25,7 +24,6 @@ import lombok.RequiredArgsConstructor;
  * vazar esse status a quem não é o dono da conta.
  */
 @Service
-@RequiredArgsConstructor
 public class VerificacaoEmailService {
 
 	private static final Logger log = LoggerFactory.getLogger(VerificacaoEmailService.class);
@@ -36,6 +34,18 @@ public class VerificacaoEmailService {
 	private final UsuarioRepository usuarioRepository;
 	private final TokenVerificacaoEmailRepository tokenRepository;
 	private final EmailService emailService;
+	private final String frontendUrl;
+
+	public VerificacaoEmailService(
+			UsuarioRepository usuarioRepository,
+			TokenVerificacaoEmailRepository tokenRepository,
+			EmailService emailService,
+			@Value("${app.frontend-url}") String frontendUrl) {
+		this.usuarioRepository = usuarioRepository;
+		this.tokenRepository = tokenRepository;
+		this.emailService = emailService;
+		this.frontendUrl = frontendUrl;
+	}
 
 	@Transactional
 	public void enviarTokenVerificacao(Usuario usuario) {
@@ -49,10 +59,13 @@ public class VerificacaoEmailService {
 
 		log.info("Token de verificação de e-mail gerado: usuarioId={}", usuario.getId());
 
+		// O e-mail traz um link clicavel (nao so o token cru) para a tela de
+		// verificacao do frontend, que ja sabe ler ?token= e chamar a API.
+		String link = frontendUrl + "/verificar-email?token=" + token;
 		emailService.enviarEmail(
 				usuario.getEmail(),
 				"Confirme seu e-mail",
-				"Use o token a seguir para confirmar seu e-mail (válido por 24 horas): " + token);
+				"Clique no link a seguir para confirmar seu e-mail (válido por 24 horas): " + link);
 	}
 
 	@Transactional

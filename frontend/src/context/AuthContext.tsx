@@ -47,15 +47,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function cadastro(nome: string, nomeUsuario: string, email: string, senha: string, termosAceitos: boolean) {
+    // UC01/UC21/RN26: a conta nasce com emailVerificado=false e o login
+    // (POST /api/auth/login) rejeita com 403 enquanto o e-mail nao for
+    // confirmado - por isso NAO autentica automaticamente apos o cadastro
+    // (antes disso resultava num login que falhava sempre). O chamador
+    // (CadastroPage) encaminha o usuario para a tela de confirmacao de
+    // e-mail em vez de navegar direto para a area logada.
     await authApi.cadastrar({ nome, nomeUsuario, email, senha, termosAceitos })
-
-    // UC01: o cadastro (POST /api/auth/cadastro) nao devolve token - so
-    // o login (POST /api/auth/login) devolve. Para cumprir o fluxo
-    // principal do UC01 ("cria o usuario ou autentica" -> "retorna token
-    // JWT" -> "redirecionado a lista de decks") sem inventar nenhum
-    // endpoint novo, o cadastro autentica com as mesmas credenciais
-    // imediatamente depois de criar a conta.
-    await login(email, senha)
   }
 
   function logout() {
