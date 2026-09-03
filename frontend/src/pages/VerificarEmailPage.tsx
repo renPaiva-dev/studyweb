@@ -64,7 +64,7 @@ export function VerificarEmailPage() {
     } catch {
       // RN26 (mesmo racional anti-enumeração de RN24): nao ha mensagem de
       // erro diferenciada a mostrar aqui.
-      setMensagem('Se o e-mail existir e ainda não estiver verificado, você receberá um novo link de confirmação.')
+      setMensagem('Se este e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link de confirmação.')
     } finally {
       setEnviando(false)
       setEstado('reenviado')

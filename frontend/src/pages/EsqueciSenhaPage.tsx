@@ -14,8 +14,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // UC18 - Esqueci minha senha. POST /api/auth/esqueci-senha
 // (docs/contrato-api.md). RN24: a resposta e sempre a mesma mensagem
-// generica, exista ou nao o e-mail na base - por isso a tela so mostra essa
-// mensagem apos o envio, nunca um erro de "e-mail nao encontrado".
+// generica, exista ou nao o e-mail cadastrado - por isso a tela so mostra
+// essa mensagem apos o envio, nunca um erro de "e-mail nao encontrado".
 export function EsqueciSenhaPage() {
   const [email, setEmail] = useState('')
   const [erroEmail, setErroEmail] = useState<string | null>(null)
@@ -40,7 +40,7 @@ export function EsqueciSenhaPage() {
       // RN24: mesmo em erro de rede/servidor, nao ha uma mensagem
       // diferenciada a mostrar aqui sem arriscar revelar se o e-mail existe -
       // a mensagem generica de sucesso e o unico estado "final" desta tela.
-      setMensagem('Se o e-mail existir em nossa base, você receberá instruções de redefinição.')
+      setMensagem('Se este e-mail estiver cadastrado, enviamos um link para redefinir sua senha.')
     } finally {
       setEnviando(false)
     }

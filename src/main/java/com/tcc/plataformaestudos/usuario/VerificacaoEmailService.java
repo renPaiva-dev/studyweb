@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>{@link #reenviarVerificacao(String)} segue o mesmo raciocínio
  * anti-enumeração de RN24 (a resposta é sempre a mesma mensagem genérica,
- * exista ou não o e-mail na base) — estendido aqui para também não
+ * exista ou não o e-mail cadastrado) — estendido aqui para também não
  * distinguir "e-mail já verificado" de "e-mail inexistente", evitando
  * vazar esse status a quem não é o dono da conta.
  */
@@ -29,7 +29,7 @@ public class VerificacaoEmailService {
 	private static final Logger log = LoggerFactory.getLogger(VerificacaoEmailService.class);
 	private static final long VALIDADE_HORAS = 24;
 	private static final String MENSAGEM_REENVIO =
-			"Se o e-mail existir e ainda não estiver verificado, você receberá um novo link de confirmação.";
+			"Se este e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link de confirmação.";
 
 	private final UsuarioRepository usuarioRepository;
 	private final TokenVerificacaoEmailRepository tokenRepository;

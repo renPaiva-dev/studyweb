@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * UC18 — Esqueci/Redefinir senha. RN24: token de uso único, válido por 1h;
  * a resposta de {@link #solicitarRedefinicao(String)} é sempre a mesma
- * mensagem genérica, exista ou não o e-mail na base (evita enumeração de
+ * mensagem genérica, exista ou não o e-mail cadastrado (evita enumeração de
  * contas).
  */
 @Service
@@ -22,7 +22,7 @@ public class PasswordResetService {
 	private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
 	private static final long VALIDADE_HORAS = 1;
 	private static final String MENSAGEM_SOLICITACAO =
-			"Se o e-mail existir em nossa base, você receberá instruções de redefinição.";
+			"Se este e-mail estiver cadastrado, enviamos um link para redefinir sua senha.";
 
 	private final UsuarioRepository usuarioRepository;
 	private final TokenRedefinicaoSenhaRepository tokenRepository;

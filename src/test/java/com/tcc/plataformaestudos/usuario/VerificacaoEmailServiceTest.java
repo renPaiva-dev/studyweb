@@ -24,7 +24,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class VerificacaoEmailServiceTest {
 
 	private static final String MENSAGEM_REENVIO =
-			"Se o e-mail existir e ainda não estiver verificado, você receberá um novo link de confirmação.";
+			"Se este e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link de confirmação.";
 
 	@Mock
 	private UsuarioRepository usuarioRepository;

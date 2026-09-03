@@ -24,7 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 class PasswordResetServiceTest {
 
 	private static final String MENSAGEM_GENERICA =
-			"Se o e-mail existir em nossa base, você receberá instruções de redefinição.";
+			"Se este e-mail estiver cadastrado, enviamos um link para redefinir sua senha.";
 
 	@Mock
 	private UsuarioRepository usuarioRepository;

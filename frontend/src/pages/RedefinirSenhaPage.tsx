@@ -19,15 +19,21 @@ interface Erros {
 }
 
 // UC18 - Redefinir senha. POST /api/auth/redefinir-senha
-// (docs/contrato-api.md). O token normalmente chega por e-mail (RN24); como
-// nao ha envio real configurado por padrao (EmailService cai no log em
-// desenvolvimento), o campo aceita colar o token manualmente alem de vir
-// pre-preenchido via querystring (?token=...) se disponivel.
+// (docs/contrato-api.md). O fluxo normal e o usuario clicar no link do
+// e-mail (RN24) e cair aqui direto com ?token=... na URL - nesse caso o
+// token nunca aparece na tela, so o formulario de nova senha (mesma
+// experiencia de Google/GitHub/Dropbox: token grande e seguro, mas invisivel
+// pro usuario). O campo manual so existe como fallback para quando nao ha
+// token na URL - ex.: modo desenvolvimento, onde EmailService cai no log em
+// vez de enviar de verdade, e o usuario cola o token lido do log.
 export function RedefinirSenhaPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const [token, setToken] = useState(searchParams.get('token') ?? '')
+  const tokenDaUrl = searchParams.get('token')
+  const tokenVeioDoLink = Boolean(tokenDaUrl)
+
+  const [token, setToken] = useState(tokenDaUrl ?? '')
   const [novaSenha, setNovaSenha] = useState('')
   const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
@@ -81,22 +87,26 @@ export function RedefinirSenhaPage() {
             <KeyRound className="h-8 w-8" />
           </span>
           <CardTitle className="font-heading text-3xl">Redefinir senha</CardTitle>
-          <CardDescription>Informe o token recebido e a nova senha</CardDescription>
+          <CardDescription>
+            {tokenVeioDoLink ? 'Escolha sua nova senha' : 'Informe o token recebido e a nova senha'}
+          </CardDescription>
         </CardHeader>
         <form onSubmit={aoSubmeter} noValidate>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="token">Token</Label>
-              <Input
-                id="token"
-                className="h-10"
-                placeholder="Cole aqui o token recebido"
-                value={token}
-                onChange={(evento) => setToken(evento.target.value)}
-                aria-invalid={Boolean(erros.token)}
-              />
-              {erros.token && <p className="text-sm text-destructive">{erros.token}</p>}
-            </div>
+            {!tokenVeioDoLink && (
+              <div className="space-y-2">
+                <Label htmlFor="token">Token</Label>
+                <Input
+                  id="token"
+                  className="h-10"
+                  placeholder="Cole aqui o token recebido"
+                  value={token}
+                  onChange={(evento) => setToken(evento.target.value)}
+                  aria-invalid={Boolean(erros.token)}
+                />
+                {erros.token && <p className="text-sm text-destructive">{erros.token}</p>}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="novaSenha">Nova senha</Label>
               <Input

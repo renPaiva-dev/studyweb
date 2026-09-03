@@ -52,6 +52,40 @@ class RateLimitingFilterTest {
 	}
 
 	@Test
+	void devePermitirAteOLimiteEBloquearAsExcedentesNoCadastro() throws Exception {
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 5; i++) {
+			filtro.doFilterInternal(requisicao("POST", "/api/auth/cadastro", "203.0.113.20"), respostaMock(), chain);
+		}
+		verify(chain, times(5)).doFilter(any(), any());
+
+		HttpServletResponse resposta = respostaMock();
+		capturarCorpo(resposta);
+		filtro.doFilterInternal(requisicao("POST", "/api/auth/cadastro", "203.0.113.20"), resposta, chain);
+
+		verify(chain, times(5)).doFilter(any(), any());
+		verify(resposta).setStatus(429);
+	}
+
+	@Test
+	void deveLimitarReenvioDeVerificacaoDeEmailParaEvitarSpam() throws Exception {
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 5; i++) {
+			filtro.doFilterInternal(requisicao("POST", "/api/auth/reenviar-verificacao", "203.0.113.21"), respostaMock(), chain);
+		}
+		verify(chain, times(5)).doFilter(any(), any());
+
+		HttpServletResponse resposta = respostaMock();
+		capturarCorpo(resposta);
+		filtro.doFilterInternal(requisicao("POST", "/api/auth/reenviar-verificacao", "203.0.113.21"), resposta, chain);
+
+		verify(chain, times(5)).doFilter(any(), any());
+		verify(resposta).setStatus(429);
+	}
+
+	@Test
 	void naoDeveMisturarContadorDeIpsDiferentes() throws Exception {
 		FilterChain chain = mock(FilterChain.class);
 

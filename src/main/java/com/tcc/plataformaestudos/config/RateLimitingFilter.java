@@ -21,11 +21,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Rate limiting em janela fixa, em memória, para três grupos de rota sem
- * nenhum limite hoje: login (força bruta de senha), esqueci/redefinir senha
- * (spam de e-mail e geração de tokens) e os endpoints de geração via IA
- * (Gemini — chamada externa paga, sem limite hoje permite esgotar cota ou
- * gerar cobrança inesperada com um script simples).
+ * Rate limiting em janela fixa, em memória, para grupos de rota sem nenhum
+ * limite hoje: login (força bruta de senha), cadastro/esqueci-senha/
+ * redefinir-senha/verificar-email/reenviar-verificação (spam de e-mail e
+ * geração de tokens — reenviar-verificação em especial dispara um e-mail
+ * real para qualquer endereço informado, sem autenticação) e os endpoints
+ * de geração via IA (Gemini — chamada externa paga, sem limite hoje permite
+ * esgotar cota ou gerar cobrança inesperada com um script simples).
  *
  * Deliberadamente NÃO é {@code @Component}: é instanciado diretamente por
  * {@link SecurityConfig} e adicionado uma única vez à cadeia de filtros do
@@ -45,8 +47,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
 	private static final List<Regra> REGRAS = List.of(
 			new Regra("POST", "/api/auth/login", 10, 60_000, false),
+			new Regra("POST", "/api/auth/cadastro", 5, 60_000, false),
 			new Regra("POST", "/api/auth/esqueci-senha", 5, 60_000, false),
 			new Regra("POST", "/api/auth/redefinir-senha", 5, 60_000, false),
+			new Regra("POST", "/api/auth/verificar-email", 10, 60_000, false),
+			new Regra("POST", "/api/auth/reenviar-verificacao", 5, 60_000, false),
 			new Regra("POST", "/api/materiais/*/gerar-flashcards", 10, 60_000, true),
 			new Regra("POST", "/api/decks/*/quizzes", 10, 60_000, true),
 			new Regra("POST", "/api/decks/*/provas", 10, 60_000, true),
