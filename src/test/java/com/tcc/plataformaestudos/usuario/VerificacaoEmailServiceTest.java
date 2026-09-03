@@ -67,7 +67,7 @@ class VerificacaoEmailServiceTest {
 		verify(tokenRepository).save(tokenCaptor.capture());
 		assertThat(tokenCaptor.getValue().getUsuario()).isEqualTo(usuario);
 		assertThat(tokenCaptor.getValue().getToken()).isNotBlank();
-		assertThat(tokenCaptor.getValue().getExpiraEm()).isAfter(LocalDateTime.now().plusHours(23));
+		assertThat(tokenCaptor.getValue().getExpiraEm()).isAfter(LocalDateTime.now().plusMinutes(9));
 
 		verify(emailService).enviarEmail(eq("ana@email.com"), anyString(), anyString());
 	}

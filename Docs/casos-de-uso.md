@@ -326,12 +326,12 @@
 - **Ator:** Estudante
 - **Objetivo:** Confirmar a posse real do e-mail informado no cadastro.
 - **Fluxo principal:**
-  1. Ao se cadastrar, sistema gera token de verificação (24h) e envia por e-mail (ou loga em dev).
+  1. Ao se cadastrar, sistema gera token de verificação (10min) e envia por e-mail, com link clicável para a tela de confirmação (ou loga em dev).
   2. Estudante acessa o link/token.
   3. Sistema valida e marca `emailVerificado=true`.
   4. Estudante pode logar normalmente.
-- **Fluxos alternativos:** A1 — login antes de verificar → 403, com opção de reenviar token.
-- **Fluxos de exceção:** E1 — token inválido/expirado → mensagem clara.
+- **Fluxos alternativos:** A1 — login antes de verificar → 403, com opção de reenviar token (gera um novo token de 10min).
+- **Fluxos de exceção:** E1 — token inválido/expirado → mensagem clara. E2 — conta nunca confirmada dentro da janela de 10min: job periódico (a cada 5min) remove a conta assim que todos os tokens emitidos para ela expiram, liberando o e-mail/nomeUsuario para um novo cadastro (RN02/RN22 exigem unicidade).
 - **Regras relacionadas:** RN26
 
 ## UC22 — Excluir material de origem

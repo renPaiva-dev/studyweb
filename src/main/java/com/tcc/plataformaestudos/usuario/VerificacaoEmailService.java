@@ -12,10 +12,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * UC21 — Verificar e-mail de cadastro. RN26: toda conta criada permanece
  * com {@code emailVerificado=false} até confirmar a posse do e-mail via
- * token de uso único (24h) — {@link #enviarTokenVerificacao(Usuario)} é
+ * token de uso único (10min) — {@link #enviarTokenVerificacao(Usuario)} é
  * chamado por {@link UsuarioService#cadastrar(CadastroRequestDTO)} logo
  * após o cadastro. Mesmo padrão de {@link PasswordResetService} (UC18):
  * token UUID de uso único e uma única exceção de token inválido/expirado.
+ * Contas que nunca confirmam dentro da janela são removidas por
+ * {@link LimpezaContasNaoVerificadasService}, para não travar o e-mail/
+ * nomeUsuario de alguém que nunca voltou a confirmar (RN26).
  *
  * <p>{@link #reenviarVerificacao(String)} segue o mesmo raciocínio
  * anti-enumeração de RN24 (a resposta é sempre a mesma mensagem genérica,
@@ -27,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class VerificacaoEmailService {
 
 	private static final Logger log = LoggerFactory.getLogger(VerificacaoEmailService.class);
-	private static final long VALIDADE_HORAS = 24;
+	private static final long VALIDADE_MINUTOS = 10;
 	private static final String MENSAGEM_REENVIO =
 			"Se este e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link de confirmação.";
 
@@ -54,7 +57,7 @@ public class VerificacaoEmailService {
 		TokenVerificacaoEmail tokenVerificacao = new TokenVerificacaoEmail();
 		tokenVerificacao.setUsuario(usuario);
 		tokenVerificacao.setToken(token);
-		tokenVerificacao.setExpiraEm(LocalDateTime.now().plusHours(VALIDADE_HORAS));
+		tokenVerificacao.setExpiraEm(LocalDateTime.now().plusMinutes(VALIDADE_MINUTOS));
 		tokenRepository.save(tokenVerificacao);
 
 		log.info("Token de verificação de e-mail gerado: usuarioId={}", usuario.getId());
@@ -65,7 +68,7 @@ public class VerificacaoEmailService {
 		emailService.enviarEmail(
 				usuario.getEmail(),
 				"Confirme seu e-mail",
-				"Clique no link a seguir para confirmar seu e-mail (válido por 24 horas): " + link);
+				"Clique no link a seguir para confirmar seu e-mail (válido por 10 minutos): " + link);
 	}
 
 	@Transactional
