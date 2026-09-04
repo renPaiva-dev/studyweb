@@ -131,7 +131,7 @@ export function NovaProvaPage() {
 
     return (
       <div className="mx-auto max-w-2xl space-y-6">
-        <div className={cn('flex flex-col items-center gap-3 rounded-xl border py-10 text-center', cores.borda, cores.fundo)}>
+        <div className={cn('flex flex-col items-center gap-3 rounded-none border py-10 text-center', cores.borda, cores.fundo)}>
           <div className={cn('rounded-full p-4', cores.iconeFundo)}>
             <Icone className={cn('h-8 w-8', cores.icone)} />
           </div>
@@ -202,8 +202,8 @@ export function NovaProvaPage() {
           <ChevronLeft className="h-4 w-4" />
           Voltar para provas
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Nova prova</h1>
-        <p className="text-muted-foreground">Escolha os flashcards e o estilo — a IA cria questões inéditas sobre o tema</p>
+        <h1 className="mt-2 font-heading text-2xl font-semibold">Nova prova</h1>
+        <p className="text-muted-foreground">Escolha os flashcards e o estilo. A IA cria questões inéditas sobre o tema.</p>
       </div>
 
       <Card>
@@ -234,7 +234,7 @@ export function NovaProvaPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base font-semibold">2. Escolha os flashcards</CardTitle>
-            <CardDescription>As questões serão sobre o tema deles — inéditas, sem repetir pergunta/resposta</CardDescription>
+            <CardDescription>As questões serão sobre o tema deles, inéditas, sem repetir pergunta/resposta</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {carregandoFlashcards && (

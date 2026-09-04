@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { MaterialItem } from '@/components/MaterialItem'
 import { RevisaoSugestoesFlashcards } from '@/components/RevisaoSugestoesFlashcards'
 import { UploadMaterialArea } from '@/components/UploadMaterialArea'
+import { useDefinirMargem } from '@/context/MargemContext'
 
 const TAMANHO_MAXIMO_BYTES = 15 * 1024 * 1024
 
@@ -100,6 +101,26 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
     }
   }
 
+  const totalProcessados = materiais?.filter((material) => material.statusProcessamento === 'PROCESSADO').length ?? 0
+  const totalPendentes = materiais?.filter((material) => material.statusProcessamento === 'PENDENTE').length ?? 0
+  const totalComErro = materiais?.filter((material) => material.statusProcessamento === 'ERRO').length ?? 0
+
+  useDefinirMargem(
+    materiais && materiais.length > 0 ? (
+      <div className="space-y-1 text-sm">
+        <p className="font-heading text-2xl font-semibold">{materiais.length}</p>
+        <p className="text-muted-foreground">
+          {materiais.length === 1 ? 'material enviado' : 'materiais enviados'}
+          {totalPendentes > 0 && `, ${totalPendentes} em processamento`}
+          {totalComErro > 0 && `, ${totalComErro} com erro`}
+        </p>
+        {totalProcessados > 0 && <p className="text-verde-lousa">{totalProcessados} pronto{totalProcessados === 1 ? '' : 's'} para gerar flashcards</p>}
+      </div>
+    ) : null,
+    null,
+    [materiais?.length, totalProcessados, totalPendentes, totalComErro],
+  )
+
   if (sugestoesEmRevisao !== null) {
     return (
       <RevisaoSugestoesFlashcards
@@ -120,13 +141,13 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
 
       {materiais === null && erroCarregamento === null && (
         <div className="space-y-3">
-          <Skeleton className="h-16 w-full rounded-xl" />
-          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-none" />
+          <Skeleton className="h-16 w-full rounded-none" />
         </div>
       )}
 
       {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border py-10 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-none border py-10 text-center">
           <FileWarning className="h-6 w-6 text-muted-foreground" />
           <p className="text-muted-foreground">{erroCarregamento}</p>
           <Button variant="outline" size="sm" onClick={() => void carregarMateriais()}>

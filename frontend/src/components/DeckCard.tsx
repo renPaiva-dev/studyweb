@@ -24,6 +24,7 @@ interface DeckCardProps {
 export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) {
   return (
     <Card
+      interactive
       role="button"
       tabIndex={0}
       onClick={onAbrir}
@@ -32,7 +33,6 @@ export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) 
           onAbrir()
         }
       }}
-      className="cursor-pointer transition-shadow hover:shadow-md"
     >
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div className="min-w-0">

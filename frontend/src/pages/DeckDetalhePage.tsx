@@ -43,7 +43,7 @@ export function DeckDetalhePage() {
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
         <Button variant="outline" onClick={() => void carregarDeck()}>
           Tentar novamente
@@ -66,7 +66,7 @@ export function DeckDetalhePage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{deck.titulo}</h1>
+          <h1 className="font-heading text-2xl font-semibold">{deck.titulo}</h1>
           {deck.descricao && <p className="text-muted-foreground">{deck.descricao}</p>}
         </div>
         <Button variant="outline" onClick={() => setCompartilhando(true)}>

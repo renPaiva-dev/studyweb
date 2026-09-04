@@ -7,6 +7,7 @@ import { gerarQuiz, responderTentativa, type Quiz, type ResultadoTentativa } fro
 import { Button } from '@/components/ui/button'
 import { QuestaoQuizItem } from '@/components/QuestaoQuizItem'
 import { ResultadoQuiz } from '@/components/ResultadoQuiz'
+import { useDefinirMargem } from '@/context/MargemContext'
 
 interface QuizTabProps {
   deckId: number
@@ -63,13 +64,32 @@ export function QuizTab({ deckId }: QuizTabProps) {
     }
   }
 
+  const totalRespondidasParaMargem = quiz?.questoes.filter((questao) => respostas[questao.id] !== undefined).length ?? 0
+
+  useDefinirMargem(
+    quiz && resultado === null ? (
+      <div className="space-y-1 text-sm">
+        <p className="font-heading text-2xl font-semibold">
+          {totalRespondidasParaMargem}/{quiz.questoes.length}
+        </p>
+        <p className="text-muted-foreground">questões respondidas</p>
+      </div>
+    ) : null,
+    quiz && resultado === null ? (
+      <p className="text-center text-sm font-medium">
+        {totalRespondidasParaMargem}/{quiz.questoes.length} respondidas
+      </p>
+    ) : null,
+    [quiz, resultado, totalRespondidasParaMargem],
+  )
+
   if (resultado !== null) {
     return <ResultadoQuiz resultado={resultado} onNovoQuiz={() => void aoGerarQuiz()} />
   }
 
   if (quiz === null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border border-dashed py-16 text-center">
         <div className="rounded-full bg-primary/10 p-3">
           <HelpCircle className="h-6 w-6 text-primary" />
         </div>

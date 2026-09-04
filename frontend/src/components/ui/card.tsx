@@ -4,7 +4,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  "rounded-lg border bg-card text-card-foreground transition-colors duration-150",
+  // Cantos retos: o Card e a folha de papel em si, nao um painel flutuante
+  // (identidade "caderno" - ver tailwind.config.js, radius e usado so em
+  // controles interativos, nao em superficies de conteudo).
+  "rounded-none border bg-card text-card-foreground transition-colors duration-150",
   {
     variants: {
       // Opt-in para cards clicaveis (ex.: DeckCard) - a borda escurece no

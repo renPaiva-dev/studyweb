@@ -1,3 +1,4 @@
+import { ChevronLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,8 +10,9 @@ export function PoliticaDePrivacidadePage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-10">
       <div>
-        <Link to="/cadastro" className="text-sm font-medium text-primary hover:underline">
-          &larr; Voltar ao cadastro
+        <Link to="/cadastro" className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-primary">
+          <ChevronLeft className="h-4 w-4" />
+          Voltar ao cadastro
         </Link>
       </div>
 

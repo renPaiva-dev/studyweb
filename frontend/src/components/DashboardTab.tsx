@@ -10,6 +10,7 @@ import { DashboardAtividade } from '@/components/DashboardAtividade'
 import { DashboardEvolucao } from '@/components/DashboardEvolucao'
 import { DashboardTopicos } from '@/components/DashboardTopicos'
 import { IndicadorPercentual } from '@/components/IndicadorPercentual'
+import { useDefinirMargem } from '@/context/MargemContext'
 
 interface DashboardTabProps {
   deckId: number
@@ -37,19 +38,36 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
     void carregarDashboard()
   }, [carregarDashboard])
 
+  useDefinirMargem(
+    dashboard ? (
+      <div className="space-y-4 text-sm">
+        <div>
+          <p className="font-heading text-2xl font-semibold text-verde-lousa">{dashboard.percentualDominado}%</p>
+          <p className="text-muted-foreground">dominado</p>
+        </div>
+        <div>
+          <p className="font-heading text-2xl font-semibold text-vermelho-correcao">{dashboard.percentualEmRisco}%</p>
+          <p className="text-muted-foreground">em risco</p>
+        </div>
+      </div>
+    ) : null,
+    null,
+    [dashboard?.percentualDominado, dashboard?.percentualEmRisco],
+  )
+
   if (dashboard === null && erroCarregamento === null) {
     return (
       <div className="grid gap-4 sm:grid-cols-3">
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-none" />
+        <Skeleton className="h-32 w-full rounded-none" />
+        <Skeleton className="h-32 w-full rounded-none" />
       </div>
     )
   }
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
         <Button variant="outline" onClick={() => void carregarDashboard()}>
           Tentar novamente
@@ -79,18 +97,18 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
           icone={TrendingUp}
           titulo="Dominado"
           percentual={dashboard.percentualDominado}
-          corBarra="bg-emerald-500"
-          corTrilha="bg-emerald-100 dark:bg-emerald-950"
-          corIcone="text-emerald-600 dark:text-emerald-400"
+          corBarra="bg-verde-lousa"
+          corTrilha="bg-verde-lousa/10"
+          corIcone="text-verde-lousa"
         />
 
         <IndicadorPercentual
           icone={AlertTriangle}
           titulo="Em risco"
           percentual={dashboard.percentualEmRisco}
-          corBarra="bg-red-500"
-          corTrilha="bg-red-100 dark:bg-red-950"
-          corIcone="text-red-600 dark:text-red-400"
+          corBarra="bg-vermelho-correcao"
+          corTrilha="bg-vermelho-correcao/10"
+          corIcone="text-vermelho-correcao"
         />
       </div>
 

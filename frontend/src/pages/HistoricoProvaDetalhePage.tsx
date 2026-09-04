@@ -37,7 +37,7 @@ export function HistoricoProvaDetalhePage() {
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
         <Button variant="outline" onClick={() => void carregar()}>
           Tentar novamente
@@ -50,8 +50,8 @@ export function HistoricoProvaDetalhePage() {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-24 w-full rounded-xl" />
-        <Skeleton className="h-32 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-none" />
+        <Skeleton className="h-32 w-full rounded-none" />
       </div>
     )
   }
@@ -67,11 +67,11 @@ export function HistoricoProvaDetalhePage() {
           Voltar para provas
         </Link>
         <div className="mt-2 flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">{detalhe.titulo}</h1>
+          <h1 className="font-heading text-2xl font-semibold">{detalhe.titulo}</h1>
           {rotuloEstilo && <Badge variant="secondary">{rotuloEstilo}</Badge>}
         </div>
         <p className="text-muted-foreground">
-          {new Date(detalhe.dataTentativa).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })} ·{' '}
+          {new Date(detalhe.dataTentativa).toLocaleString('pt-BR', { dateStyle: 'long', timeStyle: 'short' })}, pontuação{' '}
           <span className={cn('font-semibold', corTexto)}>{detalhe.pontuacao}%</span>
         </p>
       </div>

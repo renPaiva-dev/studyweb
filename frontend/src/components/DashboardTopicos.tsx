@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
+import { CORES_DESEMPENHO } from '@/utils/coresDesempenho'
 
 interface DashboardTopicosProps {
   deckId: number
 }
 
-const COR_DOMINADO = '#10b981'
-const COR_EM_RISCO = '#ef4444'
+const { dominado: COR_DOMINADO, emRisco: COR_EM_RISCO } = CORES_DESEMPENHO
 const ALTURA_POR_TOPICO = 40
 
 // UC15/RN20/RN17 - detalhamento de % dominado/em risco por topico (extensao
@@ -53,7 +53,7 @@ export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
             </Button>
           </div>
         ) : topicos === null ? (
-          <Skeleton className="h-48 w-full rounded-lg" />
+          <Skeleton className="h-48 w-full" />
         ) : topicos.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Nenhum flashcard neste deck ainda.</p>
         ) : (
@@ -94,7 +94,7 @@ export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
                       const topico = payload[0].payload as TopicoDashboard
                       return (
                         <ChartTooltipContent
-                          titulo={`${topico.topico} · ${topico.totalFlashcards} flashcards`}
+                          titulo={`${topico.topico} (${topico.totalFlashcards} flashcards)`}
                           linhas={[
                             { rotulo: 'Dominado', valor: `${topico.percentualDominado}%`, cor: COR_DOMINADO },
                             { rotulo: 'Em risco', valor: `${topico.percentualEmRisco}%`, cor: COR_EM_RISCO },

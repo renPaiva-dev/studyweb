@@ -122,7 +122,7 @@ export function PerfilPage() {
 
     try {
       await enviarLembreteTeste()
-      toast.success('Lembrete enviado — confira seu e-mail (ou o log do backend, em ambiente sem SMTP configurado).')
+      toast.success('Lembrete enviado. Confira seu e-mail (ou o log do backend, em ambiente sem SMTP configurado).')
     } catch (erro) {
       toast.error(extrairMensagemErro(erro, 'Não foi possível enviar o lembrete de teste.'))
     } finally {
@@ -132,7 +132,7 @@ export function PerfilPage() {
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
         <Button variant="outline" onClick={() => void carregar()}>
           Tentar novamente
@@ -145,7 +145,7 @@ export function PerfilPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4">
         <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-none" />
       </div>
     )
   }
@@ -153,7 +153,7 @@ export function PerfilPage() {
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Meu perfil</h1>
+        <h1 className="font-heading text-2xl font-semibold">Meu perfil</h1>
         <p className="text-muted-foreground">Gerencie seus dados de conta</p>
       </div>
 

@@ -33,7 +33,7 @@ export function DashboardGeralPage() {
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border py-16 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
         <p className="text-muted-foreground">{erroCarregamento}</p>
         <Button variant="outline" onClick={() => void carregar()}>
           Tentar novamente
@@ -47,9 +47,9 @@ export function DashboardGeralPage() {
       <div className="space-y-6">
         <Skeleton className="h-8 w-1/3" />
         <div className="grid gap-4 sm:grid-cols-3">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-none" />
+          <Skeleton className="h-32 w-full rounded-none" />
+          <Skeleton className="h-32 w-full rounded-none" />
         </div>
       </div>
     )
@@ -58,7 +58,7 @@ export function DashboardGeralPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Visão geral</h1>
+        <h1 className="font-heading text-2xl font-semibold">Visão geral</h1>
         <p className="text-muted-foreground">Seu progresso consolidado em todos os decks</p>
       </div>
 
@@ -76,7 +76,7 @@ export function DashboardGeralPage() {
 
         <Card>
           <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-            <Flame className="h-4 w-4 text-coral-500" />
+            <Flame className="h-4 w-4 text-verde-lousa" />
             <CardTitle className="text-sm font-medium text-muted-foreground">Sequência de estudo</CardTitle>
           </CardHeader>
           <CardContent>
@@ -106,18 +106,18 @@ export function DashboardGeralPage() {
           icone={TrendingUp}
           titulo="Dominado (geral)"
           percentual={dashboard.percentualDominadoGeral}
-          corBarra="bg-emerald-500"
-          corTrilha="bg-emerald-100 dark:bg-emerald-950"
-          corIcone="text-emerald-600 dark:text-emerald-400"
+          corBarra="bg-verde-lousa"
+          corTrilha="bg-verde-lousa/10"
+          corIcone="text-verde-lousa"
         />
 
         <IndicadorPercentual
           icone={AlertTriangle}
           titulo="Em risco (geral)"
           percentual={dashboard.percentualEmRiscoGeral}
-          corBarra="bg-red-500"
-          corTrilha="bg-red-100 dark:bg-red-950"
-          corIcone="text-red-600 dark:text-red-400"
+          corBarra="bg-vermelho-correcao"
+          corTrilha="bg-vermelho-correcao/10"
+          corIcone="text-vermelho-correcao"
         />
       </div>
 

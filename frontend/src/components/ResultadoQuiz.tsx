@@ -16,7 +16,7 @@ export function ResultadoQuiz({ resultado, onNovoQuiz }: ResultadoQuizProps) {
   const { icone: Icone, cores } = classificarPontuacao(resultado.pontuacao)
 
   return (
-    <div className={cn('flex flex-col items-center gap-3 rounded-xl border py-16 text-center', cores.borda, cores.fundo)}>
+    <div className={cn('flex flex-col items-center gap-3 rounded-none border py-16 text-center', cores.borda, cores.fundo)}>
       <div className={cn('rounded-full p-4', cores.iconeFundo)}>
         <Icone className={cn('h-8 w-8', cores.icone)} />
       </div>

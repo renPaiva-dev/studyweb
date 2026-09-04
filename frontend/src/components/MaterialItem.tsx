@@ -71,7 +71,7 @@ export function MaterialItem({ material, onSugestoesGeradas, onExcluido }: Mater
   }
 
   return (
-    <div className="rounded-xl border p-4">
+    <div className="rounded-none border p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />

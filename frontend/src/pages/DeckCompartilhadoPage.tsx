@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom'
 import { extrairMensagemErro } from '@/api/apiError'
 import { buscarDeckCompartilhado, type DeckCompartilhado } from '@/api/compartilhamentoApi'
 import { FlashcardEstudoCard } from '@/components/FlashcardEstudoCard'
-import { ThemeToggleButton } from '@/components/ThemeToggleButton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -45,23 +44,20 @@ export function DeckCompartilhadoPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 px-4 py-8">
-      <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="gap-1">
-          <Layers className="h-3 w-3" />
-          Deck compartilhado
-        </Badge>
-        <ThemeToggleButton />
-      </div>
+      <Badge variant="secondary" className="w-fit gap-1">
+        <Layers className="h-3 w-3" />
+        Deck compartilhado
+      </Badge>
 
       {deck === null && erro === null && (
         <div className="space-y-4">
           <Skeleton className="h-8 w-2/3" />
-          <Skeleton className="h-80 w-full rounded-2xl" />
+          <Skeleton className="h-80 w-full" />
         </div>
       )}
 
       {erro !== null && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border py-16 text-center">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-none border py-16 text-center">
           <p className="text-muted-foreground">{erro}</p>
         </div>
       )}
@@ -69,7 +65,7 @@ export function DeckCompartilhadoPage() {
       {deck !== null && (
         <div className="space-y-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{deck.titulo}</h1>
+            <h1 className="font-heading text-2xl font-semibold">{deck.titulo}</h1>
             {deck.descricao && <p className="text-muted-foreground">{deck.descricao}</p>}
           </div>
 

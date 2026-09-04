@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { ESCALA_AVALIACAO } from '@/utils/coresDesempenho'
 
 interface AvaliacaoRevisaoBotoesProps {
   onAvaliar: (qualidade: number) => void
@@ -6,15 +6,17 @@ interface AvaliacaoRevisaoBotoesProps {
 }
 
 // UC08 - avaliacao da propria resposta em escala 0-5, que alimenta o
-// recalculo SM-2 (UC09/RN09). Cores graduais (vermelho -> verde) do
-// indicio visual imediato de "errei" a "acertei com facilidade".
+// recalculo SM-2 (UC09/RN09). A escala de cor (Vermelho-correção ->
+// Verde-lousa, ver ESCALA_AVALIACAO) da o indicio visual imediato de
+// "errei" a "acertei com facilidade", sem introduzir matizes fora da
+// paleta aprovada.
 const OPCOES = [
-  { valor: 0, rotulo: 'Não lembrei', classes: 'bg-red-600 text-white hover:bg-red-700' },
-  { valor: 1, rotulo: 'Errei', classes: 'bg-orange-500 text-white hover:bg-orange-600' },
-  { valor: 2, rotulo: 'Quase', classes: 'bg-amber-400 text-amber-950 hover:bg-amber-500' },
-  { valor: 3, rotulo: 'Com esforço', classes: 'bg-yellow-400 text-yellow-950 hover:bg-yellow-500' },
-  { valor: 4, rotulo: 'Bom', classes: 'bg-lime-500 text-lime-950 hover:bg-lime-600' },
-  { valor: 5, rotulo: 'Fácil', classes: 'bg-green-600 text-white hover:bg-green-700' },
+  { valor: 0, rotulo: 'Não lembrei' },
+  { valor: 1, rotulo: 'Errei' },
+  { valor: 2, rotulo: 'Quase' },
+  { valor: 3, rotulo: 'Com esforço' },
+  { valor: 4, rotulo: 'Bom' },
+  { valor: 5, rotulo: 'Fácil' },
 ] as const
 
 export function AvaliacaoRevisaoBotoes({ onAvaliar, desabilitado }: AvaliacaoRevisaoBotoesProps) {
@@ -28,10 +30,8 @@ export function AvaliacaoRevisaoBotoes({ onAvaliar, desabilitado }: AvaliacaoRev
             type="button"
             disabled={desabilitado}
             onClick={() => onAvaliar(opcao.valor)}
-            className={cn(
-              'flex flex-col items-center gap-0.5 rounded-lg px-2 py-3 transition-colors disabled:pointer-events-none disabled:opacity-50',
-              opcao.classes,
-            )}
+            style={{ backgroundColor: ESCALA_AVALIACAO[opcao.valor] }}
+            className="flex flex-col items-center gap-0.5 px-2 py-3 text-papel transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
           >
             <span className="text-lg font-bold leading-none">{opcao.valor}</span>
             <span className="text-[11px] leading-tight">{opcao.rotulo}</span>

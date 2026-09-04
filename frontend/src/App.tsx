@@ -4,7 +4,6 @@ import { Layout } from '@/components/Layout'
 import { RotaProtegida } from '@/components/RotaProtegida'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/context/AuthContext'
-import { ThemeProvider } from '@/context/ThemeContext'
 import { CadastroPage } from '@/pages/CadastroPage'
 import { DashboardGeralPage } from '@/pages/DashboardGeralPage'
 import { DeckCompartilhadoPage } from '@/pages/DeckCompartilhadoPage'
@@ -24,38 +23,36 @@ import { VerificarEmailPage } from '@/pages/VerificarEmailPage'
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/cadastro" element={<CadastroPage />} />
-            <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
-            <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
-            <Route path="/verificar-email" element={<VerificarEmailPage />} />
-            <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
-            <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidadePage />} />
-            <Route path="/compartilhado/:token" element={<DeckCompartilhadoPage />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/cadastro" element={<CadastroPage />} />
+          <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+          <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
+          <Route path="/verificar-email" element={<VerificarEmailPage />} />
+          <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
+          <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidadePage />} />
+          <Route path="/compartilhado/:token" element={<DeckCompartilhadoPage />} />
 
-            <Route element={<RotaProtegida />}>
-              <Route element={<Layout />}>
-                <Route path="/" element={<InicioPage />} />
-                <Route path="/decks" element={<DecksPage />} />
-                <Route path="/decks/:id" element={<DeckDetalhePage />} />
-                <Route path="/dashboard-geral" element={<DashboardGeralPage />} />
-                <Route path="/provas" element={<ProvasPage />} />
-                <Route path="/provas/nova" element={<NovaProvaPage />} />
-                <Route path="/provas/:id" element={<HistoricoProvaDetalhePage />} />
-                <Route path="/perfil" element={<PerfilPage />} />
-              </Route>
+          <Route element={<RotaProtegida />}>
+            <Route element={<Layout />}>
+              <Route path="/" element={<InicioPage />} />
+              <Route path="/decks" element={<DecksPage />} />
+              <Route path="/decks/:id" element={<DeckDetalhePage />} />
+              <Route path="/dashboard-geral" element={<DashboardGeralPage />} />
+              <Route path="/provas" element={<ProvasPage />} />
+              <Route path="/provas/nova" element={<NovaProvaPage />} />
+              <Route path="/provas/:id" element={<HistoricoProvaDetalhePage />} />
+              <Route path="/perfil" element={<PerfilPage />} />
             </Route>
+          </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster />
-      </AuthProvider>
-    </ThemeProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+      <Toaster />
+    </AuthProvider>
   )
 }
 

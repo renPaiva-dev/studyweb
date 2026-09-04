@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ThemeToggleButton } from '@/components/ThemeToggleButton'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -47,16 +46,12 @@ export function EsqueciSenhaPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#FCF8EF] px-4 dark:bg-background">
-      <div className="absolute right-4 top-4 z-10">
-        <ThemeToggleButton />
-      </div>
-
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
       <AuthBackgroundDecor />
 
-      <Card className="relative w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 border-t-4 border-t-primary shadow-xl duration-500">
+      <Card className="relative w-full max-w-sm border-t-4 border-t-primary">
         <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-coral-300/30">
+          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-manilha/40">
             <KeyRound className="h-8 w-8" />
           </span>
           <CardTitle className="font-heading text-3xl">Esqueci minha senha</CardTitle>

@@ -35,7 +35,7 @@ export function ProvasPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Provas</h1>
+          <h1 className="font-heading text-2xl font-semibold">Provas</h1>
           <p className="text-muted-foreground">Gere provas personalizadas com IA e acompanhe seu histórico</p>
         </div>
         <Button onClick={() => navigate('/provas/nova')}>
@@ -46,14 +46,14 @@ export function ProvasPage() {
 
       {historico === null && erroCarregamento === null && (
         <div className="space-y-3">
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <Skeleton className="h-20 w-full rounded-xl" />
+          <Skeleton className="h-20 w-full rounded-none" />
+          <Skeleton className="h-20 w-full rounded-none" />
+          <Skeleton className="h-20 w-full rounded-none" />
         </div>
       )}
 
       {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-4 rounded-xl border py-16 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-none border py-16 text-center">
           <p className="text-muted-foreground">{erroCarregamento}</p>
           <Button variant="outline" onClick={() => void carregar()}>
             Tentar novamente
@@ -62,14 +62,14 @@ export function ProvasPage() {
       )}
 
       {historico !== null && historico.length === 0 && (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed py-20 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-none border border-dashed py-20 text-center">
           <div className="rounded-full bg-primary/10 p-4">
             <ClipboardList className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-1">
             <p className="font-medium">Você ainda não fez nenhuma prova</p>
             <p className="text-sm text-muted-foreground">
-              Selecione flashcards de um deck e um estilo — a IA gera questões inéditas para você praticar
+              Selecione flashcards de um deck e um estilo. A IA gera questões inéditas para você praticar.
             </p>
           </div>
           <Button onClick={() => navigate('/provas/nova')}>

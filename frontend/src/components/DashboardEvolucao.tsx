@@ -62,14 +62,14 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base font-semibold">Evolução do desempenho</CardTitle>
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
+        <div className="flex gap-1 bg-muted p-1">
           {PERIODOS.map((opcao) => (
             <Button
               key={opcao.valor}
               type="button"
               size="sm"
               variant="ghost"
-              className={cn('h-7 px-2 text-xs', periodo === opcao.valor && 'bg-background shadow-sm')}
+              className={cn('h-7 px-2 text-xs', periodo === opcao.valor && 'bg-background')}
               onClick={() => setPeriodo(opcao.valor)}
             >
               {opcao.rotulo}
@@ -86,7 +86,7 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
             </Button>
           </div>
         ) : pontos === null ? (
-          <Skeleton className="h-56 w-full rounded-lg" />
+          <Skeleton className="h-56 w-full" />
         ) : dados.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             Nenhuma revisão registrada neste período.
@@ -94,9 +94,8 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Média de qualidade: <span className="font-semibold text-foreground">{mediaGeral?.toFixed(2)}</span>
-              {' · '}
-              Total de revisões: <span className="font-semibold text-foreground">{totalRevisoesNoPeriodo}</span>
+              Média de qualidade <span className="font-semibold text-foreground">{mediaGeral?.toFixed(2)}</span> em{' '}
+              <span className="font-semibold text-foreground">{totalRevisoesNoPeriodo}</span> revisões no período
             </p>
 
             <div className="h-40 w-full">

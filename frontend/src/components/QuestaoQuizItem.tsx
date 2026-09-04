@@ -35,16 +35,14 @@ export function QuestaoQuizItem({ questao, numero, respostaSelecionada, onSeleci
               disabled={desabilitado}
               onClick={() => onSelecionar(alternativa)}
               className={cn(
-                'flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors disabled:pointer-events-none disabled:opacity-50',
-                selecionada
-                  ? 'border-brand-600 bg-brand-50 text-brand-900 dark:bg-brand-950/40 dark:text-brand-200'
-                  : 'hover:bg-accent',
+                'flex w-full items-center gap-2 border px-3 py-2 text-left text-sm transition-colors disabled:pointer-events-none disabled:opacity-50',
+                selecionada ? 'border-foreground bg-accent text-foreground' : 'hover:bg-accent',
               )}
             >
               <span
                 className={cn(
                   'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                  selecionada ? 'border-brand-600 bg-brand-600 text-white' : 'border-input',
+                  selecionada ? 'border-foreground bg-foreground text-background' : 'border-input',
                 )}
               >
                 {selecionada && <Check className="h-3 w-3" />}

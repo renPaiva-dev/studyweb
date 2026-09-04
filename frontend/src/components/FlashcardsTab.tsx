@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ExcluirFlashcardDialog } from '@/components/ExcluirFlashcardDialog'
 import { FlashcardFormDialog } from '@/components/FlashcardFormDialog'
 import { FlashcardItem } from '@/components/FlashcardItem'
+import { useDefinirMargem } from '@/context/MargemContext'
 
 interface FlashcardsTabProps {
   deckId: number
@@ -49,6 +50,22 @@ export function FlashcardsTab({ deckId }: FlashcardsTabProps) {
     setDialogAberto(true)
   }
 
+  const totalIA = flashcards?.filter((flashcard) => flashcard.origem === 'IA').length ?? 0
+  const totalManual = flashcards?.filter((flashcard) => flashcard.origem === 'MANUAL').length ?? 0
+
+  useDefinirMargem(
+    flashcards && flashcards.length > 0 ? (
+      <div className="space-y-1 text-sm">
+        <p className="font-heading text-2xl font-semibold">{flashcards.length}</p>
+        <p className="text-muted-foreground">
+          {totalIA} da IA, {totalManual} manual{totalManual === 1 ? '' : 'is'}
+        </p>
+      </div>
+    ) : null,
+    null,
+    [flashcards?.length, totalIA, totalManual],
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -63,13 +80,13 @@ export function FlashcardsTab({ deckId }: FlashcardsTabProps) {
 
       {flashcards === null && erroCarregamento === null && (
         <div className="space-y-3">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-none" />
+          <Skeleton className="h-24 w-full rounded-none" />
         </div>
       )}
 
       {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border py-10 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-none border py-10 text-center">
           <p className="text-muted-foreground">{erroCarregamento}</p>
           <Button variant="outline" size="sm" onClick={() => void carregarFlashcards()}>
             Tentar novamente
@@ -78,7 +95,7 @@ export function FlashcardsTab({ deckId }: FlashcardsTabProps) {
       )}
 
       {flashcards !== null && flashcards.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+        <div className="flex flex-col items-center gap-3 rounded-none border border-dashed py-16 text-center">
           <div className="rounded-full bg-primary/10 p-3">
             <Layers className="h-6 w-6 text-primary" />
           </div>

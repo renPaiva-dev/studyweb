@@ -70,7 +70,7 @@ export function DashboardAtividade({ deckId }: DashboardAtividadeProps) {
             </Button>
           </div>
         ) : flashcardsMaisRevisados === null ? (
-          <Skeleton className="h-48 w-full rounded-lg" />
+          <Skeleton className="h-48 w-full" />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2">
             <div>

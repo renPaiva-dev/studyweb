@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,74 +6,59 @@
 
 @layer base {
   :root {
-    /* Neutro de verdade (sem tingimento de matiz) - a cor de marca (violeta)
-       so aparece onde e usada com intencao (acao primaria, foco, nav ativo),
-       nunca diluida no fundo/borda/hover geral. */
-    --background: 0 0% 99%;
-    --foreground: 222.2 47.4% 11.2%;
+    /* Identidade "caderno ativamente corrigido" - paleta fixa, tema unico
+       (sem modo escuro: a metafora de papel fisico nao tem variante
+       "escura"). Ver Docs/ para a paleta hexadecimal de referencia. */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
+    /* Papel */
+    --background: 43 30% 91%;
+    --foreground: 221 39% 19%; /* Tinta */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
+    /* Superficies de conteudo ficam na mesma cor do fundo (Papel) - sem
+       elevacao, sem sombra: o Card e a propria folha, nao um painel
+       flutuante por cima dela. */
+    --card: 43 30% 91%;
+    --card-foreground: 221 39% 19%;
 
-    /* Violeta - cor primaria da marca (identico ao brand-600 abaixo). Uso
-       restrito a acao primaria/foco/estado ativo - ver --accent abaixo. */
-    --primary: 262 83% 58%;
-    --primary-foreground: 0 0% 100%;
+    --popover: 43 30% 95%;
+    --popover-foreground: 221 39% 19%;
 
-    --secondary: 0 0% 95%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Tinta como cor de acao primaria - botao vira "carimbo de tinta"
+       (fundo Tinta, texto Papel). */
+    --primary: 221 39% 19%;
+    --primary-foreground: 43 30% 96%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 45%;
+    --secondary: 40 24% 85%;
+    --secondary-foreground: 221 39% 19%;
 
-    /* Hover/estado neutro generico (menu items, ghost buttons) - antes era
-       igual a --primary, o que tingia de violeta qualquer hover no app. */
-    --accent: 0 0% 94%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --muted: 40 24% 87%;
+    --muted-foreground: 37 9% 38%; /* Grafite */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    /* Hover neutro com leve tingimento de Manilha - nunca a cor de acao. */
+    --accent: 36 35% 83%;
+    --accent-foreground: 221 39% 19%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 262 83% 58%;
+    /* Vermelho-correcao - reservado a erro/atencao real (RN da spec de
+       identidade visual: nunca decorativo). */
+    --destructive: 9 61% 44%;
+    --destructive-foreground: 43 30% 96%;
 
-    /* Raio contido - nada sobe de nivel (Card usava rounded-2xl); a unica
-       excecao fica para modais/dialogs, que ja usam sm:rounded-lg direto. */
-    --radius: 0.5rem;
-  }
+    /* Verde-lousa - reservado a confirmacao/progresso real. */
+    --positivo: 148 28% 33%;
+    --positivo-foreground: 43 30% 96%;
 
-  .dark {
-    --background: 224 20% 6%;
-    --foreground: 210 40% 98%;
+    /* Manilha - toda borda/divisor do app, fina (1px). */
+    --border: 36 40% 65%;
+    --input: 36 40% 65%;
+    --ring: 221 39% 19%; /* Tinta - foco de teclado visivel sobre Papel */
 
-    --card: 224 16% 9%;
-    --card-foreground: 210 40% 98%;
+    /* Fundo da coluna de margem (anotacao) - Papel um pouco mais escuro que
+       o fundo principal, para parecer uma folha fixa ao lado da leitura. */
+    --papel-margem: 40 26% 86%;
 
-    --popover: 224 16% 9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 262 83% 65%;
-    --primary-foreground: 224 20% 6%;
-
-    --secondary: 220 10% 16%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 220 10% 16%;
-    --muted-foreground: 220 8% 65%;
-
-    --accent: 220 10% 20%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 50.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 220 10% 18%;
-    --input: 220 10% 18%;
-    --ring: 262 83% 65%;
+    /* Raio unico, pequeno, usado com moderacao (ver tailwind.config.js:
+       so em controles interativos - botao/input/badge/dialogo). */
+    --radius: 0.25rem;
   }
 
   * {
@@ -82,5 +67,17 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Sequencia de entrada orquestrada (motion, secao 4 da spec): so acontece
+     uma vez por navegacao de modulo, nunca em hover/scroll. Desativada por
+     completo para quem pede menos movimento. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-caderno-entrada,
+    .animate-caderno-entrada-margem,
+    .animate-shimmer {
+      animation: none !important;
+      transform: none !important;
+    }
   }
 }

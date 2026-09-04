@@ -2,13 +2,13 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import type { RankingDeck } from '@/api/usuarioApi'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
+import { CORES_DESEMPENHO } from '@/utils/coresDesempenho'
 
 interface RankingDecksChartProps {
   decks: RankingDeck[]
 }
 
-const COR_DOMINADO = '#10b981'
-const COR_EM_RISCO = '#ef4444'
+const { dominado: COR_DOMINADO, emRisco: COR_EM_RISCO } = CORES_DESEMPENHO
 const ALTURA_POR_DECK = 40
 
 // UC20/RN25 - ranking de decks por desempenho (% dominado/em risco),

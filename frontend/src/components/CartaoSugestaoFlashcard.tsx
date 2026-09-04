@@ -30,18 +30,13 @@ export function CartaoSugestaoFlashcard({ sugestao, onAtualizar, onDescartar }: 
   return (
     <div
       className={cn(
-        'space-y-3 rounded-xl border-2 border-dashed p-4 transition-colors',
-        sugestao.aceita && 'border-solid border-emerald-400 bg-emerald-50/60 dark:border-emerald-700 dark:bg-emerald-950/20',
+        'space-y-3 rounded-none border-2 border-dashed border-manilha p-4 transition-colors',
+        sugestao.aceita && 'border-solid border-verde-lousa bg-verde-lousa/5',
       )}
     >
       <Badge
         variant="outline"
-        className={cn(
-          'gap-1',
-          sugestao.aceita
-            ? 'border-emerald-400 text-emerald-700 dark:text-emerald-400'
-            : 'border-amber-400 text-amber-700 dark:text-amber-400',
-        )}
+        className={cn('gap-1', sugestao.aceita ? 'border-verde-lousa text-verde-lousa' : 'border-manilha text-muted-foreground')}
       >
         <Sparkles className="h-3 w-3" />
         {sugestao.aceita ? 'Aceita' : 'Sugestão pendente'}

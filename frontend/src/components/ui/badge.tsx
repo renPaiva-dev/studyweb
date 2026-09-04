@@ -9,18 +9,19 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
+          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
-        // Coral solido - conquista/sucesso (ex.: dominado, PROCESSADO).
-        success:
-          "border-transparent bg-coral-400 text-white shadow hover:bg-coral-500",
-        // Ambar solido - risco/pendente (nunca marca ou sucesso).
-        warning:
-          "border-transparent bg-amber-500 text-white shadow hover:bg-amber-600",
+        // Verde-lousa solido - confirmacao/progresso real (ex.: dominado, PROCESSADO).
+        positivo:
+          "border-transparent bg-positivo text-positivo-foreground hover:bg-positivo/90",
+        // Neutro tracejado - ainda nao corrigido/confirmado (ex.: PENDENTE,
+        // sugestao da IA aguardando revisao). Nunca uma cor de alarme.
+        pendente:
+          "border-dashed border-manilha bg-transparent text-muted-foreground",
       },
     },
     defaultVariants: {

@@ -1,6 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ['class'],
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     container: {
@@ -12,67 +11,34 @@ export default {
     },
     extend: {
       fontFamily: {
-        // Manrope como fonte padrao do corpo (carregada via Google Fonts em index.css).
-        sans: ['Manrope', 'system-ui', 'sans-serif'],
-        // Space Grotesk para titulos de pagina - quebra a monotonia
-        // tipografica do corpo (identidade visual "energetico e gamificado").
-        heading: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        // IBM Plex Sans e Fraunces (Google Fonts, ver index.css) - identidade
+        // "caderno ativamente corrigido": corpo/UI em Plex Sans, titulos de
+        // modulo/boas-vindas/conquista em Fraunces (serifada, editorial).
+        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        heading: ['Fraunces', 'Georgia', 'serif'],
       },
       fontSize: {
-        // Escala de display para titulos de pagina (font-heading) - a
-        // hierarquia principal do produto vem de peso tipografico, nao de
-        // caixas/sombras. "display" e o h1 padrao de toda tela.
-        display: ['2.25rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
-        'display-lg': ['3.5rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
-        // Rotulo pequeno em uppercase (letter-spacing) - recurso editorial
-        // para marcar secoes sem precisar de mais uma caixa/cartao.
-        eyebrow: ['0.6875rem', { lineHeight: '1rem', letterSpacing: '0.08em', fontWeight: '600' }],
+        // Escala de titulo de modulo/pagina (font-heading) - hierarquia por
+        // peso/tamanho tipografico, nunca por CAIXA ALTA.
+        display: ['2.25rem', { lineHeight: '1.15', letterSpacing: '-0.01em', fontWeight: '600' }],
+        'display-lg': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.01em', fontWeight: '600' }],
+        // Rotulo pequeno de secao - peso/tracking discreto, NUNCA uppercase.
+        eyebrow: ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.02em', fontWeight: '600' }],
       },
       colors: {
-        // Paleta positiva/conquista: coral-laranja (#FB923C = coral-400),
-        // usado para streak/dominado/sucesso - nunca para marca ou erro.
-        coral: {
-          DEFAULT: '#fb923c',
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-          950: '#431407',
-        },
-        // Paleta da marca: indigo (primaria) e violet (destaque IA/sucesso),
-        // com tons 50-950 para dark mode futuro mesmo sem implementa-lo agora.
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
-        },
-        ia: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
-        },
+        // Paleta fixa da identidade "caderno ativamente corrigido" (ver
+        // Docs/ - spec de identidade visual). Uso literal reservado a pontos
+        // que nao podem consumir tokens HSL (ex.: cores de series do
+        // Recharts em src/utils/coresDesempenho.ts) - o resto do app usa os
+        // tokens semanticos abaixo (background/foreground/primary/...),
+        // remapeados para esta mesma paleta em index.css.
+        tinta: '#1E2A44',
+        papel: '#EFEBE1',
+        'verde-lousa': '#3C6B52',
+        'vermelho-correcao': '#B3402C',
+        grafite: '#6B6459',
+        manilha: '#C9AD82',
+
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -106,16 +72,19 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        positivo: {
+          DEFAULT: 'hsl(var(--positivo))',
+          foreground: 'hsl(var(--positivo-foreground))',
+        },
+        'papel-margem': 'hsl(var(--papel-margem))',
       },
       borderRadius: {
+        // Um valor so, usado com moderacao em controles interativos
+        // (botao/input/badge/dialogo). Superficies de conteudo (Card, a
+        // margem) ficam com cantos retos - ver componentes correspondentes.
         lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-      },
-      boxShadow: {
-        subtle: '0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 3px 0 rgb(0 0 0 / 0.06)',
-        // Glow coral para conquistas/sucesso (streak, dominado) em fases futuras.
-        'glow-coral': '0 8px 20px -4px rgb(251 146 60 / 0.35)',
+        md: 'var(--radius)',
+        sm: 'var(--radius)',
       },
       keyframes: {
         'accordion-down': {
@@ -130,11 +99,20 @@ export default {
           from: { transform: 'translateX(-100%)' },
           to: { transform: 'translateX(100%)' },
         },
+        // Sequencia de entrada orquestrada (conceito "caderno corrigido"):
+        // conteudo aparece primeiro, a margem "escreve" logo em seguida via
+        // animation-delay na classe que a usa. Ver Layout.tsx/EstudarTab.tsx.
+        'caderno-entrada': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         shimmer: 'shimmer 1.8s ease-in-out infinite',
+        'caderno-entrada': 'caderno-entrada 0.4s ease-out both',
+        'caderno-entrada-margem': 'caderno-entrada 0.4s ease-out .25s both',
       },
     },
   },

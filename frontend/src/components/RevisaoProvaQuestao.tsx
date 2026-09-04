@@ -12,10 +12,11 @@ interface RevisaoProvaQuestaoProps {
 // UC27/UC28/RN36 - revisao de uma questao ja respondida: mostra a
 // alternativa correta, a escolhida (quando errada) e a explicacao. Usado
 // tanto na tela de resultado (logo apos responder) quanto no detalhe do
-// historico de provas.
+// historico de provas. Verde-lousa/Vermelho-correção aqui sao a propria
+// metafora de "correção" da identidade visual, não decorativos.
 export function RevisaoProvaQuestao({ questao, numero }: RevisaoProvaQuestaoProps) {
   return (
-    <Card className={cn(questao.correta ? 'border-emerald-200 dark:border-emerald-900' : 'border-red-200 dark:border-red-900')}>
+    <Card className={cn(questao.correta ? 'border-verde-lousa/30' : 'border-vermelho-correcao/30')}>
       <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
         <p className="font-medium">
           <span className="text-muted-foreground">{numero}. </span>
@@ -23,10 +24,8 @@ export function RevisaoProvaQuestao({ questao, numero }: RevisaoProvaQuestaoProp
         </p>
         <span
           className={cn(
-            'flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
-            questao.correta
-              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+            'flex shrink-0 items-center gap-1 px-2 py-0.5 text-xs font-medium',
+            questao.correta ? 'bg-verde-lousa/10 text-verde-lousa' : 'bg-vermelho-correcao/10 text-vermelho-correcao',
           )}
         >
           {questao.correta ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
@@ -43,15 +42,19 @@ export function RevisaoProvaQuestao({ questao, numero }: RevisaoProvaQuestaoProp
               <div
                 key={indice}
                 className={cn(
-                  'flex items-center gap-2 rounded-lg border px-3 py-2 text-sm',
-                  ehCorreta && 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
-                  !ehCorreta && ehEscolhida && 'border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
+                  'flex items-center gap-2 border px-3 py-2 text-sm',
+                  ehCorreta && 'border-verde-lousa bg-verde-lousa/5 text-foreground',
+                  !ehCorreta && ehEscolhida && 'border-vermelho-correcao bg-vermelho-correcao/5 text-foreground',
                 )}
               >
                 <span
                   className={cn(
                     'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
-                    ehCorreta ? 'border-emerald-600 bg-emerald-600 text-white' : ehEscolhida ? 'border-red-600 bg-red-600 text-white' : 'border-input',
+                    ehCorreta
+                      ? 'border-verde-lousa bg-verde-lousa text-papel'
+                      : ehEscolhida
+                        ? 'border-vermelho-correcao bg-vermelho-correcao text-papel'
+                        : 'border-input',
                   )}
                 >
                   {ehCorreta && <Check className="h-3 w-3" />}
@@ -65,7 +68,7 @@ export function RevisaoProvaQuestao({ questao, numero }: RevisaoProvaQuestaoProp
         </div>
 
         {questao.explicacao && (
-          <div className="flex gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          <div className="flex gap-2 bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p>{questao.explicacao}</p>
           </div>

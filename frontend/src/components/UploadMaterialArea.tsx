@@ -42,7 +42,7 @@ export function UploadMaterialArea({ enviando, onArquivoSelecionado }: UploadMat
         if (!enviando) selecionarArquivo(evento.dataTransfer.files[0])
       }}
       className={cn(
-        'flex flex-col items-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors',
+        'flex flex-col items-center gap-2 rounded-none border-2 border-dashed p-8 text-center transition-colors',
         enviando ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-primary/50 hover:bg-primary/5',
         arrastando && 'border-primary bg-primary/5',
       )}
