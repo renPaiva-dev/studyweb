@@ -56,7 +56,7 @@ class MaterialOrigemServiceTest {
 	@BeforeEach
 	void configurar() {
 		materialOrigemService = new MaterialOrigemService(
-				materialOrigemRepository, deckService, pdfTextExtractorService, tempDir.toString());
+				materialOrigemRepository, deckService, pdfTextExtractorService, new ArquivoFisicoService(), tempDir.toString());
 
 		UsuarioAutenticado principal = new UsuarioAutenticado(USUARIO_ID, "ana@email.com");
 		var authentication = new UsernamePasswordAuthenticationToken(principal, null, List.of());
@@ -120,6 +120,51 @@ class MaterialOrigemServiceTest {
 
 		verifyNoInteractions(pdfTextExtractorService);
 		verify(materialOrigemRepository, never()).save(any());
+	}
+
+	/**
+	 * B3: nome_arquivo é varchar(255) no banco, mas nada validava o tamanho
+	 * do nome original antes de salvar o arquivo em disco e tentar o INSERT
+	 * — um nome > 255 caracteres derrubava o upload com
+	 * DataIntegrityViolationException (500) e deixava o arquivo já salvo em
+	 * disco como órfão. Precisa ser rejeitado ANTES de qualquer gravação.
+	 */
+	@Test
+	void deveRejeitarArquivoComNomeMaiorQue255Caracteres() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+
+		String nomeMuitoLongo = "a".repeat(252) + ".pdf";
+		assertThat(nomeMuitoLongo).hasSize(256);
+		MockMultipartFile arquivo = new MockMultipartFile(
+				"arquivo", nomeMuitoLongo, "application/pdf", "%PDF-1.4\nconteudo-fake".getBytes(StandardCharsets.UTF_8));
+
+		assertThatThrownBy(() -> materialOrigemService.enviarPdf(DECK_ID, arquivo))
+				.isInstanceOf(ArquivoInvalidoException.class);
+
+		verifyNoInteractions(pdfTextExtractorService);
+		verify(materialOrigemRepository, never()).save(any());
+	}
+
+	@Test
+	void deveAceitarArquivoComNomeDeExatamente255Caracteres() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+
+		String nomeNoLimite = "a".repeat(251) + ".pdf";
+		assertThat(nomeNoLimite).hasSize(255);
+		MockMultipartFile arquivo = new MockMultipartFile(
+				"arquivo", nomeNoLimite, "application/pdf", "%PDF-1.4\nconteudo-fake".getBytes(StandardCharsets.UTF_8));
+
+		when(pdfTextExtractorService.extrairTexto(any(File.class)))
+				.thenReturn("Texto extraído com conteúdo suficiente para passar da validação mínima de caracteres.");
+		when(materialOrigemRepository.save(any(MaterialOrigem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		MaterialOrigemResponseDTO resposta = materialOrigemService.enviarPdf(DECK_ID, arquivo);
+
+		assertThat(resposta.nomeArquivo()).isEqualTo(nomeNoLimite);
 	}
 
 	@Test

@@ -5,23 +5,27 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
+import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
@@ -78,6 +82,18 @@ class RevisaoServiceTest {
 		return revisao;
 	}
 
+	/** B8 — registro de revisão associado a um flashcard específico, para os testes de {@code findByFlashcardIdIn}. */
+	private RevisaoFlashcard revisaoDeFlashcard(Flashcard flashcard, LocalDateTime dataRevisao, LocalDate proximaRevisao) {
+		RevisaoFlashcard revisao = new RevisaoFlashcard();
+		revisao.setFlashcard(flashcard);
+		revisao.setDataRevisao(dataRevisao);
+		revisao.setFatorFacilidade(new BigDecimal("2.50"));
+		revisao.setIntervaloDias(1);
+		revisao.setRepeticoes(1);
+		revisao.setProximaRevisao(proximaRevisao);
+		return revisao;
+	}
+
 	@Test
 	void deveRetornarFilaDeEstudoOrdenadaPelosMaisAtrasadosPrimeiro() {
 		Flashcard flashcardAtrasado5Dias = flashcardComId(1L);
@@ -88,17 +104,21 @@ class RevisaoServiceTest {
 		when(revisaoFlashcardRepository.findFlashcardsPendentesDeRevisao(eq(DECK_ID), any(LocalDate.class)))
 				.thenReturn(List.of(flashcardAtrasado5Dias, flashcardAtrasado2Dias, flashcardNuncaEstudado));
 
-		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(1L))
-				.thenReturn(Optional.of(revisaoComEstado(new BigDecimal("2.50"), 5, 1, LocalDate.now().minusDays(5))));
-		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(2L))
-				.thenReturn(Optional.of(revisaoComEstado(new BigDecimal("2.50"), 2, 1, LocalDate.now().minusDays(2))));
-		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(3L))
-				.thenReturn(Optional.empty());
+		RevisaoFlashcard revisaoFlashcard1 = revisaoDeFlashcard(
+				flashcardAtrasado5Dias, LocalDateTime.now().minusDays(6), LocalDate.now().minusDays(5));
+		RevisaoFlashcard revisaoFlashcard2 = revisaoDeFlashcard(
+				flashcardAtrasado2Dias, LocalDateTime.now().minusDays(3), LocalDate.now().minusDays(2));
+		when(revisaoFlashcardRepository.findByFlashcardIdIn(List.of(1L, 2L, 3L)))
+				.thenReturn(List.of(revisaoFlashcard1, revisaoFlashcard2));
 
 		List<FilaEstudoItemDTO> fila = revisaoService.obterFilaDeEstudo(DECK_ID, false);
 
 		assertThat(fila).extracting(FilaEstudoItemDTO::flashcardId)
 				.containsExactly(3L, 1L, 2L);
+
+		// B8 — a ordenação busca todas as revisões de uma vez (findByFlashcardIdIn),
+		// nunca uma query por comparação do sort.
+		verify(revisaoFlashcardRepository, never()).findFirstByFlashcardIdOrderByDataRevisaoDesc(any());
 	}
 
 	@Test
@@ -119,8 +139,7 @@ class RevisaoServiceTest {
 
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(new Deck());
 		when(flashcardRepository.findByDeckId(DECK_ID)).thenReturn(List.of(flashcard1, flashcard2));
-		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(1L)).thenReturn(Optional.empty());
-		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(2L)).thenReturn(Optional.empty());
+		when(revisaoFlashcardRepository.findByFlashcardIdIn(List.of(1L, 2L))).thenReturn(List.of());
 
 		List<FilaEstudoItemDTO> fila = revisaoService.obterFilaDeEstudo(DECK_ID, true);
 
@@ -132,6 +151,7 @@ class RevisaoServiceTest {
 	void devePersistirPrimeiraRevisaoUsandoEstadoInicialQuandoNaoHaHistorico() {
 		Flashcard flashcard = flashcardComId(FLASHCARD_ID);
 		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcard);
+		when(flashcardRepository.findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID)).thenReturn(Optional.of(flashcard));
 		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(FLASHCARD_ID)).thenReturn(Optional.empty());
 
 		EstadoRevisao novoEstado = new EstadoRevisao(new BigDecimal("2.60"), 1, 1);
@@ -156,6 +176,7 @@ class RevisaoServiceTest {
 	void deveRecuperarEstadoAnteriorCorretamenteEmRevisaoSubsequente() {
 		Flashcard flashcard = flashcardComId(FLASHCARD_ID);
 		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcard);
+		when(flashcardRepository.findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID)).thenReturn(Optional.of(flashcard));
 
 		RevisaoFlashcard ultimaRevisao = revisaoComEstado(new BigDecimal("2.60"), 6, 2, LocalDate.now());
 		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(FLASHCARD_ID)).thenReturn(Optional.of(ultimaRevisao));
@@ -184,6 +205,47 @@ class RevisaoServiceTest {
 				.isInstanceOf(AcessoNegadoException.class);
 
 		verify(sm2CalculatorService, never()).calcularNovoEstado(any(), anyInt());
+		verify(flashcardRepository, never()).findByIdParaAtualizacaoDeRevisao(any());
+	}
+
+	/**
+	 * B9 — avaliarResposta precisa travar a linha do flashcard (lock
+	 * pessimista) ANTES de ler o estado anterior do SM-2, para serializar
+	 * avaliações concorrentes do mesmo flashcard. Concorrência real não é
+	 * testável num teste unitário; o que se verifica aqui é que o método de
+	 * repository com lock é de fato chamado, e chamado antes da leitura do
+	 * último estado.
+	 */
+	@Test
+	void deveTravarLinhaDoFlashcardAntesDeLerEstadoAnteriorAoAvaliarResposta() {
+		Flashcard flashcard = flashcardComId(FLASHCARD_ID);
+		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcard);
+		when(flashcardRepository.findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID)).thenReturn(Optional.of(flashcard));
+		when(revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(FLASHCARD_ID)).thenReturn(Optional.empty());
+		when(sm2CalculatorService.calcularNovoEstado(EstadoRevisao.inicial(), 5))
+				.thenReturn(new EstadoRevisao(new BigDecimal("2.60"), 1, 1));
+		when(revisaoFlashcardRepository.save(any(RevisaoFlashcard.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+		revisaoService.avaliarResposta(FLASHCARD_ID, new AvaliarRespostaRequestDTO(5));
+
+		verify(flashcardRepository).findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID);
+
+		InOrder ordem = inOrder(flashcardRepository, revisaoFlashcardRepository);
+		ordem.verify(flashcardRepository).findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID);
+		ordem.verify(revisaoFlashcardRepository).findFirstByFlashcardIdOrderByDataRevisaoDesc(FLASHCARD_ID);
+	}
+
+	@Test
+	void deveLancarExcecaoAoAvaliarRespostaQuandoFlashcardNaoForMaisEncontradoAoTravarALinha() {
+		Flashcard flashcard = flashcardComId(FLASHCARD_ID);
+		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcard);
+		when(flashcardRepository.findByIdParaAtualizacaoDeRevisao(FLASHCARD_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> revisaoService.avaliarResposta(FLASHCARD_ID, new AvaliarRespostaRequestDTO(5)))
+				.isInstanceOf(RecursoNaoEncontradoException.class);
+
+		verify(sm2CalculatorService, never()).calcularNovoEstado(any(), anyInt());
+		verify(revisaoFlashcardRepository, never()).save(any());
 	}
 
 }

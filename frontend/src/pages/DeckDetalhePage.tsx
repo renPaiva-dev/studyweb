@@ -80,7 +80,12 @@ export function DeckDetalhePage() {
         onOpenChange={(open) => setCompartilhando(open)}
       />
 
-      <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+      {/* key={deckId} forca remontagem completa de todas as abas ao trocar de
+          deck (mesmo padrao de `key` por rota usado em Layout.tsx) - sem isso,
+          nenhuma aba reseta seu estado nem descarta respostas de requisicao
+          em voo de um deck anterior ao navegar rapido entre decks (achados
+          F0/F5/F6/F7 da auditoria). */}
+      <Tabs key={deckId} value={abaAtiva} onValueChange={setAbaAtiva}>
         <TabsList>
           <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>

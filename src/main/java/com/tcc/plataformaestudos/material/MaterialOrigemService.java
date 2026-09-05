@@ -43,20 +43,24 @@ public class MaterialOrigemService {
 	private static final String EXTENSAO_PDF = ".pdf";
 	private static final long TAMANHO_MAXIMO_BYTES = 15L * 1024 * 1024;
 	private static final byte[] ASSINATURA_PDF = "%PDF-".getBytes(StandardCharsets.US_ASCII);
+	private static final int TAMANHO_MAXIMO_NOME_ARQUIVO = 255;
 
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final DeckService deckService;
 	private final PdfTextExtractorService pdfTextExtractorService;
+	private final ArquivoFisicoService arquivoFisicoService;
 	private final Path diretorioUpload;
 
 	public MaterialOrigemService(
 			MaterialOrigemRepository materialOrigemRepository,
 			DeckService deckService,
 			PdfTextExtractorService pdfTextExtractorService,
+			ArquivoFisicoService arquivoFisicoService,
 			@Value("${app.upload.dir}") String diretorioUpload) {
 		this.materialOrigemRepository = materialOrigemRepository;
 		this.deckService = deckService;
 		this.pdfTextExtractorService = pdfTextExtractorService;
+		this.arquivoFisicoService = arquivoFisicoService;
 		this.diretorioUpload = Path.of(diretorioUpload);
 	}
 
@@ -105,6 +109,11 @@ public class MaterialOrigemService {
 
 		if (!extensaoValida) {
 			throw new ArquivoInvalidoException("Apenas arquivos PDF são aceitos");
+		}
+
+		if (nomeOriginal.length() > TAMANHO_MAXIMO_NOME_ARQUIVO) {
+			throw new ArquivoInvalidoException(
+					"O nome do arquivo excede o tamanho máximo de " + TAMANHO_MAXIMO_NOME_ARQUIVO + " caracteres");
 		}
 
 		if (arquivo.getSize() > TAMANHO_MAXIMO_BYTES) {
@@ -172,18 +181,9 @@ public class MaterialOrigemService {
 	public void excluir(Long materialId) {
 		MaterialOrigem material = buscarMaterialDoUsuarioAutenticado(materialId);
 
-		excluirArquivoFisico(material);
+		arquivoFisicoService.excluir(material);
 		materialOrigemRepository.delete(material);
 		log.info("Material excluído: materialId={}", materialId);
-	}
-
-	private void excluirArquivoFisico(MaterialOrigem material) {
-		try {
-			Files.deleteIfExists(Path.of(material.getCaminhoArquivo()));
-		} catch (IOException e) {
-			log.error("Falha ao remover o arquivo físico do material (registro será removido mesmo assim): materialId={}",
-					material.getId(), e);
-		}
 	}
 
 	/**

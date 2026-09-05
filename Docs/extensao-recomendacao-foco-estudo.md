@@ -90,23 +90,28 @@ existentes de `DashboardServiceTest` continuam passando sem alteração.
 diretamente (é uma interface `Repository` pública, sem motivo para não
 reaproveitar) e chama `CriterioDesempenhoFlashcard.estaEmRisco(...)`.
 
-## 3. Nota técnica sobre `GeminiClient` (dívida pré-existente, não introduzida por esta spec)
+## 3. Nota técnica sobre `GeminiClient` — RESOLVIDA (auditoria 2026-09, achado B10)
 
-`GeminiClient.gerarConteudo(...)` lança `GeracaoFlashcardsException`
-diretamente em qualquer falha de infraestrutura (status HTTP ≠ 200, erro de
-I/O, resposta sem texto) — está *hardcoded* para essa exceção específica,
-mesmo sendo reaproveitado por `ProvaGenerationService` (que só embrulha em
-`GeracaoProvaException` o erro de **parse do JSON**, não o de infra — ou
-seja, hoje uma falha de rede na geração de prova já escapa como
-`GeracaoFlashcardsException`, um bug pequeno e pré-existente, fora do
-escopo desta spec). O novo `RecomendacaoEstudoService` **vai herdar o mesmo
-comportamento**: uma falha de infraestrutura do Gemini chega como
-`GeracaoFlashcardsException`, não como a exceção nova deste service. Como
-ambas mapeiam para 502 via `NegocioException`, o comportamento observável
-no contrato de API (502) continua correto — é só a mensagem/log que fica
-menos precisa. Documentar essa limitação no código (comentário), não tentar
-consertar o `GeminiClient` dentro desta tarefa (mudaria comportamento de
-duas features já prontas e testadas sem necessidade).
+Esta seção documentava uma dívida pré-existente: `GeminiClient.gerarConteudo(...)`
+lançava `GeracaoFlashcardsException` diretamente em qualquer falha de
+infraestrutura (status HTTP ≠ 200, erro de I/O, resposta sem texto), mesmo
+sendo reaproveitado por outros services — então o `gerarComRetry` de
+`ProvaGenerationService`/`RecomendacaoEstudoService`/`ExplicacaoService` só
+capturava a exceção **específica** do próprio fluxo (erro de parse do
+JSON/resposta vazia), nunca a falha de infra vinda do `GeminiClient`, então
+o retry de até 2 tentativas nunca era acionado para o caso mais comum na
+prática (rede/cota/timeout).
+
+**Corrigido** (ver `Docs/auditoria-erros-2026-09.md`, achado B10):
+`GeminiClient` agora lança uma exceção base `GeracaoConteudoIAException`
+(502) em todo ponto de falha de infraestrutura, e `GeracaoFlashcardsException`,
+`GeracaoProvaException`, `GeracaoExplicacaoException` e
+`GeracaoRecomendacaoException` passaram a estendê-la. Os quatro services
+(`FlashcardGenerationService`, `ProvaGenerationService`, `ExplicacaoService`,
+`RecomendacaoEstudoService`) capturam `GeracaoConteudoIAException` no
+`gerarComRetry`, cobrindo infra e JSON malformado igualmente — inclusive o
+`RecomendacaoEstudoService` desta spec, que já nasceu contemplado pela
+correção. Ver `Docs/integracao-ia.md` para o fluxo atualizado.
 
 ## 4. Modelo de dados
 

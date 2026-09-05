@@ -33,8 +33,8 @@ function notaAvaliacao(qualidade: number): { texto: string; cor: string } {
 
 // UC07 - fila diaria de estudo (GET /api/decks/{id}/fila-estudo, RN10: so
 // flashcards com proxima_revisao <= hoje ou primeira revisao). Se a fila
-// vier vazia, o estudante pode optar por "Revisar mesmo assim" (RN22),
-// que busca o deck inteiro ignorando RN10 - as revisoes geradas continuam
+// vier vazia, o estudante pode optar por "Revisar mesmo assim", que busca
+// o deck inteiro ignorando o filtro de RN10 - as revisoes geradas continuam
 // reais, pelo mesmo UC08/UC09. UC08 - avaliacao da resposta 0-5 (POST
 // /api/flashcards/{id}/revisoes), que aciona o recalculo SM-2 no backend
 // (UC09). Avanca automaticamente para o proximo item da fila apos cada

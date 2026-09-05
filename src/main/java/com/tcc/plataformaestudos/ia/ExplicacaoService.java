@@ -61,24 +61,23 @@ public class ExplicacaoService {
 	}
 
 	private String gerarComRetry(Long flashcardId, boolean ancoradaNoMaterial, String prompt) {
-		GeracaoExplicacaoException ultimaFalha = null;
+		// B10: captura GeracaoConteudoIAException (não só GeracaoExplicacaoException)
+		// para que o retry cubra tanto falha de infraestrutura do GeminiClient
+		// (timeout, rate limit, chave inválida, rede) quanto resposta em branco.
+		GeracaoConteudoIAException ultimaFalha = null;
 
 		for (int tentativa = 1; tentativa <= MAXIMO_TENTATIVAS; tentativa++) {
 			log.info("Chamando API de IA para explicação de flashcard: flashcardId={}, ancoradaNoMaterial={}, tentativa={}",
 					flashcardId, ancoradaNoMaterial, tentativa);
 
 			try {
-				// Nota: geminiClient.gerarConteudo pode lançar GeracaoFlashcardsException
-				// (não GeracaoExplicacaoException) em falha de infraestrutura — mesma
-				// dívida pré-existente do GeminiClient já documentada em
-				// Docs/extensao-recomendacao-foco-estudo.md §3. Ainda mapeia para 502.
 				String textoGerado = geminiClient.gerarConteudo(prompt);
 				String explicacao = validarResposta(textoGerado);
 
 				log.info("Explicação de flashcard concluída: flashcardId={}, ancoradaNoMaterial={}, tentativa={}, status=SUCESSO",
 						flashcardId, ancoradaNoMaterial, tentativa);
 				return explicacao;
-			} catch (GeracaoExplicacaoException e) {
+			} catch (GeracaoConteudoIAException e) {
 				ultimaFalha = e;
 				log.warn("Tentativa {} de gerar explicação falhou: flashcardId={}, status=FALHA, motivo={}",
 						tentativa, flashcardId, e.getMessage());

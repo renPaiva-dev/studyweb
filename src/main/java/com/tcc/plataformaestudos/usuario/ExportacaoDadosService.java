@@ -19,6 +19,8 @@ import com.tcc.plataformaestudos.quiz.QuestaoQuiz;
 import com.tcc.plataformaestudos.quiz.QuestaoQuizRepository;
 import com.tcc.plataformaestudos.quiz.Quiz;
 import com.tcc.plataformaestudos.quiz.QuizRepository;
+import com.tcc.plataformaestudos.quiz.RespostaTentativaQuiz;
+import com.tcc.plataformaestudos.quiz.RespostaTentativaQuizRepository;
 import com.tcc.plataformaestudos.quiz.TentativaQuiz;
 import com.tcc.plataformaestudos.quiz.TentativaQuizRepository;
 import com.tcc.plataformaestudos.revisao.RevisaoFlashcard;
@@ -49,12 +51,18 @@ public class ExportacaoDadosService {
 	private final QuizRepository quizRepository;
 	private final QuestaoQuizRepository questaoQuizRepository;
 	private final TentativaQuizRepository tentativaQuizRepository;
+	private final RespostaTentativaQuizRepository respostaTentativaQuizRepository;
 
 	@Transactional(readOnly = true)
 	public ExportacaoDadosDTO exportarDados() {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 		Usuario usuario = usuarioRepository.findById(usuarioId)
-				.orElseThrow(() -> new IllegalStateException("Usuário autenticado não encontrado: id=" + usuarioId));
+				.orElseThrow(() -> {
+					// B17/RN32: token ainda válido, mas a conta já foi excluída —
+					// cenário esperado, não um erro de infraestrutura (WARN, não ERROR).
+					log.warn("Token válido para usuário já excluído: usuarioId={}", usuarioId);
+					return new UsuarioNaoEncontradoException(usuarioId);
+				});
 
 		List<Deck> decks = deckRepository.findByUsuarioId(usuarioId);
 		List<Long> deckIds = decks.stream().map(Deck::getId).toList();
@@ -77,12 +85,22 @@ public class ExportacaoDadosService {
 		List<Long> quizIds = quizzes.stream().map(Quiz::getId).toList();
 		Map<Long, List<QuestaoQuiz>> questoesPorQuiz = buscarEmLote(quizIds, questaoQuizRepository::findByQuizIdIn)
 				.stream().collect(Collectors.groupingBy(q -> q.getQuiz().getId()));
-		Map<Long, List<TentativaQuiz>> tentativasPorQuiz = buscarEmLote(quizIds, tentativaQuizRepository::findByQuizIdIn)
-				.stream().collect(Collectors.groupingBy(t -> t.getQuiz().getId()));
+
+		List<TentativaQuiz> tentativas = buscarEmLote(quizIds, tentativaQuizRepository::findByQuizIdIn);
+		Map<Long, List<TentativaQuiz>> tentativasPorQuiz = tentativas.stream()
+				.collect(Collectors.groupingBy(t -> t.getQuiz().getId()));
+
+		// B16: respostas por questão (RN36) de todas as tentativas, numa única
+		// consulta em lote (mesmo padrão das demais coleções acima) — antes,
+		// ExportacaoDadosService nunca buscava RespostaTentativaQuiz.
+		List<Long> tentativaIds = tentativas.stream().map(TentativaQuiz::getId).toList();
+		Map<Long, List<RespostaTentativaQuiz>> respostasPorTentativa =
+				buscarEmLote(tentativaIds, respostaTentativaQuizRepository::buscarComQuestaoPorTentativas)
+						.stream().collect(Collectors.groupingBy(r -> r.getTentativa().getId()));
 
 		List<DeckExportadoDTO> decksExportados = decks.stream()
 				.map(deck -> montarDeckExportado(deck, materiaisPorDeck, flashcardsPorDeck, revisoesPorFlashcard,
-						quizzesPorDeck, questoesPorQuiz, tentativasPorQuiz))
+						quizzesPorDeck, questoesPorQuiz, tentativasPorQuiz, respostasPorTentativa))
 				.toList();
 
 		log.info("Exportação de dados gerada: usuarioId={}, totalDecks={}", usuarioId, decks.size());
@@ -101,7 +119,8 @@ public class ExportacaoDadosService {
 			Map<Long, List<RevisaoFlashcard>> revisoesPorFlashcard,
 			Map<Long, List<Quiz>> quizzesPorDeck,
 			Map<Long, List<QuestaoQuiz>> questoesPorQuiz,
-			Map<Long, List<TentativaQuiz>> tentativasPorQuiz) {
+			Map<Long, List<TentativaQuiz>> tentativasPorQuiz,
+			Map<Long, List<RespostaTentativaQuiz>> respostasPorTentativa) {
 
 		List<MaterialExportadoDTO> materiais = materiaisPorDeck.getOrDefault(deck.getId(), List.of()).stream()
 				.map(m -> new MaterialExportadoDTO(m.getId(), m.getNomeArquivo(), m.getStatusProcessamento(), m.getCriadoEm()))
@@ -118,12 +137,17 @@ public class ExportacaoDadosService {
 
 		List<QuizExportadoDTO> quizzesExportados = quizzesPorDeck.getOrDefault(deck.getId(), List.of()).stream()
 				.map(q -> new QuizExportadoDTO(
-						q.getId(), q.getTitulo(), q.getCriadoEm(),
+						q.getId(), q.getTitulo(), q.getOrigem(), q.getEstilo(), q.getCriadoEm(),
 						questoesPorQuiz.getOrDefault(q.getId(), List.of()).stream()
-								.map(qq -> new QuestaoExportadaDTO(qq.getId(), qq.getEnunciado(), qq.getAlternativas(), qq.getRespostaCorreta()))
+								.map(qq -> new QuestaoExportadaDTO(
+										qq.getId(), qq.getEnunciado(), qq.getAlternativas(), qq.getRespostaCorreta(), qq.getExplicacao()))
 								.toList(),
 						tentativasPorQuiz.getOrDefault(q.getId(), List.of()).stream()
-								.map(t -> new TentativaExportadaDTO(t.getId(), t.getDataTentativa(), t.getPontuacao()))
+								.map(t -> new TentativaExportadaDTO(t.getId(), t.getDataTentativa(), t.getPontuacao(),
+										respostasPorTentativa.getOrDefault(t.getId(), List.of()).stream()
+												.map(r -> new RespostaExportadaDTO(
+														r.getId(), r.getQuestao().getEnunciado(), r.getAlternativaEscolhida(), r.isCorreta()))
+												.toList()))
 								.toList()))
 				.toList();
 

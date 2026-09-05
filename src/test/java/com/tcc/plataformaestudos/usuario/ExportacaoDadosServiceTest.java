@@ -1,6 +1,7 @@
 package com.tcc.plataformaestudos.usuario;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,10 +22,14 @@ import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 import com.tcc.plataformaestudos.flashcard.OrigemFlashcard;
 import com.tcc.plataformaestudos.quiz.AlternativaQuiz;
+import com.tcc.plataformaestudos.quiz.EstiloProva;
+import com.tcc.plataformaestudos.quiz.OrigemQuiz;
 import com.tcc.plataformaestudos.quiz.QuestaoQuiz;
 import com.tcc.plataformaestudos.quiz.QuestaoQuizRepository;
 import com.tcc.plataformaestudos.quiz.Quiz;
 import com.tcc.plataformaestudos.quiz.QuizRepository;
+import com.tcc.plataformaestudos.quiz.RespostaTentativaQuiz;
+import com.tcc.plataformaestudos.quiz.RespostaTentativaQuizRepository;
 import com.tcc.plataformaestudos.quiz.TentativaQuiz;
 import com.tcc.plataformaestudos.quiz.TentativaQuizRepository;
 import com.tcc.plataformaestudos.revisao.RevisaoFlashcard;
@@ -67,6 +72,9 @@ class ExportacaoDadosServiceTest {
 	@Autowired
 	private TentativaQuizRepository tentativaQuizRepository;
 
+	@Autowired
+	private RespostaTentativaQuizRepository respostaTentativaQuizRepository;
+
 	private ExportacaoDadosService exportacaoDadosService;
 
 	@AfterEach
@@ -80,10 +88,15 @@ class ExportacaoDadosServiceTest {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 	}
 
+	private ExportacaoDadosService criarService() {
+		return new ExportacaoDadosService(usuarioRepository, deckRepository, materialOrigemRepository,
+				flashcardRepository, revisaoFlashcardRepository, quizRepository, questaoQuizRepository,
+				tentativaQuizRepository, respostaTentativaQuizRepository);
+	}
+
 	@Test
 	void deveExportarPerfilDecksFlashcardsRevisoesQuizzesQuestoesETentativasDoUsuarioAutenticado() {
-		exportacaoDadosService = new ExportacaoDadosService(usuarioRepository, deckRepository, materialOrigemRepository,
-				flashcardRepository, revisaoFlashcardRepository, quizRepository, questaoQuizRepository, tentativaQuizRepository);
+		exportacaoDadosService = criarService();
 
 		Usuario usuario = new Usuario();
 		usuario.setNome("Estudante Exportacao");
@@ -117,7 +130,9 @@ class ExportacaoDadosServiceTest {
 
 		Quiz quiz = new Quiz();
 		quiz.setDeck(deck);
-		quiz.setTitulo("Quiz de Cardiologia");
+		quiz.setTitulo("Prova de Cardiologia");
+		quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
+		quiz.setEstilo(EstiloProva.ENEM);
 		entityManager.persist(quiz);
 
 		QuestaoQuiz questao = new QuestaoQuiz();
@@ -125,6 +140,7 @@ class ExportacaoDadosServiceTest {
 		questao.setEnunciado("Qual a frequência normal de repouso?");
 		questao.setRespostaCorreta("60-100 bpm");
 		questao.setAlternativas(List.of(new AlternativaQuiz("60-100 bpm", true), new AlternativaQuiz("150-200 bpm", false)));
+		questao.setExplicacao("A frequência cardíaca normal de repouso de um adulto fica entre 60 e 100 bpm.");
 		entityManager.persist(questao);
 
 		TentativaQuiz tentativa = new TentativaQuiz();
@@ -132,6 +148,14 @@ class ExportacaoDadosServiceTest {
 		tentativa.setUsuario(usuario);
 		tentativa.setPontuacao(new BigDecimal("90.00"));
 		entityManager.persist(tentativa);
+
+		// B16: RespostaTentativaQuiz não era exportada antes desta correção.
+		RespostaTentativaQuiz respostaTentativa = new RespostaTentativaQuiz();
+		respostaTentativa.setTentativa(tentativa);
+		respostaTentativa.setQuestao(questao);
+		respostaTentativa.setAlternativaEscolhida("60-100 bpm");
+		respostaTentativa.setCorreta(true);
+		entityManager.persist(respostaTentativa);
 
 		entityManager.flush();
 		entityManager.clear();
@@ -149,14 +173,25 @@ class ExportacaoDadosServiceTest {
 		assertThat(deckExportado.flashcards().get(0).revisoes()).hasSize(1);
 		assertThat(deckExportado.flashcards().get(0).topico()).isEqualTo("Arritmias");
 		assertThat(deckExportado.quizzes()).hasSize(1);
-		assertThat(deckExportado.quizzes().get(0).questoes()).hasSize(1);
-		assertThat(deckExportado.quizzes().get(0).tentativas()).hasSize(1);
+
+		QuizExportadoDTO quizExportado = deckExportado.quizzes().get(0);
+		assertThat(quizExportado.origem()).isEqualTo(OrigemQuiz.IA_PERSONALIZADA);
+		assertThat(quizExportado.estilo()).isEqualTo(EstiloProva.ENEM);
+		assertThat(quizExportado.questoes()).hasSize(1);
+		assertThat(quizExportado.questoes().get(0).explicacao())
+				.isEqualTo("A frequência cardíaca normal de repouso de um adulto fica entre 60 e 100 bpm.");
+
+		assertThat(quizExportado.tentativas()).hasSize(1);
+		TentativaExportadaDTO tentativaExportada = quizExportado.tentativas().get(0);
+		assertThat(tentativaExportada.respostas()).hasSize(1);
+		assertThat(tentativaExportada.respostas().get(0).alternativaEscolhida()).isEqualTo("60-100 bpm");
+		assertThat(tentativaExportada.respostas().get(0).correta()).isTrue();
+		assertThat(tentativaExportada.respostas().get(0).enunciadoQuestao()).isEqualTo("Qual a frequência normal de repouso?");
 	}
 
 	@Test
 	void deveExportarEstruturaVaziaMasValidaQuandoUsuarioNaoTemNenhumDado() {
-		exportacaoDadosService = new ExportacaoDadosService(usuarioRepository, deckRepository, materialOrigemRepository,
-				flashcardRepository, revisaoFlashcardRepository, quizRepository, questaoQuizRepository, tentativaQuizRepository);
+		exportacaoDadosService = criarService();
 
 		Usuario usuario = new Usuario();
 		usuario.setNome("Sem Dados");
@@ -173,6 +208,17 @@ class ExportacaoDadosServiceTest {
 
 		assertThat(exportacao.perfil().email()).isEqualTo("semdados@email.com");
 		assertThat(exportacao.decks()).isEmpty();
+	}
+
+	/** B17/RN32 — token válido (usuário autenticado no contexto), mas a conta já foi excluída do banco. */
+	@Test
+	void deveLancarUsuarioNaoEncontradoExceptionQuandoUsuarioAutenticadoJaFoiExcluido() {
+		exportacaoDadosService = criarService();
+
+		autenticar(999_999L);
+
+		assertThatThrownBy(() -> exportacaoDadosService.exportarDados())
+				.isInstanceOf(UsuarioNaoEncontradoException.class);
 	}
 
 }

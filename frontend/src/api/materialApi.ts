@@ -12,9 +12,18 @@ export interface Material {
   criadoEm: string
 }
 
+/** Resposta do POST de upload (docs/contrato-api.md) - sem `criadoEm`, ao contrário de `Material`. */
+export interface MaterialCriado {
+  id: number
+  nomeArquivo: string
+  statusProcessamento: StatusProcessamento
+}
+
 export interface SugestaoFlashcard {
   pergunta: string
   resposta: string
+  /** RN17 - classificacao curta de topico extraida junto com a sugestao. */
+  topico: string
 }
 
 /** GET /api/decks/{id}/materiais -> 200 */
@@ -24,11 +33,11 @@ export async function listarMateriais(deckId: number): Promise<Material[]> {
 }
 
 /** POST /api/decks/{id}/materiais -> 201 (400 RN06, 401, 403, 404) */
-export async function enviarMaterial(deckId: number, arquivo: File): Promise<Material> {
+export async function enviarMaterial(deckId: number, arquivo: File): Promise<MaterialCriado> {
   const formData = new FormData()
   formData.append('arquivo', arquivo)
 
-  const { data } = await apiClient.post<Material>(`/api/decks/${deckId}/materiais`, formData, {
+  const { data } = await apiClient.post<MaterialCriado>(`/api/decks/${deckId}/materiais`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data

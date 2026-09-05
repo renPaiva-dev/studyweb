@@ -220,7 +220,16 @@ senha antiga (deve falhar) e com a nova (deve funcionar).
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/usuario/exportar-dados` | — | `200` — `{ perfil, decks: [ { ...deck, flashcards: [ {...flashcard, revisoes: [...] } ], materiais: [...], quizzes: [ {...quiz, tentativas: [...] } ] } ] }` | `401` |
+| GET | `/api/usuario/exportar-dados` | — | `200` — `{ perfil, decks: [ { ...deck, flashcards: [ {...flashcard, revisoes: [...] } ], materiais: [...], quizzes: [ {...quiz, origem, estilo, questoes: [ {..., explicacao} ], tentativas: [ {..., respostas: [ { questaoId, alternativaEscolhida, correta } ] } ] } ] } ] }` | `401` (também retornado se o token pertencer a uma conta já excluída — RN32, ver seção R) |
+
+Correção posterior (`Docs/auditoria-erros-2026-09.md`, achado B16): a primeira
+versão implementada omitia `respostas` de cada tentativa (a alternativa
+escolhida e o acerto por questão, dado exigido por RN36) e `origem`/`estilo`
+do quiz/`explicacao` da questão — a exportação buscava só
+`id, dataTentativa, pontuacao` de cada tentativa. Corrigido: `ExportacaoDadosService`
+agora busca `RespostaTentativaQuiz` em lote (por `tentativaId IN (...)`,
+mesmo padrão das demais entidades) e os DTOs de exportação incluem os campos
+acima.
 
 ### Prompt
 
@@ -272,7 +281,7 @@ tudo, e que baixar pelo frontend gera um arquivo JSON válido.
 
 | Cód. | Descrição |
 |---|---|
-| RN32 | O usuário tem direito de excluir permanentemente sua conta e todos os dados associados (LGPD, direito ao esquecimento/eliminação). A exclusão é irreversível, exige reautenticação (confirmação da senha atual) para evitar exclusão acidental ou por sessão sequestrada, e remove em cascata todos os dados vinculados ao usuário — decks e tudo que deles depende (flashcards, materiais, revisões, quizzes, tentativas), tokens de redefinição/verificação. Limitação conhecida e documentada: tokens JWT já emitidos permanecem tecnicamente válidos até sua expiração natural (no máximo 1 hora, conforme configuração), já que a autenticação é stateless sem lista de revogação nesta versão — registrado como trabalho futuro (blacklist de tokens). |
+| RN32 | O usuário tem direito de excluir permanentemente sua conta e todos os dados associados (LGPD, direito ao esquecimento/eliminação). A exclusão é irreversível, exige reautenticação (confirmação da senha atual) para evitar exclusão acidental ou por sessão sequestrada, e remove em cascata todos os dados vinculados ao usuário — decks e tudo que deles depende (flashcards, materiais, revisões, quizzes, tentativas), tokens de redefinição/verificação. Limitação conhecida e documentada: tokens JWT já emitidos permanecem tecnicamente válidos até sua expiração natural (no máximo 1 hora, conforme configuração), já que a autenticação é stateless sem lista de revogação nesta versão — registrado como trabalho futuro (blacklist de tokens). Quando um desses tokens ainda válidos é usado, os endpoints que dependem do usuário existente (`GET/PUT /api/usuario/perfil`, `PUT /api/usuario/senha`, `DELETE /api/usuario/conta`, `GET /api/usuario/exportar-dados`) respondem `401` de forma controlada (`UsuarioNaoEncontradoException`, log em WARN) — corrigido em `Docs/auditoria-erros-2026-09.md` (achado B17), que apontou esses endpoints devolvendo `500` (exceção não mapeada, log em ERROR) para esse cenário já esperado por esta RN. |
 
 ### Caso de Uso
 

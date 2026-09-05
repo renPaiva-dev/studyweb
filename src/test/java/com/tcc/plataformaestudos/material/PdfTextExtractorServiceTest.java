@@ -48,6 +48,22 @@ class PdfTextExtractorServiceTest {
 				.isInstanceOf(ExtracaoTextoException.class);
 	}
 
+	/**
+	 * B2: PDFBox pode lançar exceções não-checked (ex.: NullPointerException)
+	 * para entradas degeneradas/corrompidas que não se encaixam em
+	 * IOException. Antes do fix, isso escapava de extrairTexto, revertia a
+	 * transação inteira (quebrando o fluxo RN07 de status ERRO) e caía no
+	 * handler genérico como 500, com o arquivo já salvo em disco virando
+	 * órfão. O arquivo nulo é um jeito determinístico de forçar o
+	 * Loader.loadPDF a lançar uma RuntimeException (NullPointerException) em
+	 * vez de IOException, simulando esse cenário.
+	 */
+	@Test
+	void deveConverterExcecaoNaoCheckedDoPdfBoxEmExtracaoTextoException() {
+		assertThatThrownBy(() -> service.extrairTexto(null))
+				.isInstanceOf(ExtracaoTextoException.class);
+	}
+
 	private void criarPdfComTexto(File destino, String texto) throws IOException {
 		try (PDDocument documento = new PDDocument()) {
 			PDPage pagina = new PDPage();

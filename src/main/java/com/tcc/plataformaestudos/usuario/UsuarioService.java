@@ -135,7 +135,12 @@ public class UsuarioService {
 	private Usuario buscarUsuarioAutenticado() {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 		return usuarioRepository.findById(usuarioId)
-				.orElseThrow(() -> new IllegalStateException("Usuário autenticado não encontrado: id=" + usuarioId));
+				.orElseThrow(() -> {
+					// B17/RN32: token ainda válido, mas a conta já foi excluída —
+					// cenário esperado, não um erro de infraestrutura (WARN, não ERROR).
+					log.warn("Token válido para usuário já excluído: usuarioId={}", usuarioId);
+					return new UsuarioNaoEncontradoException(usuarioId);
+				});
 	}
 
 	@Transactional(readOnly = true)

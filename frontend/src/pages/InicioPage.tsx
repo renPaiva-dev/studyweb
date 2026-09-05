@@ -113,6 +113,7 @@ export function InicioPage() {
     ) : null,
     null,
     [dashboard?.totalDecks, dashboard?.totalFlashcards, dashboard?.streakDias, dashboard?.percentualDominadoGeral],
+    false,
   )
 
   if (erroCarregamento !== null) {

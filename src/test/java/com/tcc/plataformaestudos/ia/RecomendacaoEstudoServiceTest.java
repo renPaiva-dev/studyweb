@@ -196,4 +196,26 @@ class RecomendacaoEstudoServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
+	// GeracaoRecomendacaoException) para falha real de infraestrutura (timeout,
+	// rate limit, rede) — o retry precisa cobrir esse caso, não só resposta em
+	// branco.
+	@Test
+	void deveTentarNovamenteQuandoFalhaDeInfraestruturaNaPrimeiraTentativaESucessoNaSegunda() {
+		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
+				emRiscoPorQualidadeBaixa(1L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(2L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(3L, "Anatomia"));
+		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
+		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
+		when(geminiClient.gerarConteudo(any()))
+				.thenThrow(new com.tcc.plataformaestudos.ia.GeracaoConteudoIAException("Serviço de IA retornou status 429"))
+				.thenReturn("Foque em Anatomia.");
+
+		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
+
+		assertThat(resposta.recomendacao()).isEqualTo("Foque em Anatomia.");
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 }

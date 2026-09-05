@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { buscarAtividade, type DiaSemana, type FlashcardMaisRevisado, type RevisaoPorDiaSemana } from '@/api/dashboardApi'
@@ -34,14 +34,26 @@ export function DashboardAtividade({ deckId }: DashboardAtividadeProps) {
   const [revisoesPorDiaSemana, setRevisoesPorDiaSemana] = useState<RevisaoPorDiaSemana[]>([])
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
+  // Guarda a requisicao mais recente para ignorar respostas antigas que
+  // cheguem fora de ordem (ex.: clicar "Tentar novamente" mais de uma vez
+  // rapido dispara buscas concorrentes).
+  const requisicaoAtualRef = useRef(0)
+
   const carregar = useCallback(async () => {
+    const idRequisicao = ++requisicaoAtualRef.current
     setErroCarregamento(null)
 
     try {
       const resposta = await buscarAtividade(deckId)
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setFlashcardsMaisRevisados(resposta.flashcardsMaisRevisados)
       setRevisoesPorDiaSemana(resposta.revisoesPorDiaSemana)
     } catch (erro) {
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar a atividade deste deck.'))
     }
   }, [deckId])

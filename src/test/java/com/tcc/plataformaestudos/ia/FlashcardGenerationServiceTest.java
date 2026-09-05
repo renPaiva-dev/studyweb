@@ -164,4 +164,34 @@ class FlashcardGenerationServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(org.mockito.ArgumentMatchers.any());
 	}
 
+	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
+	// GeracaoFlashcardsException) para falha real de infraestrutura (timeout,
+	// rate limit, rede) — o retry precisa cobrir esse caso, não só JSON mal
+	// formado.
+	@Test
+	void deveTentarNovamenteQuandoFalhaDeInfraestruturaNaPrimeiraTentativaESucessoNaSegunda() {
+		when(materialOrigemService.buscarMaterialDoUsuarioAutenticado(MATERIAL_ID)).thenReturn(materialProcessado());
+		when(geminiClient.gerarConteudo(org.mockito.ArgumentMatchers.any()))
+				.thenThrow(new GeracaoConteudoIAException("Serviço de IA retornou status 429"))
+				.thenReturn("[{\"pergunta\":\"Pergunta ok\",\"resposta\":\"Resposta ok\"}]");
+
+		SugestoesFlashcardsResponseDTO resposta = flashcardGenerationService.gerarSugestoes(MATERIAL_ID);
+
+		assertThat(resposta.sugestoes()).hasSize(1);
+		verify(geminiClient, times(2)).gerarConteudo(org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void deveLancarGeracaoConteudoIAExceptionQuandoFalhaDeInfraestruturaEmTodasAsTentativas() {
+		when(materialOrigemService.buscarMaterialDoUsuarioAutenticado(MATERIAL_ID)).thenReturn(materialProcessado());
+		when(geminiClient.gerarConteudo(org.mockito.ArgumentMatchers.any()))
+				.thenThrow(new GeracaoConteudoIAException("Falha ao chamar o serviço de IA"));
+
+		assertThatThrownBy(() -> flashcardGenerationService.gerarSugestoes(MATERIAL_ID))
+				.isInstanceOf(GeracaoConteudoIAException.class)
+				.isNotInstanceOf(GeracaoFlashcardsException.class);
+
+		verify(geminiClient, times(2)).gerarConteudo(org.mockito.ArgumentMatchers.any());
+	}
+
 }

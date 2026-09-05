@@ -3,12 +3,15 @@ package com.tcc.plataformaestudos.revisao;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
@@ -53,10 +56,7 @@ public class RevisaoService {
 				? flashcardRepository.findByDeckId(deckId)
 				: revisaoFlashcardRepository.findFlashcardsPendentesDeRevisao(deckId, LocalDate.now());
 
-		return flashcards.stream()
-				.sorted(Comparator.comparing(this::proximaRevisaoOuMaisAntiga))
-				.map(FilaEstudoItemDTO::fromEntity)
-				.toList();
+		return ordenarPelaProximaRevisao(flashcards);
 	}
 
 	/**
@@ -67,6 +67,15 @@ public class RevisaoService {
 	@Transactional
 	public RevisaoResponseDTO avaliarResposta(Long flashcardId, AvaliarRespostaRequestDTO request) {
 		Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
+
+		// RN09/RN11 (SM-2): trava a linha do flashcard (lock pessimista) ANTES
+		// de ler o estado anterior, serializando avaliações concorrentes do
+		// mesmo flashcard — sem isso, duas requisições quase simultâneas leem
+		// o mesmo estado anterior e calculam/gravam independentemente,
+		// corrompendo o algoritmo (segunda escrita "vence" com base num
+		// estado já desatualizado).
+		flashcardRepository.findByIdParaAtualizacaoDeRevisao(flashcardId)
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Flashcard não encontrado"));
 
 		EstadoRevisao estadoAnterior = revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(flashcardId)
 				.map(r -> new EstadoRevisao(r.getFatorFacilidade(), r.getIntervaloDias(), r.getRepeticoes()))
@@ -90,10 +99,32 @@ public class RevisaoService {
 		return RevisaoResponseDTO.fromEntity(salva);
 	}
 
-	private LocalDate proximaRevisaoOuMaisAntiga(Flashcard flashcard) {
-		return revisaoFlashcardRepository.findFirstByFlashcardIdOrderByDataRevisaoDesc(flashcard.getId())
-				.map(RevisaoFlashcard::getProximaRevisao)
-				.orElse(LocalDate.MIN);
+	/**
+	 * UC07/RN10 — ordena a fila de estudo pelos mais atrasados primeiro. Busca
+	 * TODAS as revisões dos flashcards envolvidos numa única consulta
+	 * ({@code findByFlashcardIdIn}, já usada em UC24/RN31 para o mesmo fim) e
+	 * monta um mapa flashcardId -> próxima revisão ANTES do sort — nunca
+	 * consulta o banco dentro do {@link Comparator} (o que geraria uma query
+	 * por comparação, O(n log n) consultas em vez de O(n)).
+	 */
+	private List<FilaEstudoItemDTO> ordenarPelaProximaRevisao(List<Flashcard> flashcards) {
+		List<Long> flashcardIds = flashcards.stream().map(Flashcard::getId).toList();
+
+		List<RevisaoFlashcard> revisoes = flashcardIds.isEmpty()
+				? List.of()
+				: revisaoFlashcardRepository.findByFlashcardIdIn(flashcardIds);
+
+		Map<Long, LocalDate> proximaRevisaoPorFlashcardId = revisoes.stream()
+				.collect(Collectors.groupingBy(
+						r -> r.getFlashcard().getId(),
+						Collectors.collectingAndThen(
+								Collectors.maxBy(Comparator.comparing(RevisaoFlashcard::getDataRevisao)),
+								ultima -> ultima.map(RevisaoFlashcard::getProximaRevisao).orElse(LocalDate.MIN))));
+
+		return flashcards.stream()
+				.sorted(Comparator.comparing(f -> proximaRevisaoPorFlashcardId.getOrDefault(f.getId(), LocalDate.MIN)))
+				.map(FilaEstudoItemDTO::fromEntity)
+				.toList();
 	}
 
 }

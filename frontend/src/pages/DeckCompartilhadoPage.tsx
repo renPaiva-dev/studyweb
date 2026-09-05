@@ -78,6 +78,7 @@ export function DeckCompartilhadoPage() {
               </p>
 
               <FlashcardEstudoCard
+                key={deck.flashcards[indiceAtual].id}
                 item={{
                   flashcardId: deck.flashcards[indiceAtual].id,
                   pergunta: deck.flashcards[indiceAtual].pergunta,

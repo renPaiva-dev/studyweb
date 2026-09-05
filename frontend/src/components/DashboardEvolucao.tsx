@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { buscarEvolucao, type PeriodoEvolucao, type PontoEvolucao } from '@/api/dashboardApi'
@@ -36,13 +36,26 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
   const [pontos, setPontos] = useState<PontoEvolucao[] | null>(null)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
+  // Troca de filtro de periodo (7/30/90 dias) dispara uma nova busca sem
+  // remontar o componente (key={deckId} em DeckDetalhePage so cobre troca de
+  // deck) - guarda a requisicao mais recente para ignorar respostas antigas
+  // que cheguem fora de ordem (ex.: clicar "7 dias" e depois "90 dias" rapido).
+  const requisicaoAtualRef = useRef(0)
+
   const carregar = useCallback(async () => {
+    const idRequisicao = ++requisicaoAtualRef.current
     setErroCarregamento(null)
 
     try {
       const resposta = await buscarEvolucao(deckId, periodo)
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setPontos(resposta.pontos)
     } catch (erro) {
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar a evolução deste deck.'))
     }
   }, [deckId, periodo])

@@ -2,7 +2,8 @@
 
 Convenções gerais:
 - Todos os endpoints exigem `Authorization: Bearer {token}`, exceto os marcados com **(**)**.
-- Toda rota que recebe `{id}` de um recurso pertencente a outro usuário retorna `403` (RN01).
+- Toda rota que recebe `{id}` de um recurso pertencente a outro usuário retorna `403` (RN01) — **exceto** as rotas escopadas diretamente por `deckId` (`/api/decks/{id}` e toda subrota `/api/decks/{id}/...`), que respondem `404` tanto se o deck não existe quanto se pertence a outro usuário. Essa unificação (achado B15 da auditoria, `Docs/auditoria-erros-2026-09.md`) evita que um usuário autenticado enumere IDs de decks de terceiros por diferença de status — mesmo critério já usado no endpoint público de compartilhamento (RN37). Rotas escopadas por `{id}` de outro recurso (flashcard, material, quiz, tentativa) continuam distinguindo `403`/`404` normalmente.
+- Um token JWT de uma conta já excluída (RN32) é aceito pela autenticação, mas os endpoints que dependem do usuário existente respondem `401` (não mais um erro genérico do servidor) — ver seção "Conta e Perfil" e achado B17 da auditoria.
 - Formato padrão de erro:
 
 ```json
@@ -28,31 +29,31 @@ Convenções gerais:
 |---|---|---|---|---|
 | GET | `/api/decks` | — | `200` — `[ { id, titulo, descricao, criadoEm, totalFlashcards } ]` | `401` |
 | POST | `/api/decks` | `{ titulo, descricao }` | `201` — `{ id, titulo, descricao, criadoEm }` | `400` (título vazio) · `401` |
-| GET | `/api/decks/{id}` | — | `200` — `{ id, titulo, descricao, criadoEm, atualizadoEm }` | `401` · `403` (RN01) · `404` |
-| PUT | `/api/decks/{id}` | `{ titulo, descricao }` | `200` — deck atualizado | `400` · `401` · `403` (RN01) · `404` |
-| DELETE | `/api/decks/{id}` | — | `204` (exclusão em cascata — RN13) | `401` · `403` (RN01) · `404` |
+| GET | `/api/decks/{id}` | — | `200` — `{ id, titulo, descricao, criadoEm, atualizadoEm }` | `401` · `404` (não existe ou não é seu — RN01) |
+| PUT | `/api/decks/{id}` | `{ titulo, descricao }` | `200` — deck atualizado | `400` · `401` · `404` (não existe ou não é seu — RN01) |
+| DELETE | `/api/decks/{id}` | — | `204` (exclusão em cascata — RN13, inclui os arquivos físicos dos PDFs — B1) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Upload de Material — PDF (UC03)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho — RN06) · `401` · `403` · `404` |
+| POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho/nome de arquivo > 255 caracteres — RN06) · `401` · `404` (não existe ou não é seu — RN01) |
 | GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, criadoEm }` | `401` · `403` · `404` |
-| GET | `/api/decks/{id}/materiais` | — | `200` — `[ { id, nomeArquivo, statusProcessamento, criadoEm } ]`, mais recentes primeiro | `401` · `403` · `404` |
+| GET | `/api/decks/{id}/materiais` | — | `200` — `[ { id, nomeArquivo, statusProcessamento, criadoEm } ]`, mais recentes primeiro | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Geração de Flashcards via IA (UC04/UC05)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta, topico } ] }` (máx. 15 — RN08; nada persistido ainda; topico ver RN17) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `403` · `404` · `502` (falha no serviço de IA) |
-| POST | `/api/decks/{id}/flashcards/confirmar-sugestoes` | `{ sugestoes: [ { pergunta, resposta, aceitar: true } ] }` | `201` — flashcards criados com `origem: "IA"` | `400` · `401` · `403` · `404` |
+| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta, topico } ] }` (máx. 15 — RN08; nada persistido ainda; topico ver RN17) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `403` · `404` · `429` (limite de 10/min) · `502` (falha no serviço de IA, com retry — B10) |
+| POST | `/api/decks/{id}/flashcards/confirmar-sugestoes` | `{ sugestoes: [ { pergunta, resposta, aceitar: true } ] }` | `201` — flashcards criados com `origem: "IA"` | `400` · `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Flashcards (UC05/UC06)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/flashcards` | — | `200` — `[ { id, pergunta, resposta, mnemonico, origem } ]` | `401` · `403` · `404` |
-| POST | `/api/decks/{id}/flashcards` | `{ pergunta, resposta, mnemonico? }` | `201` — flashcard criado com `origem: "MANUAL"` | `400` (campos obrigatórios) · `401` · `403` · `404` |
+| GET | `/api/decks/{id}/flashcards` | — | `200` — `[ { id, pergunta, resposta, mnemonico, origem } ]` | `401` · `404` (não existe ou não é seu — RN01) |
+| POST | `/api/decks/{id}/flashcards` | `{ pergunta, resposta, mnemonico? }` | `201` — flashcard criado com `origem: "MANUAL"` | `400` (campos obrigatórios) · `401` · `404` (não existe ou não é seu — RN01) |
 | PUT | `/api/flashcards/{id}` | `{ pergunta, resposta, mnemonico? }` | `200` — flashcard atualizado | `400` · `401` · `403` (RN01) · `404` |
 | DELETE | `/api/flashcards/{id}` | — | `204` (revisões associadas removidas em cascata) | `401` · `403` · `404` |
 
@@ -60,7 +61,7 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/fila-estudo` | — | `200` — `[ { flashcardId, pergunta, resposta, mnemonico } ]` (RN10) | `401` · `403` · `404` |
+| GET | `/api/decks/{id}/fila-estudo` | — | `200` — `[ { flashcardId, pergunta, resposta, mnemonico } ]` (RN10) | `401` · `404` (não existe ou não é seu — RN01) |
 | POST | `/api/flashcards/{id}/revisoes` | `{ qualidadeResposta: 0-5 }` | `201` — `{ fatorFacilidade, intervaloDias, repeticoes, proximaRevisao }` (SM-2 — RN09/RN11/RN12) | `400` (fora de 0-5) · `401` · `403` · `404` |
 
 Exemplo completo:
@@ -85,7 +86,7 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/decks/{id}/quizzes` | — (a partir dos flashcards, opcionalmente via IA) | `201` — `{ id, titulo, questoes: [ { id, enunciado, alternativas } ] }` | `400` (flashcards insuficientes) · `401` · `403` · `404` |
+| POST | `/api/decks/{id}/quizzes` | — (a partir dos flashcards, opcionalmente via IA) | `201` — `{ id, titulo, questoes: [ { id, enunciado, alternativas } ] }` | `400` (flashcards insuficientes) · `401` · `404` (não existe ou não é seu — RN01) · `429` (limite de 10/min) |
 | GET | `/api/quizzes/{id}` | — | `200` — `{ id, titulo, questoes: [...] }` (sem expor `resposta_correta`) | `401` · `403` · `404` |
 | POST | `/api/quizzes/{id}/tentativas` | `{ respostas: [ { questaoId, alternativaEscolhida } ] }` | `201` — `{ pontuacao, acertos, total, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN15: todas as questões; `questoes` revela a revisão completa, só disponível depois de respondida) | `400` (respostas incompletas — RN15) · `401` · `403` · `404` |
 
@@ -93,13 +94,13 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/dashboard` | — | `200` — `{ totalFlashcards, percentualDominado, percentualEmRisco }` (RN14) | `401` · `403` · `404` |
+| GET | `/api/decks/{id}/dashboard` | — | `200` — `{ totalFlashcards, percentualDominado, percentualEmRisco }` (RN14) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Recomendação de Foco de Estudo (UC13)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/decks/{id}/recomendacao-estudo` | — | `200` — `{ recomendacao, topicoFoco, baseadoEmDados }` (RN18) | `401` · `403` · `404` · `502` (falha na IA) |
+| POST | `/api/decks/{id}/recomendacao-estudo` | — | `200` — `{ recomendacao, topicoFoco, baseadoEmDados }` (RN18) | `401` · `404` (não existe ou não é seu — RN01) · `429` (limite de 10/min — adicionado no achado B11, endpoint não tinha rate limit) · `502` (falha na IA, com retry — B10) |
 
 `baseadoEmDados: false` indica mensagem padrão (sem chamada à IA), por falta de dados suficientes.
 
@@ -107,15 +108,15 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/flashcards/{id}/explicacao` | — | `200` — `{ explicacao, ancoradaNoMaterial }` (RN19) | `401` · `403` (RN01) · `404` · `502` (falha na IA) |
+| POST | `/api/flashcards/{id}/explicacao` | — | `200` — `{ explicacao, ancoradaNoMaterial }` (RN19) | `401` · `403` (RN01) · `404` · `429` (limite de 10/min — adicionado no achado B11, endpoint não tinha rate limit) · `502` (falha na IA, com retry — B10) |
 
 ## Dashboard Avançado (UC15)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/dashboard/evolucao?dias={7\|30\|90}` | — | `200` — `{ pontos: [ { data, mediaQualidade, totalRevisoes } ] }` | `400` · `401` · `403` · `404` |
-| GET | `/api/decks/{id}/dashboard/topicos` | — | `200` — `{ topicos: [ { topico, totalFlashcards, percentualDominado, percentualEmRisco } ] }` (sem tópico → "Sem categoria") | `401` · `403` · `404` |
-| GET | `/api/decks/{id}/dashboard/atividade` | — | `200` — `{ flashcardsMaisRevisados: [...], revisoesPorDiaSemana: [...] }` (top 5) | `401` · `403` · `404` |
+| GET | `/api/decks/{id}/dashboard/evolucao?dias={7\|30\|90}` | — | `200` — `{ pontos: [ { data, mediaQualidade, totalRevisoes } ] }` | `400` · `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/decks/{id}/dashboard/topicos` | — | `200` — `{ topicos: [ { topico, totalFlashcards, percentualDominado, percentualEmRisco } ] }` (sem tópico → "Sem categoria") | `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/decks/{id}/dashboard/atividade` | — | `200` — `{ flashcardsMaisRevisados: [...], revisoesPorDiaSemana: [...] }` (top 5) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Prova Personalizada (UC16 — substituído por UC27 abaixo)
 
@@ -125,7 +126,7 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/decks/{id}/provas` | `{ flashcardIds: [...], estilo: "ENEM" \| "VESTIBULAR" \| "GERAL" }` | `201` — mesmo formato de `QuizResponseDTO` (`{ id, titulo, questoes: [...] }`, sem expor `respostaCorreta`) | `400` (`flashcardIds` vazio, ou flashcard não pertence ao deck — RN01) · `401` · `403` · `404` · `502` (falha na IA) |
+| POST | `/api/decks/{id}/provas` | `{ flashcardIds: [...], estilo: "ENEM" \| "VESTIBULAR" \| "GERAL" }` | `201` — mesmo formato de `QuizResponseDTO` (`{ id, titulo, questoes: [...] }`, sem expor `respostaCorreta`) | `400` (`flashcardIds` vazio, ou flashcard não pertence ao deck — RN01) · `401` · `404` (deck não existe ou não é seu — RN01) · `429` (limite de 10/min) · `502` (falha na IA, com retry — B10) |
 | GET | `/api/usuario/provas` | — | `200` — `[ { tentativaId, quizId, titulo, origem, estilo, dataTentativa, pontuacao, acertos, total } ]`, mais recentes primeiro (RN36) | `401` |
 | GET | `/api/usuario/provas/{tentativaId}` | — | `200` — `{ tentativaId, quizId, titulo, origem, estilo, dataTentativa, pontuacao, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN36) | `401` · `403` (RN01) · `404` |
 
@@ -135,9 +136,9 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/cadastro` (**) | `{ nome, nomeUsuario, email, senha }` | `201` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `400` · `409` (e-mail ou nomeUsuario duplicado — RN02/RN22) |
-| GET | `/api/usuario/perfil` | — | `200` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `401` |
-| PUT | `/api/usuario/perfil` | `{ nome, nomeUsuario }` | `200` — perfil atualizado | `400` · `401` · `409` (nomeUsuario em uso) |
+| POST | `/api/auth/cadastro` (**) | `{ nome, nomeUsuario, email, senha }` | `201` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `400` · `409` (e-mail ou nomeUsuario duplicado — RN02/RN22, inclusive em cadastros concorrentes com os mesmos dados — B18) |
+| GET | `/api/usuario/perfil` | — | `200` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `401` (também para token de conta já excluída — RN32) |
+| PUT | `/api/usuario/perfil` | `{ nome, nomeUsuario }` | `200` — perfil atualizado | `400` · `401` (também para token de conta já excluída — RN32) · `409` (nomeUsuario em uso, inclusive em atualizações concorrentes — B18) |
 
 ## Recuperação de Senha (UC18)
 
@@ -171,19 +172,19 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| PUT | `/api/usuario/senha` | `{ senhaAtual, novaSenha }` | `200` — senha alterada | `400` (senha atual incorreta ou nova fora da política RN27) · `401` |
+| PUT | `/api/usuario/senha` | `{ senhaAtual, novaSenha }` | `200` — senha alterada | `400` (senha atual incorreta ou nova fora da política RN27) · `401` (também para token de conta já excluída — RN32) |
 
 ## Exportação de Dados — LGPD (UC24)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/usuario/exportar-dados` | — | `200` — `{ perfil, decks: [...] }` (RN31, estrutura completa) | `401` |
+| GET | `/api/usuario/exportar-dados` | — | `200` — `{ perfil, decks: [...] }` (RN31, estrutura completa; detalhe em `Docs/extensao-lgpd-conta.md`, inclui `respostas` por tentativa de quiz/prova — RN36, achado B16) | `401` (também para token de conta já excluída — RN32) |
 
 ## Exclusão de Conta — LGPD (UC25)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| DELETE | `/api/usuario/conta` | `{ senha }` | `204` | `401` (senha incorreta) |
+| DELETE | `/api/usuario/conta` | `{ senha }` | `204` | `401` (senha incorreta, ou token de conta já excluída — RN32) |
 
 `POST /api/auth/cadastro` ganha o campo `termosAceitos: boolean` (obrigatório `true`, RN30).
 
@@ -191,9 +192,9 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo, token, criadoEm }` (RN37/RN38) | `401` · `403` (RN01) · `404` |
-| POST | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo: true, token, criadoEm }` (gera/regenera o token — RN38) | `401` · `403` (RN01) · `404` |
-| DELETE | `/api/decks/{id}/compartilhamento` | — | `204` (desativa o link — RN38) | `401` · `403` (RN01) · `404` (nenhum link existente) |
+| GET | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo, token, criadoEm }` (RN37/RN38) | `401` · `404` (deck não existe ou não é seu — RN01) |
+| POST | `/api/decks/{id}/compartilhamento` | — | `200` — `{ ativo: true, token, criadoEm }` (gera/regenera o token — RN38) | `401` · `404` (deck não existe ou não é seu — RN01) |
+| DELETE | `/api/decks/{id}/compartilhamento` | — | `204` (desativa o link — RN38) | `401` · `404` (deck não existe ou não é seu, ou nenhum link existente — RN01) |
 | GET | `/api/compartilhamentos/{token}` (\*\*) | — | `200` — `{ titulo, descricao, flashcards: [...] }` (RN37, somente leitura) | `404` (token inválido ou desativado) |
 
 (\*\*) Endpoint público — não exige JWT (RNF03, exceção documentada em `docs/regras-de-negocio.md`, RN37).

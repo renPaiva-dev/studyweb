@@ -12,6 +12,8 @@ export interface SugestaoEditavel {
   id: number
   pergunta: string
   resposta: string
+  /** RN17 - classificacao curta de topico extraida junto com a sugestao. */
+  topico: string
   aceita: boolean
 }
 
@@ -41,6 +43,12 @@ export function CartaoSugestaoFlashcard({ sugestao, onAtualizar, onDescartar }: 
         <Sparkles className="h-3 w-3" />
         {sugestao.aceita ? 'Aceita' : 'Sugestão pendente'}
       </Badge>
+
+      {sugestao.topico && (
+        <Badge variant="secondary" className="ml-2">
+          {sugestao.topico}
+        </Badge>
+      )}
 
       {editando ? (
         <div className="space-y-3">

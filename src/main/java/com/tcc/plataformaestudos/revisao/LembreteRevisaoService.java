@@ -33,13 +33,26 @@ public class LembreteRevisaoService {
 	private final LembreteRevisaoDadosService lembreteRevisaoDadosService;
 	private final EmailService emailService;
 
-	/** UC30 — job diário: um e-mail por usuário com pendências, nenhum para quem está em dia. */
+	/**
+	 * UC30 — job diário: um e-mail por usuário com pendências, nenhum para
+	 * quem está em dia. Cada envio é isolado em try/catch: um endereço
+	 * inválido ou timeout de SMTP para um usuário não pode abortar o envio
+	 * para os demais usuários dessa mesma execução do cron.
+	 */
 	@Scheduled(cron = "${app.lembrete-revisao.cron:0 0 8 * * *}")
 	public void enviarLembretesDiarios() {
 		List<LembreteRevisaoDTO> lembretes = lembreteRevisaoDadosService.montarLembretesDeTodosOsUsuarios();
-		lembretes.forEach(this::enviarEmail);
+		lembretes.forEach(this::enviarEmailComTratamentoDeErro);
 
 		log.info("Lembretes de revisão pendente enviados: usuarios={}", lembretes.size());
+	}
+
+	private void enviarEmailComTratamentoDeErro(LembreteRevisaoDTO lembrete) {
+		try {
+			enviarEmail(lembrete);
+		} catch (Exception e) {
+			log.error("Falha ao enviar lembrete de revisão: email={}", lembrete.email(), e);
+		}
 	}
 
 	/** UC30 (teste sob demanda) — envia para o próprio usuário autenticado, mesmo sem pendências. */

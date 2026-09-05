@@ -129,6 +129,20 @@ class UsuarioServiceTest {
 		assertThat(resposta.nomeUsuario()).isEqualTo("ana_estudante");
 	}
 
+	/**
+	 * B17/RN32 — token ainda válido, mas a conta já foi excluída (direito ao
+	 * esquecimento): antes lançava IllegalStateException (500 não tratado),
+	 * agora deve lançar uma exceção de negócio mapeada para 401.
+	 */
+	@Test
+	void deveLancarUsuarioNaoEncontradoExceptionQuandoTokenValidoApontaParaContaJaExcluida() {
+		autenticarUsuario();
+		when(usuarioRepository.findById(USUARIO_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> usuarioService.obterPerfil())
+				.isInstanceOf(UsuarioNaoEncontradoException.class);
+	}
+
 	@Test
 	void deveAtualizarPerfilComSucessoQuandoNomeUsuarioNaoEstaEmUsoPorOutro() {
 		autenticarUsuario();

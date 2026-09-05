@@ -60,7 +60,10 @@ public class FlashcardGenerationService {
 	}
 
 	private List<FlashcardSugestaoDTO> gerarComRetry(Long materialId, String prompt) {
-		GeracaoFlashcardsException ultimaFalha = null;
+		// B10: captura GeracaoConteudoIAException (não só GeracaoFlashcardsException)
+		// para que o retry cubra tanto falha de infraestrutura do GeminiClient
+		// (timeout, rate limit, chave inválida, rede) quanto JSON mal formatado.
+		GeracaoConteudoIAException ultimaFalha = null;
 
 		for (int tentativa = 1; tentativa <= MAXIMO_TENTATIVAS; tentativa++) {
 			log.info("Chamando API de IA para geração de flashcards: materialId={}, tentativa={}", materialId, tentativa);
@@ -73,7 +76,7 @@ public class FlashcardGenerationService {
 						materialId, tentativa, sugestoes.size());
 
 				return sugestoes;
-			} catch (GeracaoFlashcardsException e) {
+			} catch (GeracaoConteudoIAException e) {
 				ultimaFalha = e;
 				log.warn("Tentativa {} de geração de flashcards falhou: materialId={}, status=FALHA, motivo={}",
 						tentativa, materialId, e.getMessage());

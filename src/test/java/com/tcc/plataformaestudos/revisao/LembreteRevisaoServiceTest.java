@@ -1,8 +1,10 @@
 package com.tcc.plataformaestudos.revisao;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -59,6 +61,26 @@ class LembreteRevisaoServiceTest {
 
 		verify(emailService).enviarEmail(eq("maria@email.com"), anyString(), corpoCaptor.capture());
 		assertThat(corpoCaptor.getAllValues().get(1)).contains("em dia com suas revisões");
+	}
+
+	/**
+	 * B6 — o job diário não pode abortar no primeiro e-mail que falhar
+	 * (endereço inválido, timeout de SMTP): o envio de cada usuário é isolado
+	 * em try/catch, então uma falha isolada não pode impedir o envio para os
+	 * demais usuários da mesma execução do cron.
+	 */
+	@Test
+	void deveContinuarEnviandoParaOsDemaisUsuariosQuandoEnvioDeEmailFalharParaUm() {
+		LembreteRevisaoDTO joao = new LembreteRevisaoDTO("joao@email.com", "João", 3, Map.of("Anatomia", 3L));
+		LembreteRevisaoDTO maria = new LembreteRevisaoDTO("maria@email.com", "Maria", 2, Map.of("Química", 2L));
+		when(lembreteRevisaoDadosService.montarLembretesDeTodosOsUsuarios()).thenReturn(List.of(joao, maria));
+		doThrow(new RuntimeException("Falha simulada de SMTP"))
+				.when(emailService).enviarEmail(eq("joao@email.com"), anyString(), anyString());
+
+		assertThatCode(() -> lembreteRevisaoService.enviarLembretesDiarios()).doesNotThrowAnyException();
+
+		verify(emailService).enviarEmail(eq("joao@email.com"), anyString(), anyString());
+		verify(emailService).enviarEmail(eq("maria@email.com"), anyString(), anyString());
 	}
 
 	@Test

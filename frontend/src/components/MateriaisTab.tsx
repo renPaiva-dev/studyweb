@@ -29,6 +29,11 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   const [sugestoesEmRevisao, setSugestoesEmRevisao] = useState<SugestaoFlashcard[] | null>(null)
 
   const intervalosPollingRef = useRef<number[]>([])
+  // `clearInterval` no cleanup do useEffect impede so os proximos ticks -
+  // uma chamada de polling ja em voo no momento do unmount ainda resolve
+  // depois e tentaria dar setState num componente desmontado. Esta flag e
+  // checada antes de qualquer setState dentro do callback do polling.
+  const canceladoRef = useRef(false)
 
   const carregarMateriais = useCallback(async () => {
     setErroCarregamento(null)
@@ -41,10 +46,12 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   }, [deckId])
 
   useEffect(() => {
+    canceladoRef.current = false
     void carregarMateriais()
 
     const intervalosAtivos = intervalosPollingRef.current
     return () => {
+      canceladoRef.current = true
       intervalosAtivos.forEach(clearInterval)
     }
   }, [carregarMateriais])
@@ -57,6 +64,11 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
     const intervalo = window.setInterval(async () => {
       try {
         const atualizado = await buscarMaterial(materialId)
+
+        if (canceladoRef.current) {
+          return
+        }
+
         setMateriais((atual) => atual?.map((m) => (m.id === materialId ? atualizado : m)) ?? atual)
 
         if (atualizado.statusProcessamento !== 'PENDENTE') {
@@ -85,7 +97,10 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
 
     try {
       const material = await enviarMaterial(deckId, arquivo)
-      setMateriais((atual) => [material, ...(atual ?? [])])
+      // A resposta do POST (MaterialCriado) nao traz `criadoEm` (contrato) -
+      // usa a hora local como fallback para inserir o item otimisticamente
+      // na lista sem gerar "Invalid Date" na exibicao (MaterialItem).
+      setMateriais((atual) => [{ ...material, criadoEm: new Date().toISOString() }, ...(atual ?? [])])
 
       if (material.statusProcessamento === 'PENDENTE') {
         acompanharProcessamento(material.id)

@@ -55,6 +55,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 			new Regra("POST", "/api/materiais/*/gerar-flashcards", 10, 60_000, true),
 			new Regra("POST", "/api/decks/*/quizzes", 10, 60_000, true),
 			new Regra("POST", "/api/decks/*/provas", 10, 60_000, true),
+			// B11: também chamam geminiClient.gerarConteudo (UC14/UC13) e não tinham
+			// nenhum limite — mesmo padrão dos demais endpoints de IA acima.
+			new Regra("POST", "/api/flashcards/*/explicacao", 10, 60_000, true),
+			new Regra("POST", "/api/decks/*/recomendacao-estudo", 10, 60_000, true),
 			new Regra("POST", "/api/usuario/lembrete-revisao/teste", 3, 60_000, true));
 
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();

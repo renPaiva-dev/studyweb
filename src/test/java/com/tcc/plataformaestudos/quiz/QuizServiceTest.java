@@ -51,6 +51,9 @@ class QuizServiceTest {
 	private TentativaQuizRepository tentativaQuizRepository;
 
 	@Mock
+	private RespostaTentativaQuizRepository respostaTentativaQuizRepository;
+
+	@Mock
 	private ProvaGenerationService provaGenerationService;
 
 	@InjectMocks
@@ -322,6 +325,41 @@ class QuizServiceTest {
 		when(tentativaQuizRepository.existsById(999L)).thenReturn(false);
 
 		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(999L)).isInstanceOf(RecursoNaoEncontradoException.class);
+	}
+
+	/**
+	 * B12 — buscarDetalheTentativa deve pré-carregar em lote a questão de cada
+	 * resposta (via respostaTentativaQuizRepository.buscarComQuestaoPorTentativa),
+	 * evitando lazy-load individual (N+1) ao montar a revisão questão-a-questão.
+	 */
+	@Test
+	void deveCarregarQuestaoDasRespostasEmLoteAoBuscarDetalheDeTentativa() {
+		Quiz quiz = quizComTresQuestoes();
+		quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
+		quiz.setEstilo(EstiloProva.ENEM);
+
+		TentativaQuiz tentativa = new TentativaQuiz();
+		tentativa.setId(100L);
+		tentativa.setQuiz(quiz);
+		tentativa.setPontuacao(new java.math.BigDecimal("100.00"));
+
+		QuestaoQuiz questao = questao(1L, quiz, "Resposta 1");
+		questao.setExplicacao("Explicação da questão 1");
+
+		RespostaTentativaQuiz resposta = new RespostaTentativaQuiz();
+		resposta.setQuestao(questao);
+		resposta.setAlternativaEscolhida("Resposta 1");
+		resposta.setCorreta(true);
+		tentativa.setRespostas(List.of(resposta));
+
+		when(tentativaQuizRepository.buscarDetalheDoUsuario(100L, USUARIO_ID)).thenReturn(Optional.of(tentativa));
+
+		HistoricoProvaDetalheDTO detalhe = quizService.buscarDetalheTentativa(100L);
+
+		verify(respostaTentativaQuizRepository).buscarComQuestaoPorTentativa(100L);
+		assertThat(detalhe.tentativaId()).isEqualTo(100L);
+		assertThat(detalhe.questoes()).hasSize(1);
+		assertThat(detalhe.questoes().get(0).explicacao()).isEqualTo("Explicação da questão 1");
 	}
 
 }

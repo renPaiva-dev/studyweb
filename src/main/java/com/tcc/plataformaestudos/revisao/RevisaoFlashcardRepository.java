@@ -47,10 +47,15 @@ public interface RevisaoFlashcardRepository extends JpaRepository<RevisaoFlashca
 	/**
 	 * UC30/RN39 — mesmo critério de RN10, mas escopado a um único usuário (sem
 	 * um deck específico): usado pelo lembrete de revisão sob demanda.
+	 *
+	 * {@code JOIN FETCH f.deck d}: {@link LembreteRevisaoDadosService} agrupa
+	 * o resultado por título de deck ({@code f.getDeck().getTitulo()}) — sem
+	 * o fetch, {@code deck} (LAZY) dispara uma query por flashcard (N+1).
 	 */
 	@Query("""
 			SELECT f FROM Flashcard f
-			WHERE f.deck.usuario.id = :usuarioId
+			JOIN FETCH f.deck d
+			WHERE d.usuario.id = :usuarioId
 			AND (
 				NOT EXISTS (SELECT 1 FROM RevisaoFlashcard r WHERE r.flashcard = f)
 				OR EXISTS (
@@ -68,9 +73,17 @@ public interface RevisaoFlashcardRepository extends JpaRepository<RevisaoFlashca
 	/**
 	 * UC30/RN39 — mesmo critério de RN10, sem nenhum escopo: usado pelo job
 	 * diário de lembrete por e-mail, que depois agrupa o resultado por usuário.
+	 *
+	 * {@code JOIN FETCH f.deck d JOIN FETCH d.usuario}: {@link LembreteRevisaoDadosService}
+	 * agrupa o resultado por usuário ({@code f.getDeck().getUsuario().getId()})
+	 * e por título de deck ({@code f.getDeck().getTitulo()}) — sem os fetches,
+	 * {@code deck} e {@code deck.usuario} (ambos LAZY) disparam uma query por
+	 * flashcard (N+1).
 	 */
 	@Query("""
 			SELECT f FROM Flashcard f
+			JOIN FETCH f.deck d
+			JOIN FETCH d.usuario
 			WHERE (
 				NOT EXISTS (SELECT 1 FROM RevisaoFlashcard r WHERE r.flashcard = f)
 				OR EXISTS (

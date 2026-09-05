@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { MensagemResposta } from './tiposComuns'
 
 // UC17/UC19 - Conta e Perfil; UC20 - Dashboard Geral Consolidado
 // (docs/contrato-api.md, secoes "Conta e Perfil" e "Dashboard Geral Consolidado").
@@ -32,10 +33,6 @@ export async function atualizarPerfil(dados: AtualizarPerfilRequest): Promise<Pe
 // UC26/RN33 - Trocar senha autenticado; UC24/RN31 - Exportar dados (LGPD);
 // UC25/RN32 - Excluir conta (LGPD). docs/contrato-api.md, secoes "Trocar
 // Senha", "Exportacao de Dados - LGPD" e "Exclusao de Conta - LGPD".
-
-export interface MensagemResposta {
-  mensagem: string
-}
 
 /** PUT /api/usuario/senha -> 200 (400: senha atual incorreta ou nova fora da politica RN27) */
 export async function trocarSenha(senhaAtual: string, novaSenha: string): Promise<MensagemResposta> {

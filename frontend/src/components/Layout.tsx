@@ -37,7 +37,7 @@ function LayoutConteudo() {
   const { usuario, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { conteudo: margem, resumoMobile } = useMargem()
+  const { conteudo: margem, resumoMobile, fixa: margemFixa } = useMargem()
 
   function handleLogout() {
     logout()
@@ -106,7 +106,7 @@ function LayoutConteudo() {
           margem && resumoMobile && 'pb-20 lg:pb-8',
         )}
       >
-        <main key={location.pathname} className="min-w-0 animate-caderno-entrada">
+        <main key={`main-${location.pathname}`} className="min-w-0 animate-caderno-entrada">
           <Outlet />
         </main>
 
@@ -114,8 +114,11 @@ function LayoutConteudo() {
           // Em mobile a margem colapsa para abaixo do conteudo (fluxo normal
           // do grid de uma coluna); em desktop vira a coluna fixa a direita.
           <aside
-            key={location.pathname}
-            className="animate-caderno-entrada-margem border-t border-manilha bg-papel-margem px-6 py-6 lg:border-t-0 lg:border-l lg:sticky lg:top-24 lg:self-start lg:py-2"
+            key={`aside-${location.pathname}`}
+            className={cn(
+              'animate-caderno-entrada-margem border-t border-manilha bg-papel-margem px-6 py-6 lg:self-start lg:border-t-0 lg:border-l lg:py-2',
+              margemFixa && 'lg:sticky lg:top-24',
+            )}
           >
             {margem}
           </aside>

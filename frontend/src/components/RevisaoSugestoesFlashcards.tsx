@@ -51,7 +51,12 @@ export function RevisaoSugestoesFlashcards({
     try {
       await confirmarSugestoes(
         deckId,
-        aceitas.map(({ pergunta, resposta }) => ({ pergunta: pergunta.trim(), resposta: resposta.trim(), aceitar: true })),
+        aceitas.map(({ pergunta, resposta, topico }) => ({
+          pergunta: pergunta.trim(),
+          resposta: resposta.trim(),
+          topico,
+          aceitar: true,
+        })),
       )
       toast.success(`${aceitas.length} flashcard${aceitas.length === 1 ? '' : 's'} adicionado${aceitas.length === 1 ? '' : 's'} ao deck.`)
       onConfirmado()

@@ -27,7 +27,17 @@ public class PdfTextExtractorService {
 			}
 
 			return texto;
-		} catch (IOException e) {
+		} catch (ExtracaoTextoException e) {
+			throw e;
+		} catch (IOException | RuntimeException e) {
+			// B2: PDFBox lança exceções não-checked (IllegalArgumentException,
+			// NullPointerException etc.) para PDFs com estrutura corrompida que
+			// não se encaixam em IOException. Sem capturá-las aqui, elas
+			// escapariam deste método, revertendo a transação inteira (RN07
+			// deixaria de funcionar) e caindo no handler genérico -> 500, com o
+			// arquivo já salvo em disco virando órfão. Captura ambas e converte
+			// para a mesma exceção de negócio, preservando o fluxo de status
+			// ERRO já existente em MaterialOrigemService.
 			throw new ExtracaoTextoException("Falha ao extrair texto do PDF", e);
 		}
 	}

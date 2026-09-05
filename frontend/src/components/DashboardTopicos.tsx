@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { buscarTopicos, type TopicoDashboard } from '@/api/dashboardApi'
@@ -24,13 +24,25 @@ export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
   const [topicos, setTopicos] = useState<TopicoDashboard[] | null>(null)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
+  // Guarda a requisicao mais recente para ignorar respostas antigas que
+  // cheguem fora de ordem (ex.: clicar "Tentar novamente" mais de uma vez
+  // rapido dispara buscas concorrentes).
+  const requisicaoAtualRef = useRef(0)
+
   const carregar = useCallback(async () => {
+    const idRequisicao = ++requisicaoAtualRef.current
     setErroCarregamento(null)
 
     try {
       const resposta = await buscarTopicos(deckId)
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setTopicos(resposta.topicos)
     } catch (erro) {
+      if (requisicaoAtualRef.current !== idRequisicao) {
+        return
+      }
       setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar os tópicos deste deck.'))
     }
   }, [deckId])

@@ -115,4 +115,32 @@ class ProvaGenerationServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
+	// GeracaoProvaException) para falha real de infraestrutura (timeout, rate
+	// limit, rede) — o retry precisa cobrir esse caso, não só JSON mal formado.
+	@Test
+	void deveTentarNovamenteQuandoFalhaDeInfraestruturaNaPrimeiraTentativaESucessoNaSegunda() {
+		when(geminiClient.gerarConteudo(any()))
+				.thenThrow(new GeracaoConteudoIAException("Serviço de IA retornou status 429"))
+				.thenReturn("[{\"enunciado\":\"Pergunta ok\",\"alternativas\":[\"A\",\"B\",\"C\",\"D\"],"
+						+ "\"respostaCorreta\":\"A\",\"explicacao\":\"Explicação\"}]");
+
+		List<ProvaSugestaoDTO> questoes = provaGenerationService.gerarQuestoes(List.of(flashcard("P", "R")), EstiloProva.GERAL);
+
+		assertThat(questoes).hasSize(1);
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
+	@Test
+	void deveLancarGeracaoConteudoIAExceptionQuandoFalhaDeInfraestruturaEmTodasAsTentativas() {
+		when(geminiClient.gerarConteudo(any()))
+				.thenThrow(new GeracaoConteudoIAException("Falha ao chamar o serviço de IA"));
+
+		assertThatThrownBy(() -> provaGenerationService.gerarQuestoes(List.of(flashcard("P", "R")), EstiloProva.ENEM))
+				.isInstanceOf(GeracaoConteudoIAException.class)
+				.isNotInstanceOf(GeracaoProvaException.class);
+
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 }

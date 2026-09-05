@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
@@ -53,6 +54,19 @@ public class TratamentoErrosGlobal {
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
 	public ResponseEntity<ErrorResponseDTO> tratarArquivoExcedeTamanho(MaxUploadSizeExceededException ex, WebRequest request) {
 		return construirResposta(HttpStatus.BAD_REQUEST, "O arquivo enviado excede o tamanho máximo de 15MB", request);
+	}
+
+	/**
+	 * B18: padrão "check-then-act" sem lock (ex.: unicidade de e-mail/nomeUsuario
+	 * no cadastro/atualização de perfil) — duas requisições concorrentes podem
+	 * passar a checagem antes de qualquer commit; o segundo INSERT/UPDATE
+	 * estoura esta exceção no banco. Sem este handler, caía no fallback
+	 * genérico como 500 em vez do 409 (conflito) que o cliente já trata para
+	 * os outros casos de duplicidade.
+	 */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorResponseDTO> tratarViolacaoDeIntegridade(DataIntegrityViolationException ex, WebRequest request) {
+		return construirResposta(HttpStatus.CONFLICT, "Este recurso já existe ou conflita com um dado já cadastrado", request);
 	}
 
 	/**

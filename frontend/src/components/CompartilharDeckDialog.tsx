@@ -38,22 +38,27 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
   const [processando, setProcessando] = useState(false)
   const [copiado, setCopiado] = useState(false)
 
+  const deckId = deck?.id
+
   const carregarStatus = useCallback(async () => {
-    if (!deck) {
+    if (deckId === undefined) {
       return
     }
 
     setCarregando(true)
 
     try {
-      const status = await buscarStatusCompartilhamento(deck.id)
+      const status = await buscarStatusCompartilhamento(deckId)
       setToken(status.token)
     } catch (erro) {
       toast.error(extrairMensagemErro(erro, 'Não foi possível carregar o status de compartilhamento.'))
     } finally {
       setCarregando(false)
     }
-  }, [deck])
+    // deckId (primitivo) em vez de deck (objeto) - DeckDetalhePage passa um
+    // objeto literal novo a cada render, o que faria este efeito refazer o
+    // fetch e resetar o link exibido mesmo sem o deck ter mudado de fato.
+  }, [deckId])
 
   useEffect(() => {
     setToken(null)

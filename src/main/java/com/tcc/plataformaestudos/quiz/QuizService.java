@@ -55,6 +55,7 @@ public class QuizService {
 	private final FlashcardRepository flashcardRepository;
 	private final QuizRepository quizRepository;
 	private final TentativaQuizRepository tentativaQuizRepository;
+	private final RespostaTentativaQuizRepository respostaTentativaQuizRepository;
 	private final ProvaGenerationService provaGenerationService;
 
 	@Transactional
@@ -188,6 +189,11 @@ public class QuizService {
 					}
 					throw new RecursoNaoEncontradoException("Tentativa não encontrada");
 				});
+
+		// B12: popula em lote o fetch de resposta.questao para esta tentativa
+		// (mesmo contexto de persistência de tentativa.getRespostas()), evitando
+		// uma query extra por questão em montarRevisaoQuestoes.
+		respostaTentativaQuizRepository.buscarComQuestaoPorTentativa(tentativaId);
 
 		Quiz quiz = tentativa.getQuiz();
 		return new HistoricoProvaDetalheDTO(tentativa.getId(), quiz.getId(), quiz.getTitulo(), quiz.getOrigem(),

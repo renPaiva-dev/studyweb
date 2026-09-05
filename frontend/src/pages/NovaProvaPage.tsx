@@ -1,5 +1,5 @@
 import { ChevronLeft, Loader2, Sparkles } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
@@ -30,9 +30,11 @@ export function NovaProvaPage() {
   const [fase, setFase] = useState<Fase>('configurar')
 
   const [decks, setDecks] = useState<Deck[] | null>(null)
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
   const [deckId, setDeckId] = useState<number | null>(null)
   const [flashcards, setFlashcards] = useState<Flashcard[] | null>(null)
   const [carregandoFlashcards, setCarregandoFlashcards] = useState(false)
+  const [erroFlashcards, setErroFlashcards] = useState<string | null>(null)
   const [flashcardIdsSelecionados, setFlashcardIdsSelecionados] = useState<number[]>([])
   const [estilo, setEstilo] = useState<EstiloProva | null>(null)
   const [gerando, setGerando] = useState(false)
@@ -43,10 +45,12 @@ export function NovaProvaPage() {
   const [resultado, setResultado] = useState<ResultadoTentativa | null>(null)
 
   const carregarDecks = useCallback(async () => {
+    setErroCarregamento(null)
+
     try {
       setDecks(await listarDecks())
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível carregar seus decks.'))
+      setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar seus decks.'))
     }
   }, [])
 
@@ -54,19 +58,41 @@ export function NovaProvaPage() {
     void carregarDecks()
   }, [carregarDecks])
 
-  async function aoEscolherDeck(idTexto: string) {
-    const id = Number(idTexto)
-    setDeckId(id)
-    setFlashcardIdsSelecionados([])
+  // Guarda o id do deck mais recentemente pedido: se o usuario trocar de
+  // deck duas vezes rapido, a resposta de uma escolha anterior (que pode
+  // chegar depois da mais recente) e ignorada em vez de sobrescrever a
+  // lista de flashcards do deck errado na tela.
+  const deckIdSolicitadoRef = useRef<number | null>(null)
+
+  const carregarFlashcards = useCallback(async (id: number) => {
+    deckIdSolicitadoRef.current = id
+    setErroFlashcards(null)
     setCarregandoFlashcards(true)
 
     try {
-      setFlashcards(await listarFlashcards(id))
+      const dados = await listarFlashcards(id)
+      if (deckIdSolicitadoRef.current !== id) {
+        return
+      }
+      setFlashcards(dados)
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível carregar os flashcards deste deck.'))
+      if (deckIdSolicitadoRef.current !== id) {
+        return
+      }
+      setErroFlashcards(extrairMensagemErro(erro, 'Não foi possível carregar os flashcards deste deck.'))
     } finally {
-      setCarregandoFlashcards(false)
+      if (deckIdSolicitadoRef.current === id) {
+        setCarregandoFlashcards(false)
+      }
     }
+  }, [])
+
+  function aoEscolherDeck(idTexto: string) {
+    const id = Number(idTexto)
+    setDeckId(id)
+    setFlashcardIdsSelecionados([])
+    setFlashcards(null)
+    void carregarFlashcards(id)
   }
 
   function alternarFlashcard(id: number) {
@@ -211,15 +237,22 @@ export function NovaProvaPage() {
           <CardTitle className="text-base font-semibold">1. Escolha o deck</CardTitle>
         </CardHeader>
         <CardContent>
-          {decks === null ? (
+          {decks === null && erroCarregamento === null ? (
             <Skeleton className="h-10 w-full" />
+          ) : erroCarregamento !== null ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <p className="text-sm text-muted-foreground">{erroCarregamento}</p>
+              <Button variant="outline" size="sm" onClick={() => void carregarDecks()}>
+                Tentar novamente
+              </Button>
+            </div>
           ) : (
-            <Select value={deckId !== null ? String(deckId) : undefined} onValueChange={(valor) => void aoEscolherDeck(valor)}>
+            <Select value={deckId !== null ? String(deckId) : undefined} onValueChange={aoEscolherDeck}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um deck" />
               </SelectTrigger>
               <SelectContent>
-                {decks.map((deck) => (
+                {(decks ?? []).map((deck) => (
                   <SelectItem key={deck.id} value={String(deck.id)}>
                     {deck.titulo}
                   </SelectItem>
@@ -245,11 +278,25 @@ export function NovaProvaPage() {
               </>
             )}
 
-            {!carregandoFlashcards && flashcards !== null && flashcards.length === 0 && (
+            {!carregandoFlashcards && erroFlashcards !== null && (
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <p className="text-sm text-muted-foreground">{erroFlashcards}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => deckId !== null && void carregarFlashcards(deckId)}
+                >
+                  Tentar novamente
+                </Button>
+              </div>
+            )}
+
+            {!carregandoFlashcards && erroFlashcards === null && flashcards !== null && flashcards.length === 0 && (
               <p className="text-sm text-muted-foreground">Este deck ainda não tem flashcards.</p>
             )}
 
             {!carregandoFlashcards &&
+              erroFlashcards === null &&
               flashcards !== null &&
               flashcards.map((flashcard) => (
                 <label

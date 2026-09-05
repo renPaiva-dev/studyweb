@@ -113,24 +113,22 @@ public class RecomendacaoEstudoService {
 	}
 
 	private String gerarComRetry(Long deckId, String prompt) {
-		GeracaoRecomendacaoException ultimaFalha = null;
+		// B10: captura GeracaoConteudoIAException (não só GeracaoRecomendacaoException)
+		// para que o retry cubra tanto falha de infraestrutura do GeminiClient
+		// (timeout, rate limit, chave inválida, rede) quanto resposta em branco.
+		GeracaoConteudoIAException ultimaFalha = null;
 
 		for (int tentativa = 1; tentativa <= MAXIMO_TENTATIVAS; tentativa++) {
 			log.info("Chamando API de IA para recomendação de foco de estudo: deckId={}, tentativa={}", deckId, tentativa);
 
 			try {
-				// Nota: geminiClient.gerarConteudo pode lançar GeracaoFlashcardsException
-				// (não GeracaoRecomendacaoException) em falha de infraestrutura — dívida
-				// pré-existente do GeminiClient (ver Docs/extensao-recomendacao-foco-estudo.md
-				// §3). Ainda mapeia para 502 via NegocioException, só a mensagem/log
-				// ficam menos precisos; não corrigido aqui de propósito.
 				String textoGerado = geminiClient.gerarConteudo(prompt);
 				String recomendacao = validarResposta(textoGerado);
 
 				log.info("Recomendação de foco de estudo concluída: deckId={}, tentativa={}, status=SUCESSO",
 						deckId, tentativa);
 				return recomendacao;
-			} catch (GeracaoRecomendacaoException e) {
+			} catch (GeracaoConteudoIAException e) {
 				ultimaFalha = e;
 				log.warn("Tentativa {} de gerar recomendação falhou: deckId={}, status=FALHA, motivo={}",
 						tentativa, deckId, e.getMessage());

@@ -58,7 +58,7 @@ public class GeminiClient {
 
 		if (response.statusCode() != 200) {
 			log.error("Chamada à API Gemini falhou: status={}", response.statusCode());
-			throw new GeracaoFlashcardsException("Serviço de IA retornou status " + response.statusCode());
+			throw new GeracaoConteudoIAException("Serviço de IA retornou status " + response.statusCode());
 		}
 
 		log.info("Chamada à API Gemini concluída com sucesso: status={}", response.statusCode());
@@ -70,10 +70,10 @@ public class GeminiClient {
 			return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		} catch (IOException e) {
 			log.error("Falha de E/S ao chamar o serviço de IA", e);
-			throw new GeracaoFlashcardsException("Falha ao chamar o serviço de IA", e);
+			throw new GeracaoConteudoIAException("Falha ao chamar o serviço de IA", e);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			throw new GeracaoFlashcardsException("Chamada ao serviço de IA interrompida", e);
+			throw new GeracaoConteudoIAException("Chamada ao serviço de IA interrompida", e);
 		}
 	}
 
@@ -85,7 +85,7 @@ public class GeminiClient {
 
 			return objectMapper.writeValueAsString(corpo);
 		} catch (JacksonException e) {
-			throw new GeracaoFlashcardsException("Falha ao montar a requisição para o serviço de IA", e);
+			throw new GeracaoConteudoIAException("Falha ao montar a requisição para o serviço de IA", e);
 		}
 	}
 
@@ -95,12 +95,12 @@ public class GeminiClient {
 			JsonNode texto = raiz.path("candidates").path(0).path("content").path("parts").path(0).path("text");
 
 			if (texto.isMissingNode() || texto.asText().isBlank()) {
-				throw new GeracaoFlashcardsException("Resposta da API Gemini não contém texto gerado");
+				throw new GeracaoConteudoIAException("Resposta da API Gemini não contém texto gerado");
 			}
 
 			return texto.asText();
 		} catch (JacksonException e) {
-			throw new GeracaoFlashcardsException("Falha ao interpretar a resposta do serviço de IA", e);
+			throw new GeracaoConteudoIAException("Falha ao interpretar a resposta do serviço de IA", e);
 		}
 	}
 

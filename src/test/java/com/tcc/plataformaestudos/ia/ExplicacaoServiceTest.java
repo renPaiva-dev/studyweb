@@ -118,4 +118,23 @@ class ExplicacaoServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
+	// GeracaoExplicacaoException) para falha real de infraestrutura (timeout,
+	// rate limit, rede) — o retry precisa cobrir esse caso, não só resposta em
+	// branco.
+	@Test
+	void deveTentarNovamenteQuandoFalhaDeInfraestruturaNaPrimeiraTentativaESucessoNaSegunda() {
+		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcardComDeck());
+		when(materialOrigemRepository.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
+				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.empty());
+		when(geminiClient.gerarConteudo(any()))
+				.thenThrow(new GeracaoConteudoIAException("Serviço de IA retornou status 429"))
+				.thenReturn("Explicação gerada após retry.");
+
+		ExplicacaoResponseDTO resposta = explicacaoService.gerarExplicacao(FLASHCARD_ID);
+
+		assertThat(resposta.explicacao()).isEqualTo("Explicação gerada após retry.");
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 }

@@ -117,6 +117,44 @@ class RateLimitingFilterTest {
 		verify(resposta).setStatus(429);
 	}
 
+	// B11: /api/flashcards/{id}/explicacao e /api/decks/{id}/recomendacao-estudo
+	// também chamam geminiClient.gerarConteudo e não tinham nenhuma regra.
+	@Test
+	void deveLimitarExplicacaoDeFlashcardPorUsuarioAutenticadoEm10PorMinuto() throws Exception {
+		autenticarUsuario(42L);
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 10; i++) {
+			filtro.doFilterInternal(requisicao("POST", "/api/flashcards/7/explicacao", "203.0.113.98"), respostaMock(), chain);
+		}
+		verify(chain, times(10)).doFilter(any(), any());
+
+		HttpServletResponse resposta = respostaMock();
+		capturarCorpo(resposta);
+		filtro.doFilterInternal(requisicao("POST", "/api/flashcards/7/explicacao", "203.0.113.98"), resposta, chain);
+
+		verify(chain, times(10)).doFilter(any(), any());
+		verify(resposta).setStatus(429);
+	}
+
+	@Test
+	void deveLimitarRecomendacaoDeFocoDeEstudoPorUsuarioAutenticadoEm10PorMinuto() throws Exception {
+		autenticarUsuario(42L);
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 10; i++) {
+			filtro.doFilterInternal(requisicao("POST", "/api/decks/5/recomendacao-estudo", "203.0.113.97"), respostaMock(), chain);
+		}
+		verify(chain, times(10)).doFilter(any(), any());
+
+		HttpServletResponse resposta = respostaMock();
+		capturarCorpo(resposta);
+		filtro.doFilterInternal(requisicao("POST", "/api/decks/5/recomendacao-estudo", "203.0.113.97"), resposta, chain);
+
+		verify(chain, times(10)).doFilter(any(), any());
+		verify(resposta).setStatus(429);
+	}
+
 	@Test
 	void naoDeveLimitarRotasSemRegraConfigurada() throws Exception {
 		FilterChain chain = mock(FilterChain.class);

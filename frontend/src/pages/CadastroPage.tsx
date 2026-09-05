@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
-import { AuthBackgroundDecor } from '@/components/AuthBackgroundDecor'
+import { AuthSplitLayout } from '@/components/AuthSplitLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -92,10 +92,8 @@ export function CadastroPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      <AuthBackgroundDecor />
-
-      <Card className="relative w-full max-w-sm border-t-4 border-t-primary">
+    <AuthSplitLayout>
+      <Card className="w-full max-w-sm border-t-4 border-t-primary">
         <CardHeader className="items-center text-center">
           <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-manilha/40">
             <GraduationCap className="h-8 w-8" />
@@ -193,6 +191,6 @@ export function CadastroPage() {
           </Link>
         </CardFooter>
       </Card>
-    </div>
+    </AuthSplitLayout>
   )
 }

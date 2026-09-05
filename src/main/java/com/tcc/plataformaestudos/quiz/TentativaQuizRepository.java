@@ -28,8 +28,17 @@ public interface TentativaQuizRepository extends JpaRepository<TentativaQuiz, Lo
 	 * não entram no fetch join aqui de propósito — combinada com
 	 * t.respostas seria um segundo "bag" na mesma consulta (Hibernate não
 	 * permite duas coleções List no fetch de uma única query); ficam para
-	 * lazy-load posterior, o que custa só mais uma consulta (não há N+1
-	 * porque este método busca uma única tentativa, não uma lista).
+	 * lazy-load posterior, o que custa só mais uma consulta.
+	 *
+	 * <p><b>Atenção (B12):</b> embora esta consulta busque uma única
+	 * tentativa, {@code t.respostas} é uma <i>coleção</i> — cada
+	 * {@code RespostaTentativaQuiz} dela ainda referencia
+	 * {@code questao} por lazy-load, então acessar {@code resposta.getQuestao()}
+	 * para cada resposta (ex.: ao montar a revisão questão-a-questão) dispara
+	 * uma query extra por questão (N+1 real, uma prova com 5-20 questões =
+	 * 5-20 queries extras). Use
+	 * {@link RespostaTentativaQuizRepository#buscarComQuestaoPorTentativa(Long)}
+	 * antes de acessar {@code questao} das respostas desta tentativa.
 	 */
 	@Query("""
 			SELECT t FROM TentativaQuiz t

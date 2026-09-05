@@ -41,7 +41,10 @@ public class ProvaGenerationService {
 	}
 
 	private List<ProvaSugestaoDTO> gerarComRetry(String prompt) {
-		GeracaoProvaException ultimaFalha = null;
+		// B10: captura GeracaoConteudoIAException (não só GeracaoProvaException) para
+		// que o retry cubra tanto falha de infraestrutura do GeminiClient (timeout,
+		// rate limit, chave inválida, rede) quanto JSON mal formatado.
+		GeracaoConteudoIAException ultimaFalha = null;
 
 		for (int tentativa = 1; tentativa <= MAXIMO_TENTATIVAS; tentativa++) {
 			log.info("Chamando API de IA para geração de prova personalizada: tentativa={}", tentativa);
@@ -52,7 +55,7 @@ public class ProvaGenerationService {
 
 				log.info("Geração de prova concluída: tentativa={}, status=SUCESSO, total={}", tentativa, questoes.size());
 				return questoes;
-			} catch (GeracaoProvaException e) {
+			} catch (GeracaoConteudoIAException e) {
 				ultimaFalha = e;
 				log.warn("Tentativa {} de geração de prova falhou: status=FALHA, motivo={}", tentativa, e.getMessage());
 			}
