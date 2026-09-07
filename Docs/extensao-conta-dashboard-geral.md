@@ -8,7 +8,7 @@ não mais só por deck individual.
 ```
 F. Conta e Perfil (username, papel, editar perfil) — independente        [IMPLEMENTADO]
    └─> G. Esqueci/Redefinir senha — depende de F (mesmo cluster de conta) [IMPLEMENTADO]
-H. Tema escuro (frontend) — independente de tudo                         [NÃO IMPLEMENTADO]
+H. Tema escuro (frontend) — independente de tudo                         [DESCARTADO]
 I. Dashboard Geral consolidado — independente, usa lógica já existente   [IMPLEMENTADO]
 ```
 
@@ -19,9 +19,8 @@ entre uma etapa e outra, inclusive em paralelo).
 > **Status (verificado contra o código atual):** F, G e I estão em produção
 > — ver `PerfilController`/`PasswordResetService`/`DashboardController` e as
 > RNs correspondentes já incorporadas em `Docs/regras-de-negocio.md`. **H
-> (tema escuro) nunca foi implementado** — nenhuma ocorrência de
-> `ThemeContext`, `useTheme` ou classes `dark:` em `frontend/src`. Continua
-> como proposta em aberto, não como trabalho concluído.
+> (tema escuro) foi descartado deliberadamente**, não é trabalho pendente —
+> ver nota na seção H abaixo.
 
 ---
 
@@ -255,10 +254,18 @@ compromete a senha).
 
 ## H. Tema Escuro (frontend, independente)
 
-> **Status: NÃO IMPLEMENTADO.** Proposta em aberto — ver nota de status no
-> topo do documento.
+> **Status: DESCARTADO — decisão de design, não pendência técnica.** Depois
+> que esta extensão foi escrita, o frontend adotou a identidade visual
+> "caderno ativamente corrigido" (papel/tinta/vermelho de correção — ver
+> `frontend/src/index.css`), com uma paleta fixa e a decisão explícita,
+> documentada no próprio CSS, de não ter tema escuro: *"a metáfora de papel
+> físico não tem variante escura"*. Implementar o dark mode descrito abaixo
+> entraria em conflito direto com essa identidade (exigiria inventar uma
+> paleta "papel escuro" sem base na spec visual do projeto). Decisão
+> tomada em 2026-09: manter tema único. O prompt abaixo permanece só como
+> registro histórico da proposta original, não deve ser executado.
 
-Sem RN/UC de backend — é puramente de interface. Prompt direto:
+Sem RN/UC de backend — é puramente de interface. Prompt direto (histórico, não executar — ver nota acima):
 
 ```
 Leia docs/boas-praticas-frontend.md antes de continuar.
