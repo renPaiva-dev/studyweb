@@ -42,6 +42,7 @@
 | RNF07 | Custo/Escalabilidade | Operar dentro dos limites de cota gratuita dos provedores de IA. |
 | RNF08 | Manutenibilidade | Backend em arquitetura de camadas (controller/service/repository). |
 | RNF09 | Disponibilidade | Ambiente de demonstração acessível via link público durante a avaliação do TCC. |
+| RNF10 | Segurança | Rotas sensíveis a abuso (login, cadastro, recuperação/redefinição de senha, verificação de e-mail e todos os endpoints que chamam a API de IA) têm limite de requisições por janela de tempo (rate limiting), por IP nas rotas públicas de autenticação e por usuário autenticado nas rotas de IA — proteção contra força bruta, spam de e-mail e consumo indevido de cota paga de IA. |
 
 ## Regras de Negócio (RN)
 

@@ -39,6 +39,16 @@ import jakarta.servlet.http.HttpServletResponse;
  * Limitação conhecida e aceitável para uma única instância: o contador é
  * local em memória, não é compartilhado entre réplicas caso o sistema seja
  * escalado horizontalmente no futuro.
+ *
+ * B13: por padrão, o limite por IP usa {@code request.getRemoteAddr()}, não
+ * o header {@code X-Forwarded-For}. Confiar nesse header sem um proxy
+ * reverso confiável na frente é, em si, uma falha de segurança — qualquer
+ * cliente pode enviar um {@code X-Forwarded-For} diferente a cada
+ * requisição e furar o limite por completo. Só passa a ler o header quando
+ * {@code confiarXForwardedFor=true} for explicitamente configurado (ver
+ * {@code app.rate-limit.confiar-x-forwarded-for}), o que só deve ser feito
+ * quando o backend estiver de fato atrás de um proxy/CDN confiável que
+ * sobrescreve esse header (nunca repassa o valor do cliente original).
  */
 public class RateLimitingFilter extends OncePerRequestFilter {
 
@@ -64,6 +74,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
 	private final Map<String, Janela> janelasPorChave = new ConcurrentHashMap<>();
+	private final boolean confiarXForwardedFor;
+
+	public RateLimitingFilter(boolean confiarXForwardedFor) {
+		this.confiarXForwardedFor = confiarXForwardedFor;
+	}
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -95,7 +110,18 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 				return regra.padraoPath() + ":usuario:" + usuarioAutenticado.id();
 			}
 		}
-		return regra.padraoPath() + ":ip:" + request.getRemoteAddr();
+		return regra.padraoPath() + ":ip:" + resolverIpCliente(request);
+	}
+
+	private String resolverIpCliente(HttpServletRequest request) {
+		if (confiarXForwardedFor) {
+			String encaminhadoPara = request.getHeader("X-Forwarded-For");
+			if (encaminhadoPara != null && !encaminhadoPara.isBlank()) {
+				// primeiro IP da lista = cliente original; os demais são proxies intermediários.
+				return encaminhadoPara.split(",")[0].trim();
+			}
+		}
+		return request.getRemoteAddr();
 	}
 
 	private boolean permitir(Regra regra, String chave) {

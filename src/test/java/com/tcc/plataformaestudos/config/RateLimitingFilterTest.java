@@ -23,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 class RateLimitingFilterTest {
 
-	private final RateLimitingFilter filtro = new RateLimitingFilter();
+	private final RateLimitingFilter filtro = new RateLimitingFilter(false);
 
 	@AfterEach
 	void limparContextoDeSeguranca() {
@@ -95,6 +95,51 @@ class RateLimitingFilterTest {
 		// IP diferente ainda deve passar, mesmo com o primeiro IP já no limite de 5.
 		HttpServletResponse resposta = respostaMock();
 		filtro.doFilterInternal(requisicao("POST", "/api/auth/esqueci-senha", "198.51.100.2"), resposta, chain);
+
+		verify(chain, times(6)).doFilter(any(), any());
+	}
+
+	// B13: sem app.rate-limit.confiar-x-forwarded-for=true, o header enviado
+	// pelo próprio cliente não pode ser usado para burlar o limite por IP.
+	@Test
+	void naoDeveConfiarEmXForwardedForPorPadrao() throws Exception {
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 5; i++) {
+			HttpServletRequest request = requisicao("POST", "/api/auth/cadastro", "203.0.113.30");
+			when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3." + i);
+			filtro.doFilterInternal(request, respostaMock(), chain);
+		}
+		verify(chain, times(5)).doFilter(any(), any());
+
+		HttpServletRequest sexta = requisicao("POST", "/api/auth/cadastro", "203.0.113.30");
+		when(sexta.getHeader("X-Forwarded-For")).thenReturn("9.9.9.9");
+		HttpServletResponse resposta = respostaMock();
+		capturarCorpo(resposta);
+		filtro.doFilterInternal(sexta, resposta, chain);
+
+		verify(chain, times(5)).doFilter(any(), any());
+		verify(resposta).setStatus(429);
+	}
+
+	// B13: com confiarXForwardedFor=true (deploy atrás de proxy confiável), o
+	// limite deve seguir o cliente real (primeiro IP do header), não o IP do
+	// proxy — que é igual para todo mundo.
+	@Test
+	void deveConfiarEmXForwardedForQuandoConfigurado() throws Exception {
+		RateLimitingFilter filtroComProxy = new RateLimitingFilter(true);
+		FilterChain chain = mock(FilterChain.class);
+
+		for (int i = 0; i < 5; i++) {
+			HttpServletRequest request = requisicao("POST", "/api/auth/cadastro", "10.0.0.1");
+			when(request.getHeader("X-Forwarded-For")).thenReturn("198.51.100.77, 10.0.0.1");
+			filtroComProxy.doFilterInternal(request, respostaMock(), chain);
+		}
+		verify(chain, times(5)).doFilter(any(), any());
+
+		HttpServletRequest outroCliente = requisicao("POST", "/api/auth/cadastro", "10.0.0.1");
+		when(outroCliente.getHeader("X-Forwarded-For")).thenReturn("198.51.100.99, 10.0.0.1");
+		filtroComProxy.doFilterInternal(outroCliente, respostaMock(), chain);
 
 		verify(chain, times(6)).doFilter(any(), any());
 	}

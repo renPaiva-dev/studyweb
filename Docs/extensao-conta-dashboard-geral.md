@@ -6,15 +6,22 @@ usuário; (I) trata de uma visão consolidada de todo o uso do sistema,
 não mais só por deck individual.
 
 ```
-F. Conta e Perfil (username, papel, editar perfil) — independente
-   └─> G. Esqueci/Redefinir senha — depende de F (mesmo cluster de conta)
-H. Tema escuro (frontend) — independente de tudo
-I. Dashboard Geral consolidado — independente, usa lógica já existente
+F. Conta e Perfil (username, papel, editar perfil) — independente        [IMPLEMENTADO]
+   └─> G. Esqueci/Redefinir senha — depende de F (mesmo cluster de conta) [IMPLEMENTADO]
+H. Tema escuro (frontend) — independente de tudo                         [NÃO IMPLEMENTADO]
+I. Dashboard Geral consolidado — independente, usa lógica já existente   [IMPLEMENTADO]
 ```
 
 Ordem sugerida: **F → G → I → H** (H por último porque é só frontend,
 não depende de nada no backend e pode ser feito a qualquer momento
 entre uma etapa e outra, inclusive em paralelo).
+
+> **Status (verificado contra o código atual):** F, G e I estão em produção
+> — ver `PerfilController`/`PasswordResetService`/`DashboardController` e as
+> RNs correspondentes já incorporadas em `Docs/regras-de-negocio.md`. **H
+> (tema escuro) nunca foi implementado** — nenhuma ocorrência de
+> `ThemeContext`, `useTheme` ou classes `dark:` em `frontend/src`. Continua
+> como proposta em aberto, não como trabalho concluído.
 
 ---
 
@@ -247,6 +254,9 @@ compromete a senha).
 ---
 
 ## H. Tema Escuro (frontend, independente)
+
+> **Status: NÃO IMPLEMENTADO.** Proposta em aberto — ver nota de status no
+> topo do documento.
 
 Sem RN/UC de backend — é puramente de interface. Prompt direto:
 

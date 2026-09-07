@@ -4,6 +4,7 @@ Convenções gerais:
 - Todos os endpoints exigem `Authorization: Bearer {token}`, exceto os marcados com **(**)**.
 - Toda rota que recebe `{id}` de um recurso pertencente a outro usuário retorna `403` (RN01) — **exceto** as rotas escopadas diretamente por `deckId` (`/api/decks/{id}` e toda subrota `/api/decks/{id}/...`), que respondem `404` tanto se o deck não existe quanto se pertence a outro usuário. Essa unificação (achado B15 da auditoria, `Docs/auditoria-erros-2026-09.md`) evita que um usuário autenticado enumere IDs de decks de terceiros por diferença de status — mesmo critério já usado no endpoint público de compartilhamento (RN37). Rotas escopadas por `{id}` de outro recurso (flashcard, material, quiz, tentativa) continuam distinguindo `403`/`404` normalmente.
 - Um token JWT de uma conta já excluída (RN32) é aceito pela autenticação, mas os endpoints que dependem do usuário existente respondem `401` (não mais um erro genérico do servidor) — ver seção "Conta e Perfil" e achado B17 da auditoria.
+- Rate limiting em janela fixa de 60s (`RateLimitingFilter`), aplicado por IP nas rotas de `/api/auth/*` (força bruta/spam de e-mail) e por usuário autenticado nas rotas de IA e no lembrete de revisão — `429` é retornado ao exceder o limite; os limites exatos estão anotados em cada endpoint abaixo.
 - Formato padrão de erro:
 
 ```json
@@ -20,8 +21,8 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/cadastro` (**) | `{ nome, email, senha }` | `201` — `{ id, nome, email, criadoEm }` | `400` (dados inválidos) · `409` (e-mail já cadastrado — RN02) |
-| POST | `/api/auth/login` (**) | `{ email, senha }` | `200` — `{ token, tipo: "Bearer", expiraEm }` | `401` (credenciais inválidas) |
+| POST | `/api/auth/cadastro` (**) | `{ nome, email, senha }` | `201` — `{ id, nome, email, criadoEm }` | `400` (dados inválidos) · `409` (e-mail já cadastrado — RN02) · `429` (limite de 5/min por IP) |
+| POST | `/api/auth/login` (**) | `{ email, senha }` | `200` — `{ token, tipo: "Bearer", expiraEm }` | `401` (credenciais inválidas) · `429` (limite de 10/min por IP) |
 
 ## Decks (UC02)
 
@@ -61,7 +62,7 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/fila-estudo` | — | `200` — `[ { flashcardId, pergunta, resposta, mnemonico } ]` (RN10) | `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/decks/{id}/fila-estudo?incluirTodos={boolean}` | — | `200` — `[ { flashcardId, pergunta, resposta, mnemonico } ]` (RN10; por padrão só os pendentes de revisão — `incluirTodos=true`, default `false`, ignora RN10 e traz o deck inteiro, usado pelo botão "Revisar mesmo assim" quando não há pendências) | `401` · `404` (não existe ou não é seu — RN01) |
 | POST | `/api/flashcards/{id}/revisoes` | `{ qualidadeResposta: 0-5 }` | `201` — `{ fatorFacilidade, intervaloDias, repeticoes, proximaRevisao }` (SM-2 — RN09/RN11/RN12) | `400` (fora de 0-5) · `401` · `403` · `404` |
 
 Exemplo completo:
@@ -144,8 +145,8 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/esqueci-senha` (**) | `{ email }` | `200` — mensagem genérica (RN24) | `400` |
-| POST | `/api/auth/redefinir-senha` (**) | `{ token, novaSenha }` | `200` — senha redefinida | `400` (token inválido/expirado/usado) |
+| POST | `/api/auth/esqueci-senha` (**) | `{ email }` | `200` — mensagem genérica (RN24) | `400` · `429` (limite de 5/min por IP) |
+| POST | `/api/auth/redefinir-senha` (**) | `{ token, novaSenha }` | `200` — senha redefinida | `400` (token inválido/expirado/usado) · `429` (limite de 5/min por IP) |
 
 ## Dashboard Geral Consolidado (UC20)
 
@@ -157,8 +158,8 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/verificar-email` (**) | `{ token }` | `200` — mensagem de sucesso | `400` (token inválido/expirado/usado) |
-| POST | `/api/auth/reenviar-verificacao` (**) | `{ email }` | `200` — mensagem genérica (RN26) | `400` |
+| POST | `/api/auth/verificar-email` (**) | `{ token }` | `200` — mensagem de sucesso | `400` (token inválido/expirado/usado) · `429` (limite de 10/min por IP) |
+| POST | `/api/auth/reenviar-verificacao` (**) | `{ email }` | `200` — mensagem genérica (RN26) | `400` · `429` (limite de 5/min por IP) |
 
 `POST /api/auth/login` ganha um novo erro possível: `403` quando `emailVerificado=false` (RN26).
 

@@ -1,5 +1,7 @@
 package com.tcc.plataformaestudos.config;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -34,10 +36,16 @@ public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
 	private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-	private final RateLimitingFilter rateLimitingFilter = new RateLimitingFilter();
 
 	@Value("${app.cors.allowed-origins}")
 	private String allowedOrigins;
+
+	// B13: só true quando o backend estiver de fato atrás de um proxy/CDN
+	// confiável (ver javadoc de RateLimitingFilter) — default false porque
+	// não há proxy nenhum na frente hoje (docker-compose.yml expõe o backend
+	// diretamente).
+	@Value("${app.rate-limit.confiar-x-forwarded-for:false}")
+	private boolean confiarXForwardedFor;
 
 	@Bean
 	public PasswordEncoder passwordEncoder() {
@@ -53,7 +61,9 @@ public class SecurityConfig {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of(allowedOrigins.split(",")));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("*"));
+		// Únicos headers que o frontend de fato envia (ver frontend/src/api/client.ts
+		// e materialApi.ts) — "*" era mais permissivo do que o necessário.
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", configuration);
@@ -62,6 +72,12 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		// Instanciado aqui (não como campo) para garantir que confiarXForwardedFor
+		// já foi injetado pelo @Value antes da construção — e continua
+		// deliberadamente NÃO sendo um @Bean, ver javadoc de RateLimitingFilter
+		// sobre registro duplicado como filtro genérico do servlet container.
+		RateLimitingFilter rateLimitingFilter = new RateLimitingFilter(confiarXForwardedFor);
+
 		http
 			.csrf(csrf -> csrf.disable())
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -69,6 +85,14 @@ public class SecurityConfig {
 			.httpBasic(basic -> basic.disable())
 			.formLogin(form -> form.disable())
 			.exceptionHandling(handling -> handling.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+			// API somente JSON, sem HTML servido pelo backend: CSP restritiva o
+			// suficiente para negar carregamento de qualquer recurso ativo, mais
+			// frameOptions/contentTypeOptions explícitos (já vinham por padrão do
+			// Spring Security, mas documentados aqui em vez de implícitos).
+			.headers(headers -> headers
+				.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
+				.frameOptions(frame -> frame.deny())
+				.contentTypeOptions(withDefaults()))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login",

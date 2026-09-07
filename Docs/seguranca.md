@@ -60,3 +60,20 @@ No final, gerar um **resumo executivo** com:
 
 ## Restrições
 - Focar em vulnerabilidades reais identificadas no código, não em checklist genérico solto.
+
+## Estado atual (atualizado após a auditoria de 2026-09, ver `Docs/auditoria-erros-2026-09.md`)
+
+Itens do escopo acima já cobertos no código — não repetir como achado numa
+próxima rodada, a menos que uma regressão seja encontrada:
+
+- **Senhas**: hash com BCrypt (`SecurityConfig.java`, `PasswordEncoder`), nunca texto plano.
+- **JWT**: secret e expiração via variável de ambiente (`jwt.secret`/`jwt.expiration-ms`), sem fallback real em produção (`SegredosStartupValidator` avisa alto no log se o fallback fraco estiver em uso).
+- **Rate limiting**: implementado em `config/RateLimitingFilter.java` — login, cadastro, esqueci-senha, redefinir-senha, verificar-email, reenviar-verificação (por IP) e todos os endpoints de IA + lembrete de revisão manual (por usuário autenticado). Ver limites exatos em `Docs/contrato-api.md`.
+- **CORS**: origem restrita via `app.cors.allowed-origins` (env `CORS_ALLOWED_ORIGINS`), não é `*`; `allowedHeaders` restrito a `Authorization`/`Content-Type` (os únicos que o frontend envia — antes era `List.of("*")`).
+- **IDOR/controle de acesso**: RN01 aplicada nas rotas escopadas por usuário; unificação 403→404 em rotas de deck para evitar enumeração (achado B15).
+- **Headers de segurança**: `SecurityConfig.securityFilterChain` configura `.headers(...)` explicitamente — CSP (`default-src 'none'; frame-ancestors 'none'`, adequado a uma API somente JSON sem HTML servido pelo backend), `frameOptions=DENY` e `contentTypeOptions` (os dois últimos já vinham por padrão do Spring Security, agora documentados em vez de implícitos).
+- **Rate limiter e `X-Forwarded-For`** (achado B13): resolvido de forma opt-in — `resolverChaveCliente` só lê o header quando `app.rate-limit.confiar-x-forwarded-for=true` for configurado explicitamente (env `RATE_LIMIT_CONFIAR_X_FORWARDED_FOR`, default `false`). Confiar no header sem um proxy confiável na frente seria, em si, uma falha (qualquer cliente forjaria um IP novo a cada request); a config só deve ser ligada quando o deploy real estiver atrás de um proxy/CDN que sobrescreve esse header. Testado em `RateLimitingFilterTest` (`naoDeveConfiarEmXForwardedForPorPadrao`, `deveConfiarEmXForwardedForQuandoConfigurado`).
+
+Gaps reais confirmados, ainda em aberto:
+
+- **`janelasPorChave` nunca expurga entradas antigas** (achado B14, 🟢 baixo): `config/RateLimitingFilter.java` — cada IP/usuário distinto fica para sempre em memória. Baixo risco para o escopo do TCC; só relevante se o processo rodar por muito tempo sem reiniciar.

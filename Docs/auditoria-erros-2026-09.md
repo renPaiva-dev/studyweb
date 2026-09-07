@@ -223,6 +223,15 @@ trivial contra login para todo mundo.
 **Fix:** documentar essa dependência agora; quando o deploy evoluir para trás de proxy, configurar
 `server.forward-headers-strategy=framework` restrito a uma lista de proxies confiáveis.
 
+**Status: RESOLVIDO.** `resolverChaveCliente`/`resolverIpCliente` só leem `X-Forwarded-For`
+quando `app.rate-limit.confiar-x-forwarded-for=true` for explicitamente configurado (env
+`RATE_LIMIT_CONFIAR_X_FORWARDED_FOR`, default `false` — sem proxy configurado, comportamento
+idêntico ao anterior). Optou-se por esse flag opt-in em vez de
+`server.forward-headers-strategy=framework` porque este último confiaria no header globalmente
+para toda a aplicação (inclusive em `HttpServletRequest.getRemoteAddr()` usado por outros pontos
+do sistema), enquanto o flag afeta só a decisão de rate limiting, sem mudar o comportamento do
+resto da aplicação. Testado em `RateLimitingFilterTest`.
+
 ---
 
 ### B14 — [🟢 Baixo] Mapa de rate limiting cresce sem limite

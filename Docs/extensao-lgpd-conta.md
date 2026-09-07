@@ -1,5 +1,17 @@
 # Extensão de Escopo — Conformidade LGPD e Itens Pendentes de Conta
 
+> **Status: IMPLEMENTADA.** Os itens T, P, S, Q e R abaixo já estão em
+> produção. As RNs propostas aqui (RN30, RN31, RN32, RN33, RN34) foram
+> incorporadas em `Docs/regras-de-negocio.md`, os endpoints em
+> `Docs/contrato-api.md` e o schema em `Docs/modelo-de-dados.md` — esses três
+> arquivos são a fonte de verdade para o estado atual. Este documento
+> permanece como registro histórico do prompt/plano usado para implementar a
+> extensão (spec-driven development), não como TODO em aberto. Nota: a
+> migration real que consolidou T + P + R foi
+> `V6__lgpd_termos_cascata_usuario_e_username_case_insensitive.sql`, não
+> `V9` como o plano original abaixo previa — `V9` acabou sendo usada depois
+> para uma feature não relacionada (verificação de e-mail, UC21/RN26).
+
 Cobre os quatro pilares da LGPD relevantes para este sistema
 (consentimento, acesso/portabilidade, eliminação, segurança — a
 segurança já está coberta por RN01/RN02/RN26/RN27 e não é repetida
