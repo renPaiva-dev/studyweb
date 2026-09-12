@@ -378,3 +378,19 @@
 - **Fluxo principal:** Estudante informa senha atual e nova senha; sistema valida a atual e a força da nova (RN27); atualiza o hash.
 - **Fluxos de exceção:** E1 — senha atual incorreta → erro claro.
 - **Regras relacionadas:** RN33, RN27
+
+## UC31 — Definir data-alvo de prova e consultar prontidão
+
+- **Ator:** Estudante
+- **Objetivo:** Planejar o estudo restante até uma prova real, priorizando os tópicos com menor retenção estimada na data.
+- **Pré-condições:** Deck existente, pertencente ao usuário autenticado (RN01).
+- **Pós-condições:** Data-alvo persistida no deck; a prontidão em si é sempre recalculada sob demanda, não persistida (mesmo espírito de RN18).
+- **Fluxo principal:**
+  1. Estudante define a data da prova para um deck.
+  2. Sistema aplica RN01 e valida que a data não é no passado.
+  3. A qualquer momento antes da prova, o estudante consulta a prontidão.
+  4. Sistema calcula, por flashcard, a retenção estimada na data-alvo (RN40), a partir do estado SM-2 da última revisão de cada um.
+  5. Sistema agrega por tópico (RN17) e devolve o índice geral de prontidão e o plano de revisão priorizado.
+- **Fluxos alternativos:** A1 — estudante remove a data-alvo definida.
+- **Fluxos de exceção:** E1 — consulta de prontidão sem data-alvo definida → 400. E2 — data-alvo no passado ao definir → 400.
+- **Regras relacionadas:** RN40, RN01, RN17

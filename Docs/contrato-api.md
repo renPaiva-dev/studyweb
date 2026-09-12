@@ -207,3 +207,14 @@ POST /api/flashcards/57/revisoes
 | POST | `/api/usuario/lembrete-revisao/teste` | — | `200` — `{ mensagem }` (envia para o próprio e-mail, mesmo sem pendências — RN39) | `401` · `429` (limite de 3/min) |
 
 O job automático diário (RN39) não é um endpoint — roda internamente (`@Scheduled`, cron configurável via `app.lembrete-revisao.cron`).
+
+## Prontidão para Prova (UC31)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| GET | `/api/decks/{id}/prova-alvo` | — | `200` — `{ dataAlvo }` (`null` se nunca definida) | `401` · `404` (não existe ou não é seu — RN01) |
+| PUT | `/api/decks/{id}/prova-alvo` | `{ dataAlvo: "2026-10-01" }` | `200` — `{ dataAlvo }` | `400` (data no passado) · `401` · `404` (RN01) |
+| DELETE | `/api/decks/{id}/prova-alvo` | — | `204` | `401` · `404` (RN01) |
+| GET | `/api/decks/{id}/prontidao-prova` | — | `200` — `{ dataAlvoProva, diasRestantes, totalFlashcards, prontidaoGeral, topicos: [ { topico, totalFlashcards, retencaoMediaEstimada, flashcardsPrecisandoRevisao } ], mensagem }` (RN40; `topicos` ordenado por `retencaoMediaEstimada` ascendente — mais urgente primeiro) | `400` (data-alvo não definida) · `401` · `404` (RN01) |
+
+Sem chamada à IA nem serviço externo nesta feature (100% algorítmica, a partir do estado SM-2 já persistido) — sem rate limiting específico (RNF10 não se aplica).

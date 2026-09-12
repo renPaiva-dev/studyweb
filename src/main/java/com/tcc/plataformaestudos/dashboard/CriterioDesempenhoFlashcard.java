@@ -14,6 +14,14 @@ public final class CriterioDesempenhoFlashcard {
 
 	private static final int DIAS_PARA_CONSIDERAR_EM_RISCO_POR_ATRASO = 7;
 
+	/**
+	 * Rótulo do grupo de flashcards sem tópico atribuído (RN17). Ponto único
+	 * (boas-praticas-backend.md §3) — reaproveitado por
+	 * {@code DashboardService} (UC15/RN20) e {@code ProntidaoProvaService}
+	 * (UC31/RN40) para não duplicar o literal em duas classes.
+	 */
+	public static final String SEM_CATEGORIA = "Sem categoria";
+
 	private CriterioDesempenhoFlashcard() {
 	}
 

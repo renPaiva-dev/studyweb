@@ -125,4 +125,22 @@ public interface DashboardRepository extends Repository<Flashcard, Long> {
 			""")
 	List<LocalDateTime> buscarDatasDeRevisoesPorUsuario(@Param("usuarioId") Long usuarioId);
 
+	/**
+	 * UC31/RN40 — mesma lógica de {@link #buscarUltimaRevisaoComTopicoPorFlashcard(Long)}
+	 * (última revisão por flashcard, com tópico), acrescida de
+	 * {@code dataRevisao}/{@code intervaloDias} para o cálculo da retenção
+	 * estimada na data-alvo de prova ({@code CalculadoraRetencao}).
+	 */
+	@Query("""
+			SELECT new com.tcc.plataformaestudos.dashboard.EstadoProntidaoProjecao(
+				f.id, f.topico, ultima.dataRevisao, ultima.intervaloDias)
+			FROM Flashcard f
+			LEFT JOIN f.revisoes ultima
+				ON ultima.dataRevisao = (
+					SELECT MAX(r2.dataRevisao) FROM RevisaoFlashcard r2 WHERE r2.flashcard = f
+				)
+			WHERE f.deck.id = :deckId
+			""")
+	List<EstadoProntidaoProjecao> buscarUltimaRevisaoParaProntidao(@Param("deckId") Long deckId);
+
 }

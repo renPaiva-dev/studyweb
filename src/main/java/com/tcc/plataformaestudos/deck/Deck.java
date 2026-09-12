@@ -1,5 +1,6 @@
 package com.tcc.plataformaestudos.deck;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,10 @@ public class Deck {
 
 	@Column(name = "atualizado_em", nullable = false)
 	private LocalDateTime atualizadoEm;
+
+	/** RN40/UC31 — data de prova definida pelo estudante; nula até ser definida. */
+	@Column(name = "data_alvo_prova")
+	private LocalDate dataAlvoProva;
 
 	/**
 	 * RN13: excluir o deck remove em cascata seus materiais, flashcards e

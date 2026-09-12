@@ -45,6 +45,7 @@
 | descricao | VARCHAR(500) | NULL |
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 | atualizado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
+| data_alvo_prova | DATE | NULL (RN40/UC31 — data de prova definida pelo estudante; usada para estimar a retenção esperada de cada flashcard naquela data) |
 
 ### COMPARTILHAMENTO_DECK
 | Atributo | Tipo | Restrições |
@@ -200,6 +201,8 @@ CREATE TABLE deck (
     criado_em TIMESTAMP NOT NULL DEFAULT now(),
     atualizado_em TIMESTAMP NOT NULL DEFAULT now()
 );
+-- RN40/UC31: adicionada em V10, coluna nullable ate o estudante definir uma data-alvo
+ALTER TABLE deck ADD COLUMN data_alvo_prova DATE;
 
 CREATE TABLE compartilhamento_deck (
     id BIGSERIAL PRIMARY KEY,
@@ -282,7 +285,7 @@ CREATE TABLE resposta_tentativa_quiz (
 );
 ```
 
-Este DDL reflete o schema real (ver `src/main/resources/db/migration/V1`–`V9`),
+Este DDL reflete o schema real (ver `src/main/resources/db/migration/V1`–`V10`),
 não a saída literal do `ddl-auto` do Hibernate — os nomes de PK/sequence e
 tipos exatos de timestamp podem variar ligeiramente da migration física sem
 impacto no modelo lógico acima.

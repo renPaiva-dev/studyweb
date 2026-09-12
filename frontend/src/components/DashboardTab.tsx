@@ -10,6 +10,7 @@ import { DashboardAtividade } from '@/components/DashboardAtividade'
 import { DashboardEvolucao } from '@/components/DashboardEvolucao'
 import { DashboardTopicos } from '@/components/DashboardTopicos'
 import { IndicadorPercentual } from '@/components/IndicadorPercentual'
+import { ProntidaoProvaCard } from '@/components/ProntidaoProvaCard'
 import { useDefinirMargem } from '@/context/MargemContext'
 
 interface DashboardTabProps {
@@ -112,6 +113,7 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
         />
       </div>
 
+      <ProntidaoProvaCard deckId={deckId} />
       <DashboardEvolucao deckId={deckId} />
       <DashboardTopicos deckId={deckId} />
       <DashboardAtividade deckId={deckId} />

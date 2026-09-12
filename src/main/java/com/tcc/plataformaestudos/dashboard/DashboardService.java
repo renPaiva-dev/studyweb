@@ -45,7 +45,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class DashboardService {
 
-	private static final String SEM_CATEGORIA = "Sem categoria";
 	private static final int TOP_FLASHCARDS_MAIS_REVISADOS = 5;
 
 	private final DeckService deckService;
@@ -111,7 +110,7 @@ public class DashboardService {
 		List<UltimaRevisaoComTopicoProjecao> estados = dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(deckId);
 
 		Map<String, List<UltimaRevisaoComTopicoProjecao>> porTopico = estados.stream()
-				.collect(Collectors.groupingBy(e -> e.topico() != null ? e.topico() : SEM_CATEGORIA));
+				.collect(Collectors.groupingBy(e -> e.topico() != null ? e.topico() : CriterioDesempenhoFlashcard.SEM_CATEGORIA));
 
 		List<TopicoDashboardDTO> topicos = porTopico.entrySet().stream()
 				.map(entrada -> montarTopicoDashboard(entrada.getKey(), entrada.getValue()))
