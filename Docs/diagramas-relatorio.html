@@ -1,0 +1,699 @@
+<title>Diagramas StudyWeb</title>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --border: #DCD6C7;
+    --text: #1E2A44;
+    --text-muted: #6B6459;
+    --accent: #3C6B52;
+    --chip-bg: #EFEBE1;
+    --code-bg: #EFEBE1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171512;
+      --surface: #201D19;
+      --border: #3A362F;
+      --text: #EDE7DA;
+      --text-muted: #B3AB99;
+      --accent: #7FB89A;
+      --chip-bg: #2A2621;
+      --code-bg: #2A2621;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171512;
+    --surface: #201D19;
+    --border: #3A362F;
+    --text: #EDE7DA;
+    --text-muted: #B3AB99;
+    --accent: #7FB89A;
+    --chip-bg: #2A2621;
+    --code-bg: #2A2621;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    line-height: 1.5;
+  }
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+  header.top { margin-bottom: 2.5rem; }
+  header.top h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.35rem; }
+  header.top p { color: var(--text-muted); margin: 0; max-width: 72ch; font-size: 0.95rem; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem; }
+  nav.toc a {
+    font-size: 0.8rem; padding: 0.3rem 0.7rem; border-radius: 999px;
+    background: var(--chip-bg); color: var(--text); text-decoration: none; border: 1px solid var(--border);
+  }
+  nav.toc a:hover { border-color: var(--accent); }
+
+  section.diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.75rem;
+    margin-bottom: 2.25rem;
+  }
+  section.diagram h2 {
+    font-size: 1.15rem; margin: 0 0 0.15rem;
+    display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
+  }
+  section.diagram h2 .tag {
+    font-size: 0.7rem; font-weight: 600; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px; padding: 0.05rem 0.55rem;
+  }
+  section.diagram > p.caption {
+    color: var(--text-muted); font-size: 0.85rem; margin: 0.35rem 0 1.25rem; max-width: 90ch;
+  }
+  .mermaid-wrap {
+    overflow-x: auto; background: var(--code-bg); border-radius: 8px; padding: 1rem;
+  }
+  section.diagram details { margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
+  section.diagram summary { cursor: pointer; color: var(--text); font-weight: 600; }
+  section.diagram .legend { margin-top: 0.5rem; display: grid; gap: 0.25rem; }
+  footer.note {
+    border-top: 1px solid var(--border); padding-top: 1.25rem;
+    color: var(--text-muted); font-size: 0.85rem; max-width: 90ch;
+  }
+  footer.note code { background: var(--chip-bg); padding: 0.1rem 0.35rem; border-radius: 4px; }
+
+  /* Diagramas técnicos: sempre tinta-sobre-papel, independente do tema do
+     viewer -- sao pra virar figura impressa/colada no relatorio, entao o
+     contraste tem que ser previsivel em qualquer visualizador/impressora. */
+  .tech-svg-wrap {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem;
+    overflow-x: auto;
+  }
+  .tech-svg-wrap svg { display: block; }
+  .tech-svg-wrap text { fill: #16202E; font-family: "IBM Plex Sans", system-ui, sans-serif; }
+
+  /* Casos de uso (UML classico) */
+  .uc-boundary { fill: #FFFFFF; stroke: #16202E; stroke-width: 1.6; }
+  .uc-boundary-label { font-size: 12.5px; font-weight: 700; fill: #16202E; }
+  .uc-ellipse { fill: #F7F5F0; stroke: #16202E; stroke-width: 1.4; }
+  .uc-text { font-size: 11px; }
+  .uc-actor-label { font-size: 11.5px; font-weight: 600; }
+  .uc-assoc { stroke: #16202E; stroke-width: 1.2; }
+  .uc-dep { stroke: #B3402C; stroke-width: 1.3; fill: none; stroke-dasharray: 5 3; }
+  .uc-dep-label { fill: #B3402C; font-style: italic; }
+  .uc-stick { stroke: #16202E; stroke-width: 2; fill: none; stroke-linecap: round; }
+
+  /* DER Chen/brModelo */
+  .ent-box { fill: #EAF1EC; stroke: #16202E; stroke-width: 1.6; }
+  .ent-name { font-size: 13px; font-weight: 700; }
+  .attr-ellipse { fill: #FFFDF7; stroke: #16202E; stroke-width: 1.1; }
+  .attr-text { font-size: 10px; }
+  .attr-pk { font-weight: 700; }
+  .attr-underline { stroke: #16202E; stroke-width: 1; }
+  .attr-line { stroke: #6B6459; stroke-width: 1; }
+  .rel-diamond { fill: #F3E6C9; stroke: #16202E; stroke-width: 1.5; }
+  .rel-text { font-size: 10.5px; font-weight: 600; }
+  .rel-line { stroke: #16202E; stroke-width: 1.3; }
+  .card-text { fill: #7A3B22; font-weight: 700; }
+</style>
+
+<div class="page">
+  <header class="top">
+    <h1>Diagramas do Sistema — StudyWeb</h1>
+    <p>Gerados a partir do estado real do código e da documentação em <code>Docs/</code>. Casos de uso em notação UML clássica (ator/elipse/fronteira, «include»/«extend»); entidade-relacionamento em notação Chen/brModelo (retângulo/losango/elipse, cardinalidade min-máx). Pensados pras seções 3.2–3.5 do Relatório Técnico (IFPI).</p>
+    <nav class="toc">
+      <a href="#uc">3.2 Casos de uso</a>
+      <a href="#classe">3.3 Classes</a>
+      <a href="#arq">3.4 Arquitetura</a>
+      <a href="#der">3.5 Entidade-Relacionamento</a>
+    </nav>
+  </header>
+
+  <section class="diagram" id="uc">
+    <h2>3.2 Diagrama de Casos de Uso <span class="tag">notação UML clássica</span></h2>
+    <p class="caption">29 UCs — dividido em 7 diagramas por módulo pra ficar legível (um diagrama só com todos ficaria ilegível). Todas as relações «include»/«extend» do sistema ocorrem dentro do mesmo módulo, então nenhuma foi perdida na divisão. Ator primário: Estudante. Atores secundários: Sistema (interno) e Serviço de IA (Gemini).</p>
+
+    <div id="uc-grid" style="display:grid; grid-template-columns:1fr; gap:1.5rem;"></div>
+
+    <details>
+      <summary>Nota sobre UC16</summary>
+      <div class="legend">UC16 (geração automática de prova por tópico em risco) foi substituído por UC27 (seleção manual de flashcards + estilo) — por isso não aparece nos diagramas. Ver <code>Docs/regras-de-negocio.md</code>, RN21→RN35.</div>
+    </details>
+  </section>
+
+  <section class="diagram" id="classe">
+    <h2>3.3 Diagrama de Classes <span class="tag">UML — 12 entidades + 5 enums</span></h2>
+    <p class="caption">Reflete as entidades JPA reais em <code>src/main/java/.../{usuario,deck,material,flashcard,revisao,quiz,compartilhamento}</code>. Composição (◆) nas relações com <code>cascade = ALL, orphanRemoval = true</code> no lado "um".<br><strong>Por que não em brModelo:</strong> brModelo é uma ferramenta/notação especificamente de Entidade-Relacionamento (Chen) — não existe uma variante brModelo para diagrama de classes UML, são notações de propósitos diferentes. O DER equivalente (seção 3.5 abaixo) é que está em Chen/brModelo.</p>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+classDiagram
+    class Usuario {
+        +Long id
+        +String nome
+        +String nomeUsuario
+        +String email
+        +String senhaHash
+        +PapelUsuario papel
+        +LocalDateTime criadoEm
+        +LocalDateTime termosAceitosEm
+        +String termosVersao
+        +boolean emailVerificado
+    }
+    class TokenRedefinicaoSenha {
+        +Long id
+        +String token
+        +LocalDateTime expiraEm
+        +boolean usado
+        +LocalDateTime criadoEm
+    }
+    class TokenVerificacaoEmail {
+        +Long id
+        +String token
+        +LocalDateTime expiraEm
+        +boolean usado
+        +LocalDateTime criadoEm
+    }
+    class Deck {
+        +Long id
+        +String titulo
+        +String descricao
+        +LocalDateTime criadoEm
+        +LocalDateTime atualizadoEm
+    }
+    class CompartilhamentoDeck {
+        +Long id
+        +String token
+        +boolean ativo
+        +LocalDateTime criadoEm
+        +LocalDateTime revogadoEm
+    }
+    class MaterialOrigem {
+        +Long id
+        +String nomeArquivo
+        +String caminhoArquivo
+        +String textoExtraido
+        +StatusProcessamento statusProcessamento
+        +LocalDateTime criadoEm
+    }
+    class Flashcard {
+        +Long id
+        +String pergunta
+        +String resposta
+        +String mnemonico
+        +String topico
+        +OrigemFlashcard origem
+        +LocalDateTime criadoEm
+    }
+    class RevisaoFlashcard {
+        +Long id
+        +LocalDateTime dataRevisao
+        +short qualidadeResposta
+        +BigDecimal fatorFacilidade
+        +int intervaloDias
+        +int repeticoes
+        +LocalDate proximaRevisao
+    }
+    class Quiz {
+        +Long id
+        +String titulo
+        +OrigemQuiz origem
+        +EstiloProva estilo
+        +LocalDateTime criadoEm
+    }
+    class QuestaoQuiz {
+        +Long id
+        +String enunciado
+        +List~AlternativaQuiz~ alternativas
+        +String respostaCorreta
+        +String explicacao
+    }
+    class AlternativaQuiz {
+        <<record>>
+        +String texto
+        +boolean correta
+    }
+    class TentativaQuiz {
+        +Long id
+        +LocalDateTime dataTentativa
+        +BigDecimal pontuacao
+    }
+    class RespostaTentativaQuiz {
+        +Long id
+        +String alternativaEscolhida
+        +boolean correta
+    }
+
+    class PapelUsuario {
+        <<enumeration>>
+        ESTUDANTE
+        ADMIN
+    }
+    class OrigemFlashcard {
+        <<enumeration>>
+        MANUAL
+        IA
+    }
+    class StatusProcessamento {
+        <<enumeration>>
+        PENDENTE
+        PROCESSADO
+        ERRO
+    }
+    class OrigemQuiz {
+        <<enumeration>>
+        DETERMINISTICO
+        IA_PERSONALIZADA
+    }
+    class EstiloProva {
+        <<enumeration>>
+        ENEM
+        VESTIBULAR
+        GERAL
+    }
+
+    Usuario "1" *-- "0..*" Deck : possui
+    Usuario "1" *-- "0..*" TokenRedefinicaoSenha : solicita
+    Usuario "1" *-- "0..*" TokenVerificacaoEmail : solicita
+    Usuario "1" *-- "0..*" RevisaoFlashcard : realiza
+    Usuario "1" *-- "0..*" TentativaQuiz : realiza
+    Deck "1" *-- "0..*" MaterialOrigem : contem
+    Deck "1" *-- "0..*" Flashcard : contem
+    Deck "1" *-- "0..*" Quiz : gera
+    Deck "1" *-- "0..1" CompartilhamentoDeck : compartilha
+    Flashcard "1" *-- "0..*" RevisaoFlashcard : historico
+    Quiz "1" *-- "0..*" QuestaoQuiz : contem
+    Quiz "1" *-- "0..*" TentativaQuiz : recebe
+    QuestaoQuiz "1" *-- "0..*" AlternativaQuiz : serializa
+    TentativaQuiz "1" *-- "0..*" RespostaTentativaQuiz : detalha
+    QuestaoQuiz "1" o-- "0..*" RespostaTentativaQuiz : referenciada
+
+    Usuario ..> PapelUsuario
+    Flashcard ..> OrigemFlashcard
+    MaterialOrigem ..> StatusProcessamento
+    Quiz ..> OrigemQuiz
+    Quiz ..> EstiloProva
+      </pre>
+    </div>
+  </section>
+
+  <section class="diagram" id="arq">
+    <h2>3.4 Arquitetura do Sistema <span class="tag">containers + camadas</span></h2>
+    <p class="caption">Nível de container (à la C4): reflete os serviços do <code>docker-compose.yml</code> (db/backend/frontend) e as camadas internas do backend (controller → service → repository), conforme <code>Docs/CLAUDE.md</code>.</p>
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+flowchart TB
+    Browser["🌐 Navegador<br/>SPA React"]
+
+    subgraph FrontendContainer["Container Frontend (Nginx)"]
+        SPA["React 19 + TypeScript + Vite<br/>Tailwind CSS / shadcn-ui"]
+    end
+
+    subgraph BackendContainer["Container Backend (Spring Boot 4 / Java 17)"]
+        direction TB
+        Security["Security<br/>JWT + RateLimitingFilter + CORS"]
+        Controller["Controllers (REST)"]
+        Service["Services<br/>(regras de negócio)"]
+        Repository["Repositories<br/>(Spring Data JPA)"]
+        Security -.protege.-> Controller
+        Controller --> Service
+        Service --> Repository
+    end
+
+    subgraph DbContainer["Container PostgreSQL"]
+        Postgres[("PostgreSQL 16<br/>+ Flyway (migrations)")]
+    end
+
+    subgraph Externos["Serviços Externos"]
+        Gemini["API Gemini<br/>(geração de conteúdo via IA)"]
+        SMTP["Servidor SMTP<br/>(e-mails transacionais)"]
+    end
+
+    Browser -->|"HTTP"| SPA
+    Browser -->|"REST JSON + Bearer JWT"| Controller
+    Repository -->|"JDBC"| Postgres
+    Service -->|"HTTPS"| Gemini
+    Service -->|"SMTP"| SMTP
+      </pre>
+    </div>
+  </section>
+
+  <section class="diagram" id="der">
+    <h2>3.5 Diagrama de Entidade-Relacionamento <span class="tag">Chen / brModelo — 12 entidades</span></h2>
+    <p class="caption">Notação clássica: entidades = retângulo, relacionamentos = losango, atributos = elipse (PK sublinhado, FK marcado), cardinalidade mín-máx em cada ponta. Por legibilidade, cada entidade mostra a chave primária + FKs + os atributos de negócio mais relevantes — o dicionário de dados completo (todos os campos, tipos e regras) está em <code>Docs/modelo-de-dados.md</code>.</p>
+    <div class="tech-svg-wrap">
+      <svg id="der-svg" viewBox="0 0 2500 1560" width="2500" height="1560" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </section>
+
+  <footer class="note">
+    Como exportar pro relatório: cada diagrama é SVG gerado na hora — printa a página inteira (<code>Ctrl+P → Salvar como PDF</code>) ou clica com o botão direito sobre o SVG → "Salvar imagem como" (funciona na maioria dos navegadores pra SVG inline) pra pegar cada um separado em alta resolução. O diagrama de classes/arquitetura (Mermaid) também aceita botão direito → salvar imagem.
+  </footer>
+</div>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function wrapText(parent, x, y, text, opts) {
+    opts = opts || {};
+    const fontSize = opts.fontSize || 11;
+    const maxChars = opts.maxChars || 20;
+    const words = String(text).split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const t = cur ? cur + ' ' + w : w;
+      if (t.length > maxChars && cur) { lines.push(cur); cur = w; } else cur = t;
+    }
+    if (cur) lines.push(cur);
+    const lh = fontSize + 3;
+    const startY = y - ((lines.length - 1) * lh) / 2 + fontSize * 0.35;
+    const t = el('text', { x: x, y: startY, 'text-anchor': 'middle', 'font-size': fontSize, class: opts.className || '' }, parent);
+    lines.forEach((line, i) => {
+      const tspan = el('tspan', { x: x, dy: i === 0 ? 0 : lh }, t);
+      tspan.textContent = line;
+    });
+    return { lines: lines.length, height: lines.length * lh };
+  }
+  function ucDefs(svg) {
+    const defs = el('defs', {}, svg);
+    const marker = el('marker', { id: 'ucArrow', markerWidth: 10, markerHeight: 10, refX: 8, refY: 3, orient: 'auto', markerUnits: 'strokeWidth' }, defs);
+    el('path', { d: 'M0,0 L8,3 L0,6 Z', fill: '#B3402C' }, marker);
+  }
+  function drawActor(svg, x, y, label) {
+    const g = el('g', {}, svg);
+    el('circle', { cx: x, cy: y - 34, r: 9, class: 'uc-stick' }, g);
+    el('line', { x1: x, y1: y - 25, x2: x, y2: y + 6, class: 'uc-stick' }, g);
+    el('line', { x1: x - 15, y1: y - 13, x2: x + 15, y2: y - 13, class: 'uc-stick' }, g);
+    el('line', { x1: x, y1: y + 6, x2: x - 13, y2: y + 28, class: 'uc-stick' }, g);
+    el('line', { x1: x, y1: y + 6, x2: x + 13, y2: y + 28, class: 'uc-stick' }, g);
+    wrapText(g, x, y + 42, label, { fontSize: 10.5, maxChars: 16, className: 'uc-actor-label' });
+  }
+
+  function renderUseCaseDiagram(svgId, cfg) {
+    const svg = document.getElementById(svgId);
+    ucDefs(svg);
+    const boxW = 300, rowH = 78, topPad = 46;
+    const H = topPad * 2 + cfg.usecases.length * rowH;
+    const leftActors = cfg.actors.filter(a => a.side !== 'right');
+    const rightActors = cfg.actors.filter(a => a.side === 'right');
+    const leftMargin = leftActors.length ? 130 : 20;
+    const rightMargin = rightActors.length ? 130 : 20;
+    const W = leftMargin + boxW + rightMargin + 40;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', H);
+
+    const boxX = leftMargin + 20, boxY = 26, boxH = H - 52;
+    el('rect', { x: boxX, y: boxY, width: boxW, height: boxH, rx: 6, class: 'uc-boundary' }, svg);
+    el('text', { x: boxX + boxW / 2, y: boxY + 20, 'text-anchor': 'middle', class: 'uc-boundary-label' }, svg).textContent = cfg.boxLabel;
+
+    const ucPos = {};
+    cfg.usecases.forEach((uc, i) => {
+      const cy = boxY + 52 + i * rowH;
+      const cx = boxX + boxW / 2;
+      el('ellipse', { cx: cx, cy: cy, rx: 128, ry: 30, class: 'uc-ellipse' }, svg);
+      wrapText(svg, cx, cy, uc.id + ' — ' + uc.label, { fontSize: 10.5, maxChars: 24, className: 'uc-text' });
+      ucPos[uc.id] = { x: cx, y: cy };
+    });
+
+    function placeActors(list, ax) {
+      list.forEach((a, ai) => {
+        const ay = boxY + boxH / 2 + (ai - (list.length - 1) / 2) * 130;
+        drawActor(svg, ax, ay, a.label);
+        a.targets.forEach(id => {
+          const p = ucPos[id];
+          if (!p) return;
+          const edgeX = p.x + (ax < p.x ? -128 : 128);
+          el('line', { x1: ax, y1: ay, x2: edgeX, y2: p.y, class: 'uc-assoc' }, svg);
+        });
+      });
+    }
+    placeActors(leftActors, 55);
+    placeActors(rightActors, W - 55);
+
+    function sideArrow(fromId, toId, label) {
+      const p1 = ucPos[fromId], p2 = ucPos[toId];
+      if (!p1 || !p2) return;
+      const bulge = 78;
+      const x0 = p1.x + 128, x1 = p2.x + 128;
+      const path = 'M ' + x0 + ' ' + p1.y + ' C ' + (x0 + bulge) + ' ' + p1.y + ', ' + (x1 + bulge) + ' ' + p2.y + ', ' + x1 + ' ' + p2.y;
+      el('path', { d: path, class: 'uc-dep', 'marker-end': 'url(#ucArrow)' }, svg);
+      const midY = (p1.y + p2.y) / 2;
+      el('text', { x: x0 + bulge + 4, y: midY, 'font-size': 9.5, class: 'uc-dep-label' }, svg).textContent = label;
+    }
+    (cfg.includes || []).forEach(pair => sideArrow(pair[0], pair[1], '«include»'));
+    (cfg.extendsList || []).forEach(pair => sideArrow(pair[0], pair[1], '«extend»'));
+  }
+
+  const MODULOS = [
+    {
+      id: 'uc-mod-1', boxLabel: 'Autenticação e Conta',
+      usecases: [
+        { id: 'UC01', label: 'Cadastrar-se / Login' },
+        { id: 'UC17', label: 'Cadastro com nome de usuário' },
+        { id: 'UC18', label: 'Esqueci/Redefinir senha' },
+        { id: 'UC19', label: 'Editar perfil' },
+        { id: 'UC21', label: 'Verificar e-mail' },
+        { id: 'UC23', label: 'Aceitar termos de uso' },
+        { id: 'UC26', label: 'Trocar senha' },
+      ],
+      actors: [{ label: 'Estudante', side: 'left', targets: ['UC01', 'UC17', 'UC18', 'UC19', 'UC21', 'UC23', 'UC26'] }],
+      extendsList: [['UC17', 'UC01'], ['UC23', 'UC01']],
+    },
+    {
+      id: 'uc-mod-2', boxLabel: 'LGPD',
+      usecases: [
+        { id: 'UC24', label: 'Exportar meus dados' },
+        { id: 'UC25', label: 'Excluir conta permanentemente' },
+      ],
+      actors: [{ label: 'Estudante', side: 'left', targets: ['UC24', 'UC25'] }],
+    },
+    {
+      id: 'uc-mod-3', boxLabel: 'Deck e Material',
+      usecases: [
+        { id: 'UC02', label: 'Criar/gerenciar deck' },
+        { id: 'UC03', label: 'Enviar PDF de estudo' },
+        { id: 'UC22', label: 'Excluir material de origem' },
+        { id: 'UC29', label: 'Compartilhar deck via link' },
+      ],
+      actors: [{ label: 'Estudante', side: 'left', targets: ['UC02', 'UC03', 'UC22', 'UC29'] }],
+    },
+    {
+      id: 'uc-mod-4', boxLabel: 'Flashcards',
+      usecases: [
+        { id: 'UC04', label: 'Gerar flashcards via IA' },
+        { id: 'UC05', label: 'Criar/editar flashcard' },
+        { id: 'UC06', label: 'Registrar mnemônico' },
+        { id: 'UC12', label: 'Classificar tópico' },
+        { id: 'UC14', label: 'Explicar flashcard' },
+      ],
+      actors: [
+        { label: 'Estudante', side: 'left', targets: ['UC04', 'UC05', 'UC06', 'UC14'] },
+        { label: 'Sistema (interno)', side: 'right', targets: ['UC12'] },
+        { label: 'Serviço de IA (Gemini)', side: 'right', targets: ['UC04', 'UC14'] },
+      ],
+      includes: [['UC04', 'UC12']],
+    },
+    {
+      id: 'uc-mod-5', boxLabel: 'Estudo (Repetição Espaçada — SM-2)',
+      usecases: [
+        { id: 'UC07', label: 'Estudar deck (revisão)' },
+        { id: 'UC08', label: 'Avaliar própria resposta' },
+        { id: 'UC09', label: 'Recalcular próxima revisão' },
+        { id: 'UC30', label: 'Lembrete de revisão pendente' },
+      ],
+      actors: [
+        { label: 'Estudante', side: 'left', targets: ['UC07', 'UC08', 'UC30'] },
+        { label: 'Sistema (interno)', side: 'right', targets: ['UC09', 'UC30'] },
+      ],
+      includes: [['UC08', 'UC09']],
+    },
+    {
+      id: 'uc-mod-6', boxLabel: 'Quiz e Provas',
+      usecases: [
+        { id: 'UC10', label: 'Responder quiz' },
+        { id: 'UC27', label: 'Gerar prova personalizada' },
+        { id: 'UC28', label: 'Consultar histórico de provas' },
+      ],
+      actors: [
+        { label: 'Estudante', side: 'left', targets: ['UC10', 'UC27', 'UC28'] },
+        { label: 'Serviço de IA (Gemini)', side: 'right', targets: ['UC27'] },
+      ],
+    },
+    {
+      id: 'uc-mod-7', boxLabel: 'Dashboard',
+      usecases: [
+        { id: 'UC11', label: 'Visualizar progresso do deck' },
+        { id: 'UC13', label: 'Obter recomendação de foco' },
+        { id: 'UC15', label: 'Visualizar evolução detalhada' },
+        { id: 'UC20', label: 'Dashboard geral consolidado' },
+      ],
+      actors: [
+        { label: 'Estudante', side: 'left', targets: ['UC11', 'UC13', 'UC15', 'UC20'] },
+        { label: 'Serviço de IA (Gemini)', side: 'right', targets: ['UC13'] },
+      ],
+      extendsList: [['UC15', 'UC11']],
+    },
+  ];
+
+  const grid = document.getElementById('uc-grid');
+  MODULOS.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'tech-svg-wrap';
+    const h = document.createElement('div');
+    h.style.cssText = 'font-size:12px;font-weight:700;color:#16202E;margin-bottom:6px;';
+    h.textContent = m.boxLabel;
+    const svg = document.createElementNS(NS, 'svg');
+    svg.id = m.id;
+    card.appendChild(h);
+    card.appendChild(svg);
+    grid.appendChild(card);
+    renderUseCaseDiagram(m.id, m);
+  });
+
+  // ---------------------------------------------------------------
+  // 3.5 DER — Chen / brModelo
+  // ---------------------------------------------------------------
+  function drawEntity(svg, x, y, name, attrs) {
+    const W = 190, H = 54;
+    el('rect', { x: x - W / 2, y: y - H / 2, width: W, height: H, class: 'ent-box' }, svg);
+    wrapText(svg, x, y, name, { fontSize: 12.5, maxChars: 17, className: 'ent-name' });
+
+    const AW = 122, AH = 32, GAP = 44, DX = 128;
+    const nLeft = Math.ceil(attrs.length / 2), nRight = attrs.length - nLeft;
+    attrs.forEach((a, i) => {
+      const side = i % 2 === 0 ? -1 : 1;
+      const idx = Math.floor(i / 2);
+      const count = side === -1 ? nLeft : nRight;
+      const ax = x + side * (W / 2 + DX);
+      const ay = y - ((count - 1) * GAP) / 2 + idx * GAP;
+      el('ellipse', { cx: ax, cy: ay, rx: AW / 2, ry: AH / 2, class: 'attr-ellipse' }, svg);
+      const label = a.name + (a.fk ? ' (FK)' : a.uk ? ' (UK)' : '');
+      wrapText(svg, ax, ay, label, { fontSize: 9.5, maxChars: 15, className: 'attr-text' + (a.pk ? ' attr-pk' : '') });
+      if (a.pk) {
+        const uw = Math.min(AW - 12, a.name.length * 6.4);
+        el('line', { x1: ax - uw / 2, y1: ay + 8, x2: ax + uw / 2, y2: ay + 8, class: 'attr-underline' }, svg);
+      }
+      const edgeX = x + side * (W / 2);
+      el('line', { x1: edgeX, y1: y, x2: ax - side * (AW / 2), y2: ay, class: 'attr-line' }, svg);
+    });
+    return { x: x, y: y, w: W, h: H };
+  }
+
+  function port(entity, towardX, towardY) {
+    const dx = towardX - entity.x, dy = towardY - entity.y;
+    const ratio = Math.abs(dx) / (entity.w / 2) - Math.abs(dy) / (entity.h / 2);
+    if (ratio > 0) {
+      return { x: entity.x + Math.sign(dx) * entity.w / 2, y: entity.y };
+    }
+    return { x: entity.x, y: entity.y + Math.sign(dy || 1) * entity.h / 2 };
+  }
+
+  function drawRelationship(svg, e1, e2, verb, card1, card2, diamondPos) {
+    const mx = diamondPos ? diamondPos.x : (e1.x + e2.x) / 2;
+    const my = diamondPos ? diamondPos.y : (e1.y + e2.y) / 2;
+    const DW = 104, DH = 54;
+    const points = [
+      [mx, my - DH / 2], [mx + DW / 2, my], [mx, my + DH / 2], [mx - DW / 2, my],
+    ].map(p => p.join(',')).join(' ');
+    el('polygon', { points: points, class: 'rel-diamond' }, svg);
+    wrapText(svg, mx, my, verb, { fontSize: 10, maxChars: 11, className: 'rel-text' });
+
+    const p1 = port(e1, mx, my);
+    const p2 = port(e2, mx, my);
+    el('line', { x1: p1.x, y1: p1.y, x2: mx, y2: my, class: 'rel-line' }, svg);
+    el('line', { x1: mx, y1: my, x2: p2.x, y2: p2.y, class: 'rel-line' }, svg);
+
+    function labelNear(p, text, towardX, towardY) {
+      const dx = towardX - p.x, dy = towardY - p.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const lx = p.x + (dx / len) * 26, ly = p.y + (dy / len) * 26 - 5;
+      el('text', { x: lx, y: ly, 'text-anchor': 'middle', class: 'card-text' }, svg).textContent = text;
+    }
+    labelNear(p1, card1, mx, my);
+    labelNear(p2, card2, mx, my);
+  }
+
+  const derSvg = document.getElementById('der-svg');
+
+  const E = {};
+  function ent(id, x, y, name, attrs) {
+    E[id] = Object.assign({ id: id }, drawEntity(derSvg, x, y, name, attrs));
+  }
+
+  ent('USUARIO', 1150, 130, 'USUARIO', [
+    { name: 'id', pk: true }, { name: 'nome_usuario', uk: true },
+    { name: 'email', uk: true }, { name: 'papel' }, { name: 'email_verificado' },
+  ]);
+  ent('TRS', 380, 440, 'TOKEN_REDEFINICAO_SENHA', [
+    { name: 'id', pk: true }, { name: 'usuario_id', fk: true },
+    { name: 'token', uk: true }, { name: 'expira_em' },
+  ]);
+  ent('TVE', 830, 440, 'TOKEN_VERIFICACAO_EMAIL', [
+    { name: 'id', pk: true }, { name: 'usuario_id', fk: true },
+    { name: 'token', uk: true }, { name: 'expira_em' },
+  ]);
+  ent('DECK', 1550, 440, 'DECK', [
+    { name: 'id', pk: true }, { name: 'usuario_id', fk: true },
+    { name: 'titulo' }, { name: 'criado_em' },
+  ]);
+  ent('CD', 350, 760, 'COMPARTILHAMENTO_DECK', [
+    { name: 'id', pk: true }, { name: 'deck_id', fk: true, uk: true },
+    { name: 'token', uk: true }, { name: 'ativo' },
+  ]);
+  ent('MO', 850, 760, 'MATERIAL_ORIGEM', [
+    { name: 'id', pk: true }, { name: 'deck_id', fk: true },
+    { name: 'nome_arquivo' }, { name: 'status_processamento' },
+  ]);
+  ent('FC', 1350, 760, 'FLASHCARD', [
+    { name: 'id', pk: true }, { name: 'deck_id', fk: true },
+    { name: 'pergunta' }, { name: 'origem' }, { name: 'topico' },
+  ]);
+  ent('QZ', 1900, 760, 'QUIZ', [
+    { name: 'id', pk: true }, { name: 'deck_id', fk: true },
+    { name: 'titulo' }, { name: 'origem' }, { name: 'estilo' },
+  ]);
+  ent('RF', 1350, 1080, 'REVISAO_FLASHCARD', [
+    { name: 'id', pk: true }, { name: 'flashcard_id', fk: true }, { name: 'usuario_id', fk: true },
+    { name: 'qualidade_resposta' }, { name: 'proxima_revisao' },
+  ]);
+  ent('QQ', 1780, 1080, 'QUESTAO_QUIZ', [
+    { name: 'id', pk: true }, { name: 'quiz_id', fk: true },
+    { name: 'enunciado' }, { name: 'resposta_correta' },
+  ]);
+  ent('TQ', 2230, 1080, 'TENTATIVA_QUIZ', [
+    { name: 'id', pk: true }, { name: 'quiz_id', fk: true }, { name: 'usuario_id', fk: true },
+    { name: 'pontuacao' },
+  ]);
+  ent('RTQ', 2005, 1400, 'RESPOSTA_TENTATIVA_QUIZ', [
+    { name: 'id', pk: true }, { name: 'tentativa_quiz_id', fk: true }, { name: 'questao_quiz_id', fk: true },
+    { name: 'correta' },
+  ]);
+
+  drawRelationship(derSvg, E.USUARIO, E.DECK, 'possui', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.USUARIO, E.TRS, 'solicita', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.USUARIO, E.TVE, 'solicita', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.USUARIO, E.RF, 'realiza', '(0,N)', '(1,1)', { x: 900, y: 300 });
+  drawRelationship(derSvg, E.USUARIO, E.TQ, 'realiza', '(0,N)', '(1,1)', { x: 1750, y: 300 });
+  drawRelationship(derSvg, E.DECK, E.MO, 'contém', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.DECK, E.FC, 'contém', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.DECK, E.QZ, 'gera', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.DECK, E.CD, 'compartilha', '(0,1)', '(1,1)');
+  drawRelationship(derSvg, E.FC, E.RF, 'histórico', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.QZ, E.QQ, 'contém', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.QZ, E.TQ, 'recebe', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.TQ, E.RTQ, 'detalha', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.QQ, E.RTQ, 'referencia', '(0,N)', '(1,1)', { x: 1900, y: 1240 });
+})();
+</script>
