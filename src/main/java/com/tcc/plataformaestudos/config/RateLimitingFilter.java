@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,6 +42,13 @@ import jakarta.servlet.http.HttpServletResponse;
  * local em memória, não é compartilhado entre réplicas caso o sistema seja
  * escalado horizontalmente no futuro.
  *
+ * B14: {@code janelasPorChave} expurga periodicamente as chaves cuja janela
+ * já expirou há muito tempo (ver {@link #purgarJanelasExpiradasSeNecessario()}),
+ * em vez de crescer para sempre com um IP/usuário novo a cada entrada — sem
+ * isso, um processo de vida longa acumula uma entrada por IP/usuário
+ * distinto já visto, indefinidamente.
+ *
+
  * B13: por padrão, o limite por IP usa {@code request.getRemoteAddr()}, não
  * o header {@code X-Forwarded-For}. Confiar nesse header sem um proxy
  * reverso confiável na frente é, em si, uma falha de segurança — qualquer
@@ -73,11 +82,26 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
+	// B14: intervalo entre varreduras de limpeza e margem de retenção de uma
+	// janela parada (maior janela configurada acima é 60_000ms — o dobro já
+	// garante que nenhuma janela ainda "quente" seja removida por engano).
+	private static final long INTERVALO_LIMPEZA_MILLIS = 5 * 60_000L;
+	private static final long RETENCAO_MINIMA_MILLIS = 2 * 60_000L;
+
 	private final Map<String, Janela> janelasPorChave = new ConcurrentHashMap<>();
 	private final boolean confiarXForwardedFor;
+	private final LongSupplier relogio;
+	private final AtomicLong ultimaLimpeza;
 
 	public RateLimitingFilter(boolean confiarXForwardedFor) {
+		this(confiarXForwardedFor, System::currentTimeMillis);
+	}
+
+	/** Pacote-privado: permite controlar o tempo em teste, sem esperar de verdade os minutos do intervalo de limpeza (B14). */
+	RateLimitingFilter(boolean confiarXForwardedFor, LongSupplier relogio) {
 		this.confiarXForwardedFor = confiarXForwardedFor;
+		this.relogio = relogio;
+		this.ultimaLimpeza = new AtomicLong(relogio.getAsLong());
 	}
 
 	@Override
@@ -125,10 +149,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 	}
 
 	private boolean permitir(Regra regra, String chave) {
-		Janela janela = janelasPorChave.computeIfAbsent(chave, k -> new Janela());
+		purgarJanelasExpiradasSeNecessario();
+
+		Janela janela = janelasPorChave.computeIfAbsent(chave, k -> new Janela(relogio.getAsLong()));
 
 		synchronized (janela) {
-			long agora = System.currentTimeMillis();
+			long agora = relogio.getAsLong();
 
 			if (agora - janela.inicioJanela > regra.janelaMillis()) {
 				janela.inicioJanela = agora;
@@ -138,6 +164,38 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 			janela.contagem++;
 			return janela.contagem <= regra.limite();
 		}
+	}
+
+	/**
+	 * B14: varre {@code janelasPorChave} no máximo uma vez a cada
+	 * {@value #INTERVALO_LIMPEZA_MILLIS}ms (checagem barata via
+	 * {@link AtomicLong#compareAndSet}, não uma thread/scheduler dedicado —
+	 * este filtro é deliberadamente simples, sem ciclo de vida de bean, ver
+	 * javadoc da classe), removendo entradas cuja janela está parada há mais
+	 * de {@value #RETENCAO_MINIMA_MILLIS}ms. Uma chave removida por engano
+	 * antes da hora não corrompe nada: na pior hipótese, a próxima requisição
+	 * daquela chave recria a janela do zero, exatamente como já aconteceria
+	 * naturalmente quando a janela expira (linha do {@code permitir} logo
+	 * acima).
+	 */
+	private void purgarJanelasExpiradasSeNecessario() {
+		long agora = relogio.getAsLong();
+		long ultima = ultimaLimpeza.get();
+
+		if (agora - ultima < INTERVALO_LIMPEZA_MILLIS || !ultimaLimpeza.compareAndSet(ultima, agora)) {
+			return;
+		}
+
+		janelasPorChave.entrySet().removeIf(entrada -> {
+			synchronized (entrada.getValue()) {
+				return agora - entrada.getValue().inicioJanela > RETENCAO_MINIMA_MILLIS;
+			}
+		});
+	}
+
+	/** Pacote-privado: só para teste (B14) — inspeciona o tamanho do mapa sem expor um getter público desnecessário. */
+	int quantidadeDeChavesRastreadas() {
+		return janelasPorChave.size();
 	}
 
 	private void responderExcedido(HttpServletResponse response, String path) throws IOException {
@@ -171,8 +229,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 	}
 
 	private static final class Janela {
-		private long inicioJanela = System.currentTimeMillis();
+		private long inicioJanela;
 		private int contagem = 0;
+
+		private Janela(long inicioJanela) {
+			this.inicioJanela = inicioJanela;
+		}
 	}
 
 }

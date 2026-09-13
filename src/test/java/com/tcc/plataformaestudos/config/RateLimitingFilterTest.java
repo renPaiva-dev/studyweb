@@ -200,6 +200,50 @@ class RateLimitingFilterTest {
 		verify(resposta).setStatus(429);
 	}
 
+	// B14 (Docs/auditoria-erros-2026-09.md): janelasPorChave nao pode crescer
+	// para sempre - chaves paradas ha muito tempo devem ser expurgadas.
+	@Test
+	void deveExpurgarJanelasAntigasDoMapaEmMemoria() throws Exception {
+		long[] agora = { 0L };
+		RateLimitingFilter filtroComRelogio = new RateLimitingFilter(false, () -> agora[0]);
+		FilterChain chain = mock(FilterChain.class);
+
+		filtroComRelogio.doFilterInternal(requisicao("POST", "/api/auth/login", "203.0.113.40"), respostaMock(), chain);
+		assertThat(filtroComRelogio.quantidadeDeChavesRastreadas()).isEqualTo(1);
+
+		// Avanca alem do intervalo de limpeza (5min) e da retencao minima (2min,
+		// bem alem da janela de 60s de qualquer regra) antes da proxima requisicao.
+		agora[0] += 6 * 60_000L;
+		filtroComRelogio.doFilterInternal(requisicao("POST", "/api/auth/cadastro", "203.0.113.41"), respostaMock(), chain);
+
+		// A chave antiga (login) foi expurgada durante a checagem da nova
+		// requisicao; so sobra a chave recem-criada (cadastro).
+		assertThat(filtroComRelogio.quantidadeDeChavesRastreadas()).isEqualTo(1);
+	}
+
+	@Test
+	void naoDeveExpurgarJanelasAindaDentroDaRetencaoMinima() throws Exception {
+		long[] agora = { 0L };
+		RateLimitingFilter filtroComRelogio = new RateLimitingFilter(false, () -> agora[0]);
+		FilterChain chain = mock(FilterChain.class);
+
+		// t=0: janela do IP A.
+		filtroComRelogio.doFilterInternal(requisicao("POST", "/api/auth/login", "203.0.113.42"), respostaMock(), chain);
+
+		// t=4min50s: ainda antes do intervalo de limpeza (5min) - janela do IP B.
+		agora[0] = 4 * 60_000L + 50_000L;
+		filtroComRelogio.doFilterInternal(requisicao("POST", "/api/auth/cadastro", "203.0.113.43"), respostaMock(), chain);
+		assertThat(filtroComRelogio.quantidadeDeChavesRastreadas()).isEqualTo(2);
+
+		// t=5min10s: dispara a limpeza - IP A (parado ha 5min10s, alem da
+		// retencao minima de 2min) e removido; IP B (parado ha so 20s) fica.
+		agora[0] = 5 * 60_000L + 10_000L;
+		filtroComRelogio.doFilterInternal(requisicao("POST", "/api/auth/esqueci-senha", "203.0.113.44"), respostaMock(), chain);
+
+		// IP B sobrevive + a nova chave (esqueci-senha) criada agora = 2.
+		assertThat(filtroComRelogio.quantidadeDeChavesRastreadas()).isEqualTo(2);
+	}
+
 	@Test
 	void naoDeveLimitarRotasSemRegraConfigurada() throws Exception {
 		FilterChain chain = mock(FilterChain.class);

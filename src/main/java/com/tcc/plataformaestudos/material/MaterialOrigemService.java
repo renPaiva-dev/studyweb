@@ -13,6 +13,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,6 +46,8 @@ public class MaterialOrigemService {
 	private static final long TAMANHO_MAXIMO_BYTES = 15L * 1024 * 1024;
 	private static final byte[] ASSINATURA_PDF = "%PDF-".getBytes(StandardCharsets.US_ASCII);
 	private static final int TAMANHO_MAXIMO_NOME_ARQUIVO = 255;
+	private static final int TAMANHO_PADRAO_PAGINA = 20;
+	private static final int TAMANHO_MAXIMO_PAGINA = 50;
 
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final DeckService deckService;
@@ -90,13 +94,24 @@ public class MaterialOrigemService {
 		return MaterialOrigemResponseDTO.fromEntity(buscarMaterialDoUsuarioAutenticado(materialId));
 	}
 
+	/**
+	 * B5 (Docs/auditoria-erros-2026-09.md) — paginada: {@code tamanho} é
+	 * limitado a {@value #TAMANHO_MAXIMO_PAGINA} (valor de exemplo, mesmo
+	 * espírito do "ex.: 15" de RN08) para que um valor arbitrário do cliente
+	 * não force uma consulta sem limite prático; valores inválidos (&lt;= 0)
+	 * caem no padrão de {@value #TAMANHO_PADRAO_PAGINA}.
+	 */
 	@Transactional(readOnly = true)
-	public List<MaterialOrigemResponseDTO> listarPorDeck(Long deckId) {
+	public MaterialOrigemPaginaDTO listarPorDeck(Long deckId, int pagina, int tamanho) {
 		deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		return materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(deckId).stream()
-				.map(MaterialOrigemResponseDTO::fromEntity)
-				.toList();
+		int paginaValidada = Math.max(0, pagina);
+		int tamanhoValidado = tamanho <= 0 ? TAMANHO_PADRAO_PAGINA : Math.min(tamanho, TAMANHO_MAXIMO_PAGINA);
+
+		Page<MaterialOrigem> paginaDeMateriais = materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(
+				deckId, PageRequest.of(paginaValidada, tamanhoValidado));
+
+		return MaterialOrigemPaginaDTO.fromPage(paginaDeMateriais);
 	}
 
 	private void validarArquivo(MultipartFile arquivo) {

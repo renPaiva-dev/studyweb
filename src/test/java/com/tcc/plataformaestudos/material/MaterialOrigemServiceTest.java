@@ -23,6 +23,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -243,19 +245,53 @@ class MaterialOrigemServiceTest {
 		material.setId(5L);
 		material.setNomeArquivo("apostila.pdf");
 		material.setStatusProcessamento(StatusProcessamento.PROCESSADO);
-		when(materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(DECK_ID)).thenReturn(List.of(material));
+		when(materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(DECK_ID, PageRequest.of(0, 20)))
+				.thenReturn(new PageImpl<>(List.of(material), PageRequest.of(0, 20), 1));
 
-		List<MaterialOrigemResponseDTO> resposta = materialOrigemService.listarPorDeck(DECK_ID);
+		MaterialOrigemPaginaDTO resposta = materialOrigemService.listarPorDeck(DECK_ID, 0, 20);
 
-		assertThat(resposta).hasSize(1);
-		assertThat(resposta.get(0).nomeArquivo()).isEqualTo("apostila.pdf");
+		assertThat(resposta.itens()).hasSize(1);
+		assertThat(resposta.itens().get(0).nomeArquivo()).isEqualTo("apostila.pdf");
+		assertThat(resposta.pagina()).isZero();
+		assertThat(resposta.tamanho()).isEqualTo(20);
+		assertThat(resposta.totalItens()).isEqualTo(1);
+		assertThat(resposta.totalPaginas()).isEqualTo(1);
+	}
+
+	// B5 (Docs/auditoria-erros-2026-09.md): tamanho de página acima do limite
+	// (TAMANHO_MAXIMO_PAGINA) é limitado, em vez de permitir uma consulta
+	// arbitrariamente grande vinda do cliente.
+	@Test
+	void deveLimitarTamanhoDaPaginaAoMaximoQuandoClientePedeMais() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+		when(materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(DECK_ID, PageRequest.of(0, 50)))
+				.thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+		materialOrigemService.listarPorDeck(DECK_ID, 0, 500);
+
+		verify(materialOrigemRepository).findByDeckIdOrderByCriadoEmDesc(DECK_ID, PageRequest.of(0, 50));
+	}
+
+	@Test
+	void deveUsarTamanhoPadraoQuandoValorInformadoForInvalido() {
+		Deck deck = new Deck();
+		deck.setId(DECK_ID);
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck);
+		when(materialOrigemRepository.findByDeckIdOrderByCriadoEmDesc(DECK_ID, PageRequest.of(0, 20)))
+				.thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+
+		materialOrigemService.listarPorDeck(DECK_ID, -3, 0);
+
+		verify(materialOrigemRepository).findByDeckIdOrderByCriadoEmDesc(DECK_ID, PageRequest.of(0, 20));
 	}
 
 	@Test
 	void deveLancarAcessoNegadoExceptionAoListarMateriaisDeDeckDeOutroUsuario() {
 		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenThrow(new AcessoNegadoException("Você não tem permissão para acessar este deck"));
 
-		assertThatThrownBy(() -> materialOrigemService.listarPorDeck(DECK_ID))
+		assertThatThrownBy(() -> materialOrigemService.listarPorDeck(DECK_ID, 0, 20))
 				.isInstanceOf(AcessoNegadoException.class);
 
 		verifyNoInteractions(materialOrigemRepository);

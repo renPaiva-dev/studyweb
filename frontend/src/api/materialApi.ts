@@ -26,9 +26,20 @@ export interface SugestaoFlashcard {
   topico: string
 }
 
-/** GET /api/decks/{id}/materiais -> 200 */
-export async function listarMateriais(deckId: number): Promise<Material[]> {
-  const { data } = await apiClient.get<Material[]>(`/api/decks/${deckId}/materiais`)
+/** B5 - resposta paginada de GET /api/decks/{id}/materiais (docs/contrato-api.md). */
+export interface PaginaMateriais {
+  itens: Material[]
+  pagina: number
+  tamanho: number
+  totalItens: number
+  totalPaginas: number
+}
+
+/** GET /api/decks/{id}/materiais?pagina={n}&tamanho={n} -> 200 (padrao: pagina 0, tamanho 20) */
+export async function listarMateriais(deckId: number, pagina = 0, tamanho = 20): Promise<PaginaMateriais> {
+  const { data } = await apiClient.get<PaginaMateriais>(`/api/decks/${deckId}/materiais`, {
+    params: { pagina, tamanho },
+  })
   return data
 }
 

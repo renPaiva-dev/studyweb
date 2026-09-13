@@ -103,6 +103,14 @@ paginam. Não é uma violação de spec (o contrato atual não exige paginação
 crescimento sem limite se o TCC evoluir para uso real. Tratar como melhoria, não bug — decidir
 se vale a pena para o escopo do projeto.
 
+**Status: RESOLVIDO (parcialmente).** `GET /api/decks/{id}/materiais` agora é paginado
+(`pagina`/`tamanho`, padrão 0/20, `tamanho` limitado a 50 via `MaterialOrigemRepository`
+com `Pageable` em vez de trazer a tabela inteira do deck de uma vez — ver
+`MaterialOrigemPaginaDTO`). O limite de *quantidade* de materiais por deck (segunda metade do
+achado) não foi implementado — decisão consciente de manter fora do escopo por ora, já que RN06
+não o exige e o volume real de um TCC não se aproxima de justificar isso. Testado em
+`MaterialOrigemServiceTest`.
+
 ---
 
 ### B6 — [🟡 Alto] Job de lembrete diário aborta silenciosamente no primeiro e-mail que falhar
@@ -239,6 +247,13 @@ resto da aplicação. Testado em `RateLimitingFilterTest`.
 
 `janelasPorChave` nunca remove entradas antigas — cada IP/usuário distinto fica para sempre em
 memória. Baixo risco para o escopo do TCC; só relevante se o processo rodar por muito tempo.
+
+**Status: RESOLVIDO.** `purgarJanelasExpiradasSeNecessario()` varre o mapa no máximo a cada 5
+minutos (checagem barata via `AtomicLong`, sem thread/scheduler dedicado) e remove chaves paradas
+há mais de 2 minutos — margem segura acima da maior janela configurada (60s). Testado em
+`RateLimitingFilterTest` (`deveExpurgarJanelasAntigasDoMapaEmMemoria`,
+`naoDeveExpurgarJanelasAindaDentroDaRetencaoMinima`), com o relógio injetável para não depender de
+tempo real de execução.
 
 ---
 

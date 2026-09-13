@@ -40,7 +40,7 @@ Convenções gerais:
 |---|---|---|---|---|
 | POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho/nome de arquivo > 255 caracteres — RN06) · `401` · `404` (não existe ou não é seu — RN01) |
 | GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, criadoEm }` | `401` · `403` · `404` |
-| GET | `/api/decks/{id}/materiais` | — | `200` — `[ { id, nomeArquivo, statusProcessamento, criadoEm } ]`, mais recentes primeiro | `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/decks/{id}/materiais?pagina={n}&tamanho={n}` | — | `200` — `{ itens: [ { id, nomeArquivo, statusProcessamento, criadoEm } ], pagina, tamanho, totalItens, totalPaginas }`, mais recentes primeiro (paginado — achado B5, `pagina` padrão 0, `tamanho` padrão 20, limitado a 50) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Geração de Flashcards via IA (UC04/UC05)
 

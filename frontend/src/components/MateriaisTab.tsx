@@ -28,6 +28,14 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   const [enviando, setEnviando] = useState(false)
   const [sugestoesEmRevisao, setSugestoesEmRevisao] = useState<SugestaoFlashcard[] | null>(null)
 
+  // B5 - a listagem agora e paginada; guarda a pagina atual/total para o
+  // botao "Carregar mais" e para o total real (totalItens), que pode ser
+  // maior do que o que ja foi carregado na tela.
+  const [paginaAtual, setPaginaAtual] = useState(0)
+  const [totalPaginas, setTotalPaginas] = useState(0)
+  const [totalItens, setTotalItens] = useState(0)
+  const [carregandoMais, setCarregandoMais] = useState(false)
+
   const intervalosPollingRef = useRef<number[]>([])
   // `clearInterval` no cleanup do useEffect impede so os proximos ticks -
   // uma chamada de polling ja em voo no momento do unmount ainda resolve
@@ -39,11 +47,31 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
     setErroCarregamento(null)
 
     try {
-      setMateriais(await listarMateriais(deckId))
+      const resultado = await listarMateriais(deckId, 0)
+      setMateriais(resultado.itens)
+      setPaginaAtual(resultado.pagina)
+      setTotalPaginas(resultado.totalPaginas)
+      setTotalItens(resultado.totalItens)
     } catch (erro) {
       setErroCarregamento(extrairMensagemErro(erro, 'Não foi possível carregar os materiais deste deck.'))
     }
   }, [deckId])
+
+  async function carregarMaisMateriais() {
+    setCarregandoMais(true)
+
+    try {
+      const resultado = await listarMateriais(deckId, paginaAtual + 1)
+      setMateriais((atual) => [...(atual ?? []), ...resultado.itens])
+      setPaginaAtual(resultado.pagina)
+      setTotalPaginas(resultado.totalPaginas)
+      setTotalItens(resultado.totalItens)
+    } catch (erro) {
+      toast.error(extrairMensagemErro(erro, 'Não foi possível carregar mais materiais.'))
+    } finally {
+      setCarregandoMais(false)
+    }
+  }
 
   useEffect(() => {
     canceladoRef.current = false
@@ -101,6 +129,7 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
       // usa a hora local como fallback para inserir o item otimisticamente
       // na lista sem gerar "Invalid Date" na exibicao (MaterialItem).
       setMateriais((atual) => [{ ...material, criadoEm: new Date().toISOString() }, ...(atual ?? [])])
+      setTotalItens((atual) => atual + 1)
 
       if (material.statusProcessamento === 'PENDENTE') {
         acompanharProcessamento(material.id)
@@ -123,9 +152,9 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   useDefinirMargem(
     materiais && materiais.length > 0 ? (
       <div className="space-y-1 text-sm">
-        <p className="font-heading text-2xl font-semibold">{materiais.length}</p>
+        <p className="font-heading text-2xl font-semibold">{totalItens}</p>
         <p className="text-muted-foreground">
-          {materiais.length === 1 ? 'material enviado' : 'materiais enviados'}
+          {totalItens === 1 ? 'material enviado' : 'materiais enviados'}
           {totalPendentes > 0 && `, ${totalPendentes} em processamento`}
           {totalComErro > 0 && `, ${totalComErro} com erro`}
         </p>
@@ -133,7 +162,7 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
       </div>
     ) : null,
     null,
-    [materiais?.length, totalProcessados, totalPendentes, totalComErro],
+    [materiais?.length, totalItens, totalProcessados, totalPendentes, totalComErro],
   )
 
   if (sugestoesEmRevisao !== null) {
@@ -182,9 +211,23 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
               key={material.id}
               material={material}
               onSugestoesGeradas={setSugestoesEmRevisao}
-              onExcluido={(materialId) => setMateriais((atual) => atual?.filter((m) => m.id !== materialId) ?? atual)}
+              onExcluido={(materialId) => {
+                setMateriais((atual) => atual?.filter((m) => m.id !== materialId) ?? atual)
+                setTotalItens((atual) => Math.max(0, atual - 1))
+              }}
             />
           ))}
+        </div>
+      )}
+
+      {/* B5 - lista paginada (20 por vez); so aparece quando ha mais paginas
+          alem da ja carregada, evitando trocar a UX de decks pequenos (o
+          caso comum de um TCC). */}
+      {materiais !== null && paginaAtual + 1 < totalPaginas && (
+        <div className="flex justify-center">
+          <Button variant="outline" size="sm" onClick={() => void carregarMaisMateriais()} disabled={carregandoMais}>
+            {carregandoMais ? 'Carregando...' : 'Carregar mais materiais'}
+          </Button>
         </div>
       )}
     </div>
