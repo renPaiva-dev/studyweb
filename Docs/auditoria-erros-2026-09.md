@@ -13,6 +13,13 @@ redesign das telas de auth).
 
 **Legenda de esforço:** 🟢 pequeno (< 1h) · 🟡 médio (1 dia) · 🔴 grande (vários dias / decisão de arquitetura)
 
+> **Re-verificação em 2026-09-15: todos os 33 achados abaixo estão resolvidos.** Cada um foi
+> conferido individualmente contra o código atual (não só contra este documento) — a maioria já
+> tinha sido corrigida ao longo do desenvolvimento normal, mas esta lista nunca tinha sido
+> atualizada para refletir isso. O texto original de cada achado foi mantido como registro
+> histórico; a nota **Status: RESOLVIDO** logo abaixo de cada um documenta a correção real, com
+> arquivo/método como evidência. Nenhuma ação pendente restante deste documento.
+
 ---
 
 ## Resumo executivo
@@ -53,6 +60,11 @@ espaço em disco sem limite. O teste `DeckExclusaoCascataTest` só confere o ban
 `deck.getMateriais()` e apagar cada arquivo físico (reaproveitar a lógica de
 `excluirArquivoFisico`, movendo-a para um serviço compartilhado se necessário).
 
+**Status: RESOLVIDO.** `DeckService.excluir()` chama `arquivoFisicoService.excluirTodos(deck.getMateriais())`
+antes de `deckRepository.delete(deck)`. A lógica de remoção física foi extraída para o novo
+`material/ArquivoFisicoService`, reutilizado tanto aqui quanto em `MaterialOrigemService.excluir()`
+— o javadoc da classe cita B1 explicitamente.
+
 ---
 
 ### B2 — [🟡 Alto] PDF corrompido pode causar 500 + arquivo órfão em vez do fluxo de erro já implementado
@@ -68,6 +80,10 @@ disco virando órfão.
 `Exception`), preservando a conversão para `ExtracaoTextoException` — assim cai no fluxo RN07
 (status `ERRO`) já existente, em vez de 500.
 
+**Status: RESOLVIDO.** `extrairTexto` agora usa `catch (IOException | RuntimeException e)`,
+convertendo para `ExtracaoTextoException` e caindo no fluxo RN07 (status `ERRO`) em vez de
+propagar para um 500.
+
 ---
 
 ### B3 — [🟡 Médio] Nome de arquivo muito longo derruba o upload com 500 + arquivo órfão
@@ -81,6 +97,10 @@ físico é salvo, e o `INSERT` falha com `DataIntegrityViolationException` sem h
 **Fix:** validar `nomeOriginal.length() > 255` em `validarArquivo`, antes de salvar o arquivo em
 disco.
 
+**Status: RESOLVIDO.** `validarArquivo` rejeita nomes acima de 255 caracteres com
+`ArquivoInvalidoException` antes de `salvarArquivoFisico` ser chamado — sem risco de arquivo
+órfão.
+
 ---
 
 ### B4 — [🟢 Médio/baixo] N+1 ao listar decks
@@ -91,6 +111,10 @@ disparada — 1+N queries em vez de uma agregada.
 
 **Fix:** substituir por uma consulta agregada (`GROUP BY deck_id`) que devolva
 `Map<Long, Long>` de uma vez para todos os decks do usuário.
+
+**Status: RESOLVIDO.** `listar()` busca a contagem de flashcards de todos os decks do usuário
+numa única consulta agregada (`flashcardRepository.contarPorDeckIdAgrupado`) e monta o
+`Map<Long, Long>` usado para montar cada DTO.
 
 ---
 
@@ -133,6 +157,10 @@ lembretes.forEach(l -> {
 });
 ```
 
+**Status: RESOLVIDO.** `LembreteRevisaoService` envolve cada envio individual num try/catch
+dedicado (`enviarEmailComTratamentoDeErro`), logando a falha por usuário sem interromper os
+demais.
+
 ---
 
 ### B7 — [🟡 Alto] N+1 no job de lembrete diário (roda para todos os usuários, todo dia)
@@ -147,6 +175,9 @@ dispara uma query lazy extra. Com 500 flashcards pendentes em 120 decks de 40 us
 **Fix:** adicionar `JOIN FETCH f.deck d JOIN FETCH d.usuario` nas queries de
 `RevisaoFlashcardRepository` que acessam esses campos.
 
+**Status: RESOLVIDO.** `findTodosPendentesDeRevisao` agora tem
+`JOIN FETCH f.deck d JOIN FETCH d.usuario`, eliminando as queries lazy extras por deck/usuário.
+
 ---
 
 ### B8 — [🟡 Médio] Ordenar a fila de estudo dispara uma query por comparação
@@ -158,6 +189,10 @@ pendentes gera dezenas a centenas de queries só para montar a fila de estudo.
 
 **Fix:** buscar todas as revisões relevantes de uma vez (`findByFlashcardIdIn`, já existe),
 montar um `Map<Long, LocalDate>` e ordenar em memória usando esse mapa.
+
+**Status: RESOLVIDO.** `ordenarPelaProximaRevisao` busca todas as revisões relevantes de uma vez
+(`findByFlashcardIdIn`) e monta um `Map<Long, LocalDate>` antes do sort — o `Comparator` só lê do
+mapa, sem acessar o banco.
 
 ---
 
@@ -172,6 +207,10 @@ acaso, não da ordem real de avaliação. Corrompe silenciosamente o SM-2 (RN09)
 
 **Fix:** serializar leitura+cálculo+escrita por flashcard (lock pessimista na leitura, ou travar
 a linha do `Flashcard` antes de calcular o novo estado, dentro da mesma transação).
+
+**Status: RESOLVIDO.** `avaliarResposta` trava a linha do flashcard
+(`flashcardRepository.findByIdParaAtualizacaoDeRevisao`, lock pessimista) antes de ler o estado
+anterior, serializando avaliações concorrentes do mesmo flashcard.
 
 ---
 
@@ -189,6 +228,11 @@ services (`FlashcardGenerationService`, `ProvaGenerationService`, e os já cient
 `RecomendacaoEstudoService`/`ExplicacaoService`, ver `Docs/extensao-recomendacao-foco-estudo.md`
 §3) capturem igualmente antes de decidir se tentam de novo.
 
+**Status: RESOLVIDO.** Nova exceção base `GeracaoConteudoIAException` é lançada pelo
+`GeminiClient` para timeout/status não-200/erro de rede/resposta vazia; `GeracaoFlashcardsException`/
+`GeracaoProvaException` agora estendem essa base, e `ProvaGenerationService.gerarComRetry` captura
+a exceção base — o retry passa a cobrir falha de infraestrutura, não só JSON malformado.
+
 ---
 
 ### B11 — [🟡 Alto] Dois endpoints que chamam a IA Gemini não têm rate limit
@@ -201,6 +245,10 @@ em loop sem limite algum, esgotando a cota gratuita ou gerando custo real sem co
 
 **Fix:** adicionar duas `Regra` novas em `REGRAS`, mesmo limite dos demais endpoints de IA
 (ex.: 10/min por usuário).
+
+**Status: RESOLVIDO.** `RateLimitingFilter` tem regras dedicadas para
+`POST /api/flashcards/*/explicacao` e `POST /api/decks/*/recomendacao-estudo` (10/min por
+usuário, mesmo limite dos demais endpoints de IA).
 
 ---
 
@@ -215,6 +263,10 @@ query extra por questão ao abrir o detalhe (`GET /api/usuario/provas/{id}`).
 **Fix:** segunda query em lote (`SELECT ... FROM RespostaTentativaQuiz rq JOIN FETCH rq.questao
 WHERE rq.tentativa.id = :id`, já que Hibernate não permite duas coleções `List` no fetch da
 mesma query) ou configurar `hibernate.default_batch_fetch_size`.
+
+**Status: RESOLVIDO.** `QuizService.buscarDetalheTentativa` faz uma segunda busca em lote
+(`respostaTentativaQuizRepository.buscarComQuestaoPorTentativa`, com `JOIN FETCH rq.questao`)
+logo após carregar a tentativa — sem N+1 ao montar o detalhe.
 
 ---
 
@@ -269,6 +321,10 @@ decisão já tomada no lado público.
 **Fix (opcional):** unificar para 404 também quando "existe mas não é seu", ou documentar
 conscientemente o trade-off.
 
+**Status: RESOLVIDO.** `buscarDeckDoUsuarioAutenticado` unifica em `RecursoNaoEncontradoException`
+(404) tanto "não existe" quanto "existe mas não é seu", igual ao lado público. O javadoc do
+método cita B15 explicitamente.
+
 ---
 
 ### B16 — [🟡 Médio] Exportação de dados (LGPD/RN31) não inclui as respostas por questão das tentativas
@@ -283,6 +339,11 @@ RN36), mas `ExportacaoDadosService` nunca busca essa entidade — `TentativaExpo
 **Fix:** injetar `RespostaTentativaQuizRepository`, buscar em lote por `tentativaId IN (...)`
 (mesmo padrão já usado no service), adicionar `List<RespostaExportadaDTO>` em
 `TentativaExportadaDTO`.
+
+**Status: RESOLVIDO.** `ExportacaoDadosService` busca `RespostaTentativaQuiz` em lote
+(`RespostaTentativaQuizRepository.buscarComQuestaoPorTentativas`) e popula
+`TentativaExportadaDTO.respostas`; `QuizExportadoDTO`/`QuestaoExportadaDTO` passaram a incluir
+`origem`/`estilo`/`explicacao`.
 
 ---
 
@@ -299,6 +360,10 @@ documentado. Afeta `GET/PUT /api/usuario/perfil`, `PUT /api/usuario/senha`,
 **Fix:** trocar por uma exceção de negócio (`RecursoNaoEncontradoException` ou nova
 `UsuarioNaoEncontradoException`, 401/404), logada em INFO/WARN.
 
+**Status: RESOLVIDO.** Nova `UsuarioNaoEncontradoException` (estende `NegocioException`, mapeada
+para 401) substitui o `IllegalStateException` antigo em `UsuarioService.buscarUsuarioAutenticado`
+e `ExportacaoDadosService`, logada em WARN em vez de ERROR.
+
 ---
 
 ### B18 — [🟡 Médio] Corrida no cadastro/atualização de perfil gera 500 em vez de 409
@@ -312,6 +377,12 @@ para `EmailJaCadastradoException`/`NomeUsuarioJaCadastradoException`.
 **Fix:** adicionar `@ExceptionHandler(DataIntegrityViolationException.class)` em
 `TratamentoErrosGlobal` (409, mensagem genérica), ou try/catch nos dois métodos convertendo para
 as exceções de negócio já existentes.
+
+**Status: RESOLVIDO.** `TratamentoErrosGlobal` agora tem
+`@ExceptionHandler(DataIntegrityViolationException.class)` retornando 409 — a corrida no
+cadastro/perfil não cai mais no handler genérico (500). `cadastrar`/`atualizarPerfil` continuam
+"check-then-act" sem lock (a correção foi no tratamento do erro, não na causa), decisão
+consciente já que o 409 resultante está correto de qualquer forma.
 
 ---
 
@@ -345,6 +416,10 @@ em `DashboardEvolucao`, que `key={deckId}` sozinho não cobre). Ver F6 para o ca
 `DashboardEvolucao`/`Topicos`/`Atividade` com o filtro de período, que não é resolvido por
 `key={deckId}`.
 
+**Status: RESOLVIDO.** `DeckDetalhePage.tsx` usa `<Tabs key={deckId} ...>`, forçando remontagem
+completa das 5 abas ao trocar de deck. O comentário no código cita explicitamente os achados
+F0/F5/F6/F7 desta auditoria.
+
 ---
 
 ### F1 — [🟡 Alto] NovaProvaPage: sem estado de erro/retry ao falhar `listarDecks`
@@ -356,6 +431,9 @@ skeleton pra sempre, sem forma de tentar de novo além de recarregar a página i
 
 **Fix:** adicionar `erroCarregamento` + bloco de erro com botão "Tentar novamente", igual ao
 padrão das demais páginas (`DeckDetalhePage`, `DecksPage`, etc.).
+
+**Status: RESOLVIDO.** `NovaProvaPage` tem estado `erroCarregamento` com bloco de erro dedicado e
+botão "Tentar novamente", igual ao padrão das demais páginas.
 
 ---
 
@@ -369,6 +447,9 @@ deck com `deckId` de outro na tela.
 **Fix:** guardar a requisição mais recente (`useRef` com o id pedido) e ignorar a resposta se o
 id não bater mais com o selecionado atual.
 
+**Status: RESOLVIDO.** `NovaProvaPage` usa `deckIdSolicitadoRef` para descartar a resposta de uma
+requisição cujo deck não é mais o selecionado.
+
 ---
 
 ### F1c — [🟡 Médio] NovaProvaPage: flashcards somem silenciosamente se a busca falhar
@@ -377,6 +458,9 @@ id não bater mais com o selecionado atual.
 Mesma causa raiz de F1 — se `listarFlashcards` falhar, nem a mensagem "deck sem flashcards" nem
 a lista aparecem, só o cabeçalho do card "2. Escolha os flashcards" fica vazio. Corrigir junto
 com F1.
+
+**Status: RESOLVIDO** (mesmo fix de F1/F1b). `NovaProvaPage` tem um estado `erroFlashcards`
+próprio, com bloco de erro e retry dedicados.
 
 ---
 
@@ -389,6 +473,9 @@ IA; o tipo do frontend omite `topico`, e o componente de revisão desestrutura s
 
 **Fix:** adicionar `topico: string` a `SugestaoFlashcard`, propagar em
 `SugestaoParaConfirmar` e exibir no componente de revisão.
+
+**Status: RESOLVIDO.** `SugestaoFlashcard` inclui `topico: string`, propagado e reenviado por
+`RevisaoSugestoesFlashcards.tsx`.
 
 ---
 
@@ -404,6 +491,10 @@ nenhum — se o backend não suportar, o botão parece "não fazer nada". O come
 `contrato-api.md`/`regras-de-negocio.md` (ou remover o parâmetro se não suportar); corrigir a
 citação de RN nos dois comentários.
 
+**Status: RESOLVIDO.** `contrato-api.md` documenta `incluirTodos` explicitamente para
+`GET /api/decks/{id}/fila-estudo`; os comentários em `estudoApi.ts`/`EstudarTab.tsx` foram
+corrigidos para citar RN10 (fila do dia), não mais RN22.
+
 ---
 
 ### F4 — [🟢 Baixo] Tipo de resposta do upload de material não bate com o contrato (sobra `criadoEm`)
@@ -416,6 +507,10 @@ realmente não devolver esse campo, aparece "Invalid Date" até o próximo poll 
 **Fix:** criar um tipo `MaterialCriado` sem `criadoEm` para a resposta do POST; usar
 `new Date()` local como fallback ao inserir o item otimisticamente na lista.
 
+**Status: RESOLVIDO.** A resposta do `POST` agora usa um tipo `MaterialCriado` separado (sem
+`criadoEm`); `MateriaisTab` usa `new Date().toISOString()` como fallback local ao inserir o item
+otimisticamente na lista.
+
 ---
 
 ### F4b — [🟢 Baixo] Duplicação do tipo `{ mensagem: string }`
@@ -425,6 +520,9 @@ realmente não devolver esse campo, aparece "Invalid Date" até o próximo poll 
 Mesmo formato, dois nomes diferentes em arquivos diferentes. Centralizar em um tipo
 compartilhado.
 
+**Status: RESOLVIDO.** `api/tiposComuns.ts` define `MensagemResposta` compartilhado, importado
+por `authApi.ts` e `usuarioApi.ts` em vez de redeclarado em cada um.
+
 ---
 
 ### F5 — [🟡 Alto] QuizTab: estado do quiz não reseta ao trocar de deck
@@ -433,6 +531,9 @@ compartilhado.
 Resolvido pelo fix F0 (`key={deckId}` em `DeckDetalhePage`). Sem isso, o quiz do deck anterior
 continua visível e uma resposta pode ser registrada contra o quiz errado
 (`responderTentativa(quiz.id, ...)` usando o id do deck anterior).
+
+**Status: RESOLVIDO** via F0 — `key={deckId}` em `DeckDetalhePage` remonta `QuizTab` inteiro ao
+trocar de deck, resetando todo o estado do quiz.
 
 ---
 
@@ -449,6 +550,11 @@ deck** — `key={deckId}` não cobre esse caso, porque o deck não mudou. Clicar
 dentro do próprio `DashboardEvolucao`/`Topicos`/`Atividade`, já que remontar por período inteiro
 perderia a transição suave do gráfico.
 
+**Status: RESOLVIDO**, incluindo o caso específico que F0 sozinho não cobria: `DashboardEvolucao`/
+`DashboardTopicos`/`DashboardAtividade` usam uma ref de "requisição mais recente"
+(`requisicaoAtualRef`) para descartar respostas fora de ordem ao trocar o filtro de período
+rapidamente.
+
 ---
 
 ### F7 — [🟡 Médio] CompartilharDeckDialog reseta e refaz fetch a cada re-render do pai
@@ -460,6 +566,9 @@ render; o `useEffect` do diálogo depende da referência de `deck` inteira, não
 Trocar de aba com o diálogo aberto reseta o link exibido e refaz a busca sem necessidade.
 
 **Fix:** trocar a dependência do `useEffect`/`useCallback` no diálogo de `deck` para `deck?.id`.
+
+**Status: RESOLVIDO.** `CompartilharDeckDialog` deriva `deckId = deck?.id` e usa esse valor
+primitivo (não o objeto `deck`) como dependência do `useEffect`/`useCallback`.
 
 ---
 
@@ -476,6 +585,9 @@ flashcard).
 **Fix:** adicionar `key={deck.flashcards[indiceAtual].id}` na chamada de
 `FlashcardEstudoCard` em `DeckCompartilhadoPage.tsx`.
 
+**Status: RESOLVIDO.** `DeckCompartilhadoPage.tsx` passa `key={deck.flashcards[indiceAtual].id}`
+para `FlashcardEstudoCard`, cumprindo o contrato documentado no próprio componente.
+
 ---
 
 ### F9 — [🟢 Baixo] MateriaisTab: polling pode chamar `setState` após unmount
@@ -487,9 +599,15 @@ desperdiçado.
 
 **Fix:** flag `cancelado` (ou `AbortController`) capturada no cleanup do `useEffect`.
 
+**Status: RESOLVIDO.** `MateriaisTab` usa uma flag `canceladoRef`, setada no cleanup do
+`useEffect` e checada antes de qualquer `setState` dentro do polling.
+
 ---
 
-## 3. Ordem sugerida de execução
+## 3. Ordem sugerida de execução (histórico — já concluída)
+
+> Esta seção documenta a ordem originalmente planejada, mantida como registro. Todos os itens
+> abaixo estão resolvidos (ver seções 1 e 2).
 
 1. **B1** (arquivo órfão ao excluir deck) e **B9** (corrupção silenciosa do SM-2) — únicos dois
    que causam perda/corrupção de dado real, não só erro de UX.
@@ -507,3 +625,6 @@ desperdiçado.
 *Gerado por auditoria automatizada em 2026-09-05. Cada achado foi verificado individualmente
 por um agente dedicado à sua área, mas vale sua própria checagem antes de corrigir — em caso de
 dúvida sobre uma RN específica, o documento fonte é sempre `Docs/regras-de-negocio.md`.*
+
+*Re-verificado em 2026-09-15 por dois agentes dedicados (backend e frontend), cada achado
+conferido individualmente contra o código atual.*
