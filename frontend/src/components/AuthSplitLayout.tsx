@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import estudandoFoto from '@/assets/estudando.jpg'
+import { Logo } from '@/components/Logo'
 
 interface AuthSplitLayoutProps {
   children: ReactNode
@@ -25,8 +26,9 @@ export function AuthSplitLayout({ children }: AuthSplitLayoutProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-tinta/85 via-tinta/30 to-tinta/10" />
 
         <div className="relative flex h-full flex-col items-center justify-end p-12 pb-20 text-center text-papel">
-          <p className="font-heading text-5xl font-semibold drop-shadow-sm">StudyWeb</p>
-          <p className="mt-3 text-lg text-papel/85 drop-shadow-sm">Sua melhor plataforma de estudos</p>
+          <Logo tone="light" className="mb-3 h-10 w-10" />
+          <p className="font-heading text-5xl font-semibold drop-shadow-sm">Sinapse</p>
+          <p className="mt-3 text-lg text-papel/85 drop-shadow-sm">Transforme material em memória.</p>
         </div>
       </div>
 

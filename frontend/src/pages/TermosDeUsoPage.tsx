@@ -22,7 +22,7 @@ export function TermosDeUsoPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
-            Ao criar uma conta na Plataforma de Estudos, você concorda com os termos abaixo, que regem o uso do
+            Ao criar uma conta no Sinapse, você concorda com os termos abaixo, que regem o uso do
             serviço de organização de estudos e geração de flashcards por IA.
           </p>
           <p>

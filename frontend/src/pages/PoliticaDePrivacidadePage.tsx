@@ -22,7 +22,7 @@ export function PoliticaDePrivacidadePage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
           <p>
-            Esta política descreve como a Plataforma de Estudos trata seus dados pessoais, em conformidade com a Lei
+            Esta política descreve como o Sinapse trata seus dados pessoais, em conformidade com a Lei
             Geral de Proteção de Dados (LGPD).
           </p>
           <p>

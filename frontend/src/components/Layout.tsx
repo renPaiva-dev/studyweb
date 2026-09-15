@@ -1,6 +1,7 @@
-import { ClipboardList, LayoutDashboard, LogOut, NotebookPen, User, UserCircle } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, LogOut, User, UserCircle } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
+import { Logo } from '@/components/Logo'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,8 +51,8 @@ function LayoutConteudo() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
-              <NotebookPen className="h-5 w-5 text-foreground" strokeWidth={1.5} />
-              Plataforma de Estudos
+              <Logo className="h-6 w-6" />
+              Sinapse
             </Link>
 
             <nav className="hidden items-center gap-6 sm:flex">

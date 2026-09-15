@@ -11,11 +11,13 @@ export default {
     },
     extend: {
       fontFamily: {
-        // IBM Plex Sans e Fraunces (Google Fonts, ver index.css) - identidade
-        // "caderno ativamente corrigido": corpo/UI em Plex Sans, titulos de
-        // modulo/boas-vindas/conquista em Fraunces (serifada, editorial).
-        sans: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        // Hanken Grotesk, Fraunces e IBM Plex Mono (Google Fonts, ver
+        // index.css) - identidade Sinapse: corpo/UI em Hanken Grotesk,
+        // titulos de modulo/boas-vindas/conquista em Fraunces (serifada,
+        // editorial), dado numerico (prontidao, intervalos) em Plex Mono.
+        sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
         heading: ['Fraunces', 'Georgia', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       fontSize: {
         // Escala de titulo de modulo/pagina (font-heading) - hierarquia por
@@ -26,18 +28,21 @@ export default {
         eyebrow: ['0.75rem', { lineHeight: '1rem', letterSpacing: '0.02em', fontWeight: '600' }],
       },
       colors: {
-        // Paleta fixa da identidade "caderno ativamente corrigido" (ver
-        // Docs/ - spec de identidade visual). Uso literal reservado a pontos
-        // que nao podem consumir tokens HSL (ex.: cores de series do
-        // Recharts em src/utils/coresDesempenho.ts) - o resto do app usa os
-        // tokens semanticos abaixo (background/foreground/primary/...),
-        // remapeados para esta mesma paleta em index.css.
-        tinta: '#1E2A44',
-        papel: '#EFEBE1',
-        'verde-lousa': '#3C6B52',
+        // Paleta fixa da identidade Sinapse (tinta/papel/verde-lousa/
+        // vermelho-correcao/grafite/manilha sao os mesmos nomes de token de
+        // antes - so os valores mudaram, pra nao exigir troca em cada
+        // componente que ja consome essas classes literais). Uso literal
+        // reservado a pontos que nao podem consumir tokens HSL (ex.: cores
+        // de series do Recharts em src/utils/coresDesempenho.ts) - o resto
+        // do app usa os tokens semanticos abaixo (background/foreground/
+        // primary/...), remapeados para esta mesma paleta em index.css.
+        tinta: '#15172B',
+        papel: '#F4F5FA',
+        'verde-lousa': '#1D7A66',
         'vermelho-correcao': '#B3402C',
-        grafite: '#6B6459',
-        manilha: '#C9AD82',
+        grafite: '#62657C',
+        manilha: '#DFE1EC',
+        spark: '#F2A63B',
 
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',

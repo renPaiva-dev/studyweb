@@ -1,8 +1,9 @@
-# StudyWeb
+# Sinapse
 
-Plataforma de estudos com flashcards, repetição espaçada (SM-2), geração de
-conteúdo via IA (Gemini) e provas personalizadas. Stack: Spring Boot 4 (Java
-17) + PostgreSQL no backend, React 19/TypeScript/Vite no frontend.
+Plataforma de estudos (nome de projeto: `studyweb`) com flashcards, repetição
+espaçada (SM-2), geração de conteúdo via IA (Gemini) e provas personalizadas.
+Stack: Spring Boot 4 (Java 17) + PostgreSQL no backend, React 19/TypeScript/
+Vite no frontend.
 
 Documentação completa de regras de negócio, casos de uso, modelo de dados e
 contrato de API em [`Docs/`](Docs/).

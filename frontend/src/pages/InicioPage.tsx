@@ -33,8 +33,7 @@ const RECURSOS = [
   },
 ]
 
-// Tela inicial do app (clicar em "Plataforma de Estudos" no cabecalho leva
-// aqui) - combina um resumo do progresso (dashboard geral, UC20), uma
+// Tela inicial do app (clicar em "Sinapse" no cabecalho leva aqui) - combina um resumo do progresso (dashboard geral, UC20), uma
 // pre-visualizacao dos decks (UC02) e uma apresentacao do sistema, servindo
 // como ponto de partida unico em vez de cair direto em "Meus decks". Os
 // numeros de progresso vivem na margem (useDefinirMargem), nao numa grade
@@ -133,7 +132,7 @@ export function InicioPage() {
     <div className="space-y-10">
       <div className="flex flex-col gap-6 border-b border-manilha pb-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-md space-y-2">
-          <p className="text-eyebrow text-muted-foreground">Plataforma de Estudos</p>
+          <p className="text-eyebrow text-muted-foreground">Sinapse</p>
           <h1 className="font-heading text-display">{primeiroNome ? `Olá, ${primeiroNome}` : 'Bem-vindo(a) de volta'}</h1>
           <p className="text-muted-foreground">
             Organize seus materiais em decks, gere flashcards com IA e deixe a repetição espaçada guiar suas revisões.
