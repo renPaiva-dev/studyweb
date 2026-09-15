@@ -105,6 +105,12 @@ POST /api/flashcards/57/revisoes
 
 `baseadoEmDados: false` indica mensagem padrão (sem chamada à IA), por falta de dados suficientes.
 
+## Pergunta sobre o Material do Deck (UC32)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| POST | `/api/decks/{id}/perguntas` | `{ pergunta }` | `200` — `{ resposta, materiaisConsultados }` (RN41) | `400` (nenhum material processado no deck) · `401` · `404` (não existe ou não é seu — RN01) · `429` (limite de 10/min) · `502` (falha na IA, com retry) |
+
 ## Explicação de Flashcard (UC14)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |

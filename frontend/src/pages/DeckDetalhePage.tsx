@@ -12,12 +12,14 @@ import { DashboardTab } from '@/components/DashboardTab'
 import { EstudarTab } from '@/components/EstudarTab'
 import { FlashcardsTab } from '@/components/FlashcardsTab'
 import { MateriaisTab } from '@/components/MateriaisTab'
+import { PerguntarTab } from '@/components/PerguntarTab'
 import { QuizTab } from '@/components/QuizTab'
 
 // UC02 - visao geral de um deck. GET /api/decks/{id} (docs/contrato-api.md).
-// Abas: Materiais (UC03/UC04), Flashcards (UC05/UC06), Estudar
-// (UC07/08/09), Quiz (UC10) e Dashboard (UC11) tem implementacao completa.
-// UC29 - botao "Compartilhar" abre o dialogo de link publico somente leitura.
+// Abas: Materiais (UC03/UC04), Perguntar (UC32), Flashcards (UC05/UC06),
+// Estudar (UC07/08/09), Quiz (UC10) e Dashboard (UC11) tem implementacao
+// completa. UC29 - botao "Compartilhar" abre o dialogo de link publico
+// somente leitura.
 export function DeckDetalhePage() {
   const { id } = useParams<{ id: string }>()
   const deckId = Number(id)
@@ -89,6 +91,7 @@ export function DeckDetalhePage() {
         <TabsList>
           <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>
+          <TabsTrigger value="perguntar">Perguntar</TabsTrigger>
           <TabsTrigger value="estudar">Estudar</TabsTrigger>
           <TabsTrigger value="quiz">Quiz</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -100,6 +103,10 @@ export function DeckDetalhePage() {
 
         <TabsContent value="materiais">
           <MateriaisTab deckId={deckId} onFlashcardsConfirmados={() => setAbaAtiva('flashcards')} />
+        </TabsContent>
+
+        <TabsContent value="perguntar">
+          <PerguntarTab deckId={deckId} />
         </TabsContent>
 
         <TabsContent value="estudar">

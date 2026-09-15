@@ -32,4 +32,12 @@ public interface MaterialOrigemRepository extends JpaRepository<MaterialOrigem, 
 	Optional<MaterialOrigem> findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
 			Long deckId, StatusProcessamento statusProcessamento);
 
+	/**
+	 * UC32/RN41 — todos os materiais utilizáveis (texto já extraído) de um
+	 * deck, para ancorar a resposta a uma pergunta livre sobre o conteúdo do
+	 * deck inteiro (diferente de UC14/RN19, que usa só o mais recente).
+	 */
+	List<MaterialOrigem> findByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNull(
+			Long deckId, StatusProcessamento statusProcessamento);
+
 }

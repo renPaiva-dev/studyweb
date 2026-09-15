@@ -394,3 +394,18 @@
 - **Fluxos alternativos:** A1 — estudante remove a data-alvo definida.
 - **Fluxos de exceção:** E1 — consulta de prontidão sem data-alvo definida → 400. E2 — data-alvo no passado ao definir → 400.
 - **Regras relacionadas:** RN40, RN01, RN17
+
+## UC32 — Perguntar sobre o material do deck
+
+- **Ator:** Estudante
+- **Objetivo:** Tirar uma dúvida livre sobre o conteúdo de um deck, sem se limitar à pergunta/resposta de um flashcard específico.
+- **Pré-condições:** Deck existente, pertencente ao usuário autenticado (RN01); deck com ao menos um material processado (status PROCESSADO, com texto extraído).
+- **Pós-condições:** Resposta retornada, nunca persistida (mesmo espírito de RN18).
+- **Fluxo principal:**
+  1. Estudante digita uma pergunta livre sobre um deck.
+  2. Sistema aplica RN01.
+  3. Sistema reúne o texto extraído de todos os materiais processados do deck.
+  4. Sistema monta um prompt com a pergunta e esse texto como única fonte permitida, e chama a IA (RN41).
+  5. Sistema retorna a resposta e quantos materiais foram usados como contexto.
+- **Fluxos de exceção:** E1 — deck sem nenhum material processado → 400. E2 — falha na API de IA → 502 (com retry).
+- **Regras relacionadas:** RN41, RN01, RN19
