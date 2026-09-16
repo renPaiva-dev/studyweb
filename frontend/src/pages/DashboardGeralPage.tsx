@@ -70,7 +70,9 @@ export function DashboardGeralPage() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{dashboard.totalDecks}</p>
-            <p className="text-xs text-muted-foreground">{dashboard.totalFlashcards} flashcards no total</p>
+            <p className="text-xs text-muted-foreground">
+              {dashboard.totalFlashcards} flashcard{dashboard.totalFlashcards === 1 ? '' : 's'} no total
+            </p>
           </CardContent>
         </Card>
 

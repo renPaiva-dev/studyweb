@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
@@ -26,6 +27,8 @@ import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
+
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * UC13/RN18 — ver Docs/extensao-recomendacao-foco-estudo.md §7 para a lista
@@ -48,6 +51,11 @@ class RecomendacaoEstudoServiceTest {
 
 	@Mock
 	private GeminiClient geminiClient;
+
+	// Real, não mock: precisa interpretar o JSON de verdade (ver
+	// RecomendacaoEstudoService.interpretarResposta), não apenas registrar chamadas.
+	@Spy
+	private ObjectMapper objectMapper = new ObjectMapper();
 
 	@InjectMocks
 	private RecomendacaoEstudoService recomendacaoEstudoService;
@@ -78,7 +86,9 @@ class RecomendacaoEstudoServiceTest {
 		Flashcard flashcard = new Flashcard();
 		flashcard.setPergunta("O que é a mitose?");
 		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of(flashcard));
-		when(geminiClient.gerarConteudo(any())).thenReturn("Foque em revisar os conceitos básicos de Anatomia.");
+		// GeminiClient força responseMimeType=application/json (ver sua javadoc) -
+		// a resposta real nunca é texto puro, mesmo o prompt pedindo isso.
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"recomendacao\": \"Foque em revisar os conceitos básicos de Anatomia.\"}");
 
 		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
 
@@ -145,7 +155,7 @@ class RecomendacaoEstudoServiceTest {
 				emRiscoPorQualidadeBaixa(5L, "Fisiologia"));
 		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
 		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
-		when(geminiClient.gerarConteudo(any())).thenReturn("Recomendação qualquer.");
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"recomendacao\": \"Recomendação qualquer.\"}");
 
 		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
 
@@ -178,6 +188,42 @@ class RecomendacaoEstudoServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// Regressão: GeminiClient força responseMimeType=application/json em toda
+	// chamada, mesmo o prompt desta feature pedindo apenas texto simples -
+	// sem interpretar o JSON, o objeto cru (ex.: {"recomendacao": "..."})
+	// vazava para a tela. Ver RecomendacaoEstudoService.interpretarResposta.
+	@Test
+	void deveExtrairTextoDeDentroDoObjetoJsonRetornadoPelaIa() {
+		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
+				emRiscoPorQualidadeBaixa(1L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(2L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(3L, "Anatomia"));
+		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
+		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
+		when(geminiClient.gerarConteudo(any()))
+				.thenReturn("{\"recomendacao\": \"Priorize os cartões de Anatomia hoje.\"}");
+
+		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
+
+		assertThat(resposta.recomendacao()).isEqualTo("Priorize os cartões de Anatomia hoje.");
+	}
+
+	@Test
+	void deveLancarGeracaoRecomendacaoExceptionQuandoIaRetornaJsonMalFormado() {
+		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
+				emRiscoPorQualidadeBaixa(1L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(2L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(3L, "Anatomia"));
+		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
+		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
+		when(geminiClient.gerarConteudo(any())).thenReturn("Foque em Anatomia.");
+
+		assertThatThrownBy(() -> recomendacaoEstudoService.gerarRecomendacao(DECK_ID))
+				.isInstanceOf(GeracaoRecomendacaoException.class);
+
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 	@Test
 	void deveTentarNovamenteQuandoIaRetornaTextoEmBrancoNaPrimeiraTentativaESucessoNaSegunda() {
 		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
@@ -188,7 +234,7 @@ class RecomendacaoEstudoServiceTest {
 		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
 		when(geminiClient.gerarConteudo(any()))
 				.thenReturn("")
-				.thenReturn("Foque em Anatomia.");
+				.thenReturn("{\"recomendacao\": \"Foque em Anatomia.\"}");
 
 		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
 
@@ -210,7 +256,7 @@ class RecomendacaoEstudoServiceTest {
 		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of());
 		when(geminiClient.gerarConteudo(any()))
 				.thenThrow(new com.tcc.plataformaestudos.ia.GeracaoConteudoIAException("Serviço de IA retornou status 429"))
-				.thenReturn("Foque em Anatomia.");
+				.thenReturn("{\"recomendacao\": \"Foque em Anatomia.\"}");
 
 		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
 
