@@ -91,7 +91,10 @@ export function InicioPage() {
       <div className="space-y-6 text-sm">
         <div>
           <p className="font-heading text-2xl font-semibold">{dashboard.totalDecks}</p>
-          <p className="text-muted-foreground">decks, {dashboard.totalFlashcards} flashcards no total</p>
+          <p className="text-muted-foreground">
+            deck{dashboard.totalDecks === 1 ? '' : 's'}, {dashboard.totalFlashcards} flashcard
+            {dashboard.totalFlashcards === 1 ? '' : 's'} no total
+          </p>
         </div>
         <div>
           <p className="font-heading text-2xl font-semibold text-verde-lousa">

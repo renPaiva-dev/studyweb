@@ -98,7 +98,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
   const concluidos = Math.min(indiceAtual, totalNaFila)
 
   useDefinirMargem(
-    fila && fila.length > 0 ? (
+    fila === null ? null : fila.length > 0 ? (
       <div className="space-y-6 text-sm">
         <div>
           <p className="font-heading text-2xl font-semibold">
@@ -121,13 +121,24 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
 
         {notasCard && <div className="space-y-3 border-t border-manilha pt-4 text-foreground">{notasCard}</div>}
       </div>
-    ) : null,
-    fila && fila.length > 0 ? (
+    ) : (
+      <div className="text-sm">
+        <p className="font-heading text-2xl font-semibold text-verde-lousa">Em dia</p>
+        <p className="text-muted-foreground">Nenhuma revisão pendente hoje.</p>
+      </div>
+    ),
+    fila === null ? null : fila.length > 0 ? (
       <p className="text-center text-sm font-medium">
         {concluidos}/{totalNaFila} concluídos
       </p>
-    ) : null,
-    [concluidos, totalNaFila, ultimaAvaliacao, notasCard],
+    ) : (
+      <p className="text-center text-sm font-medium text-verde-lousa">Em dia — nada pendente hoje</p>
+    ),
+    // `fila` precisa estar nas deps: ao passar de "carregando" (null) para
+    // "vazia" ([]), concluidos/totalNaFila continuam os dois em 0 - sem
+    // `fila` aqui, o efeito nao reexecuta nessa transicao e a margem fica
+    // presa no conteudo (null) do primeiro render.
+    [fila, concluidos, totalNaFila, ultimaAvaliacao, notasCard],
   )
 
   if (fila === null && erroCarregamento === null) {
@@ -152,15 +163,17 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
 
   if (fila !== null && fila.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-none border border-verde-lousa/30 bg-verde-lousa/5 py-20 text-center">
-        <div className="rounded-full bg-verde-lousa/10 p-4">
-          <PartyPopper className="h-8 w-8 text-verde-lousa" />
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-3 border-t border-manilha py-16 text-center">
+        <PartyPopper className="h-6 w-6 text-verde-lousa" strokeWidth={1.5} />
+        <div className="space-y-1">
+          <p className="font-heading text-2xl font-semibold text-verde-lousa">
+            {modoCompleto ? 'Este deck ainda não tem flashcards.' : 'Nenhuma revisão pendente hoje!'}
+          </p>
+          {!modoCompleto && <p className="text-sm text-muted-foreground">Volte amanhã, ou continue revisando se preferir.</p>}
         </div>
-        <p className="text-lg font-medium text-verde-lousa">
-          {modoCompleto ? 'Este deck ainda não tem flashcards.' : 'Nenhuma revisão pendente hoje, volte amanhã!'}
-        </p>
         {!modoCompleto && (
           <Button variant="outline" onClick={() => void carregarFila(true)}>
+            <RotateCw className="mr-2 h-4 w-4" />
             Revisar mesmo assim
           </Button>
         )}
@@ -170,17 +183,16 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
 
   if (fila !== null && indiceAtual >= fila.length) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-none border border-verde-lousa/30 bg-verde-lousa/5 py-20 text-center">
-        <div className="rounded-full bg-verde-lousa/10 p-4">
-          <CheckCircle2 className="h-8 w-8 text-verde-lousa" />
-        </div>
+      <div className="mx-auto flex max-w-xl flex-col items-center gap-3 border-t border-manilha py-16 text-center">
+        <CheckCircle2 className="h-6 w-6 text-verde-lousa" strokeWidth={1.5} />
         <div className="space-y-1">
-          <p className="text-lg font-medium text-verde-lousa">Sessão concluída!</p>
-          <p className="text-sm text-verde-lousa/80">
+          <p className="font-heading text-2xl font-semibold text-verde-lousa">Sessão concluída!</p>
+          <p className="text-sm text-muted-foreground">
             Você revisou {fila.length} flashcard{fila.length === 1 ? '' : 's'} hoje.
           </p>
         </div>
         <Button variant="outline" onClick={() => void carregarFila(false)}>
+          <RotateCw className="mr-2 h-4 w-4" />
           Verificar novamente
         </Button>
       </div>

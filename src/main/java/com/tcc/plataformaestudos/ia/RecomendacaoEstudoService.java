@@ -19,6 +19,8 @@ import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * UC13 — Obter recomendação de foco de estudo (RN18), incluído por UC04's
@@ -56,6 +58,7 @@ public class RecomendacaoEstudoService {
 	private final DashboardRepository dashboardRepository;
 	private final FlashcardRepository flashcardRepository;
 	private final GeminiClient geminiClient;
+	private final ObjectMapper objectMapper;
 
 	@Transactional(readOnly = true)
 	public RecomendacaoEstudoResponseDTO gerarRecomendacao(Long deckId) {
@@ -123,7 +126,7 @@ public class RecomendacaoEstudoService {
 
 			try {
 				String textoGerado = geminiClient.gerarConteudo(prompt);
-				String recomendacao = validarResposta(textoGerado);
+				String recomendacao = interpretarResposta(textoGerado);
 
 				log.info("Recomendação de foco de estudo concluída: deckId={}, tentativa={}, status=SUCESSO",
 						deckId, tentativa);
@@ -139,11 +142,28 @@ public class RecomendacaoEstudoService {
 		throw ultimaFalha;
 	}
 
-	private String validarResposta(String textoGerado) {
-		if (textoGerado == null || textoGerado.isBlank()) {
+	/**
+	 * {@link GeminiClient} força {@code responseMimeType=application/json} em
+	 * toda chamada (ver sua javadoc) — mesmo pedindo "texto simples" no
+	 * prompt, a resposta sempre vem como JSON. Por isso o prompt pede
+	 * explicitamente o formato {@code {"recomendacao": "..."}} e este método o
+	 * interpreta, em vez de tratar a resposta como texto puro (bug corrigido
+	 * após aparecer o JSON cru na tela em teste manual ponta a ponta).
+	 */
+	private String interpretarResposta(String textoGerado) {
+		RecomendacaoGeradaDTO resposta;
+
+		try {
+			resposta = objectMapper.readValue(textoGerado, RecomendacaoGeradaDTO.class);
+		} catch (JacksonException e) {
+			throw new GeracaoRecomendacaoException("JSON retornado pela IA está mal formatado", e);
+		}
+
+		if (resposta.recomendacao() == null || resposta.recomendacao().isBlank()) {
 			throw new GeracaoRecomendacaoException("IA não retornou nenhuma recomendação");
 		}
-		return textoGerado.trim();
+
+		return resposta.recomendacao().trim();
 	}
 
 	private String montarPrompt(TopicoEmRisco topicoVencedor, List<Flashcard> flashcardsEmRisco) {
@@ -160,14 +180,22 @@ public class RecomendacaoEstudoService {
 				Perguntas dos flashcards em risco desse tópico:
 				%s
 
-				Em até 2 frases, escreva uma recomendação curta, direta e motivadora de
-				como o estudante deve focar seus próximos estudos nesse tópico. Não
-				repita as perguntas, não dê a resposta de nenhuma delas. Responda em
-				texto simples, sem markdown, sem aspas ao redor de toda a resposta.
+				Em até 2 frases, escreva uma recomendação de como o estudante deve focar
+				sua próxima revisão desse tópico. A recomendação precisa citar pelo
+				menos um conceito ou aspecto concreto que apareça nas perguntas acima
+				(parafraseado, nunca a pergunta literal nem a resposta) — não escreva
+				um conselho genérico do tipo "estude mais" ou "revise com atenção" sem
+				nenhuma referência ao conteúdo real. Tom direto, sem enrolação
+				motivacional vazia.
+				Responda apenas com um objeto JSON no formato
+				{"recomendacao": "..."}, sem markdown, sem crases, sem texto fora do JSON.
 				""".formatted(topicoVencedor.topico(), topicoVencedor.idsEmRisco().size(), topicoVencedor.totalNoTopico(), perguntas);
 	}
 
 	private record TopicoEmRisco(String topico, List<Long> idsEmRisco, int totalNoTopico) {
+	}
+
+	private record RecomendacaoGeradaDTO(String recomendacao) {
 	}
 
 }
