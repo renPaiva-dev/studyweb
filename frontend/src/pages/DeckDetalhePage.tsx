@@ -1,6 +1,6 @@
-import { Share2 } from 'lucide-react'
+import { Share2, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { buscarDeck, type DeckDetalhe } from '@/api/deckApi'
 import { extrairMensagemErro } from '@/api/apiError'
@@ -16,12 +16,14 @@ import { PerguntarTab } from '@/components/PerguntarTab'
 import { QuizTab } from '@/components/QuizTab'
 
 // UC02 - visao geral de um deck. GET /api/decks/{id} (docs/contrato-api.md).
-// Abas: Materiais (UC03/UC04), Perguntar (UC32), Flashcards (UC05/UC06),
-// Estudar (UC07/08/09), Quiz (UC10) e Dashboard (UC11) tem implementacao
-// completa. UC29 - botao "Compartilhar" abre o dialogo de link publico
-// somente leitura.
+// Abas na ordem do fluxo real: Materiais (UC03/UC04) -> Flashcards (UC05/UC06)
+// -> Perguntar (UC32) -> Estudar (UC07/08/09) -> Quiz (UC10) -> Dashboard
+// (UC11). UC29 - botao "Compartilhar" abre o dialogo de link publico somente
+// leitura; "Gerar prova" leva para UC27 (NovaProvaPage) com este deck
+// pre-selecionado via query param, sem precisar escolher de novo.
 export function DeckDetalhePage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const deckId = Number(id)
 
   const [deck, setDeck] = useState<DeckDetalhe | null>(null)
@@ -71,10 +73,16 @@ export function DeckDetalhePage() {
           <h1 className="font-heading text-2xl font-semibold">{deck.titulo}</h1>
           {deck.descricao && <p className="text-muted-foreground">{deck.descricao}</p>}
         </div>
-        <Button variant="outline" onClick={() => setCompartilhando(true)}>
-          <Share2 className="mr-2 h-4 w-4" />
-          Compartilhar
-        </Button>
+        <div className="flex shrink-0 gap-2">
+          <Button variant="outline" onClick={() => navigate(`/provas/nova?deckId=${deckId}`)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Gerar prova
+          </Button>
+          <Button variant="outline" onClick={() => setCompartilhando(true)}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Compartilhar
+          </Button>
+        </div>
       </div>
 
       <CompartilharDeckDialog
@@ -89,20 +97,20 @@ export function DeckDetalhePage() {
           F0/F5/F6/F7 da auditoria). */}
       <Tabs key={deckId} value={abaAtiva} onValueChange={setAbaAtiva}>
         <TabsList>
-          <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
           <TabsTrigger value="materiais">Materiais</TabsTrigger>
+          <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
           <TabsTrigger value="perguntar">Perguntar</TabsTrigger>
           <TabsTrigger value="estudar">Estudar</TabsTrigger>
           <TabsTrigger value="quiz">Quiz</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="flashcards">
-          <FlashcardsTab deckId={deckId} />
-        </TabsContent>
-
         <TabsContent value="materiais">
           <MateriaisTab deckId={deckId} onFlashcardsConfirmados={() => setAbaAtiva('flashcards')} />
+        </TabsContent>
+
+        <TabsContent value="flashcards">
+          <FlashcardsTab deckId={deckId} />
         </TabsContent>
 
         <TabsContent value="perguntar">

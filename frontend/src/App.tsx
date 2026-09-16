@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { RotaProtegida } from '@/components/RotaProtegida'
 import { Toaster } from '@/components/ui/sonner'
+import { VLibrasWidget } from '@/components/VLibrasWidget'
 import { AuthProvider } from '@/context/AuthContext'
 import { CadastroPage } from '@/pages/CadastroPage'
 import { DashboardGeralPage } from '@/pages/DashboardGeralPage'
@@ -52,6 +53,7 @@ function App() {
         </Routes>
       </BrowserRouter>
       <Toaster />
+      <VLibrasWidget />
     </AuthProvider>
   )
 }

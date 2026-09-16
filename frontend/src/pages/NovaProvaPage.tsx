@@ -1,6 +1,6 @@
 import { ChevronLeft, Loader2, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
@@ -23,9 +23,12 @@ type Fase = 'configurar' | 'fazendo' | 'resultado'
 
 // UC27 - Gerar prova personalizada via IA: escolher deck + flashcard(s) +
 // estilo, responder (reaproveitando QuestaoQuizItem/POST .../tentativas de
-// UC10) e ver o resultado com revisao questao a questao (RN36).
+// UC10) e ver o resultado com revisao questao a questao (RN36). Quando
+// aberta a partir do botao "Gerar prova" de um deck (DeckDetalhePage), o
+// deck chega via ?deckId= e o passo 1 comeca ja preenchido.
 export function NovaProvaPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [fase, setFase] = useState<Fase>('configurar')
 
@@ -87,13 +90,30 @@ export function NovaProvaPage() {
     }
   }, [])
 
-  function aoEscolherDeck(idTexto: string) {
-    const id = Number(idTexto)
-    setDeckId(id)
-    setFlashcardIdsSelecionados([])
-    setFlashcards(null)
-    void carregarFlashcards(id)
-  }
+  const aoEscolherDeck = useCallback(
+    (idTexto: string) => {
+      const id = Number(idTexto)
+      setDeckId(id)
+      setFlashcardIdsSelecionados([])
+      setFlashcards(null)
+      void carregarFlashcards(id)
+    },
+    [carregarFlashcards],
+  )
+
+  // Se a pagina foi aberta a partir do botao "Gerar prova" de um deck
+  // (DeckDetalhePage), o deckId chega via query param e o passo 1 e
+  // preenchido automaticamente, sem o usuario ter que escolher de novo.
+  useEffect(() => {
+    if (decks === null || deckId !== null) {
+      return
+    }
+
+    const deckIdParam = Number(searchParams.get('deckId'))
+    if (decks.some((deck) => deck.id === deckIdParam)) {
+      aoEscolherDeck(String(deckIdParam))
+    }
+  }, [decks, deckId, searchParams, aoEscolherDeck])
 
   function alternarFlashcard(id: number) {
     setFlashcardIdsSelecionados((atual) => (atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id]))
