@@ -15,8 +15,14 @@ RUN npm run build
 # Runtime stage — serve os arquivos estáticos via Nginx, com fallback de
 # rota para index.html (necessário para o roteamento client-side do
 # react-router — sem isso, um refresh em /decks/5 daria 404 no Nginx).
+# nginx.conf.template fica em /etc/nginx/templates/: o entrypoint padrão da
+# imagem oficial roda envsubst nele automaticamente antes de subir,
+# resolvendo ${PORT} — necessário em PaaS como Railway, que injeta PORT
+# dinamicamente (ver Docs/deploy-railway.md). Sem PORT definido (docker
+# compose local), cai no 80 de sempre via ENV abaixo.
 FROM nginx:alpine AS runtime
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
+ENV PORT=80
 EXPOSE 80

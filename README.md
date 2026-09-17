@@ -50,6 +50,30 @@ npm run dev
 ## Testes
 
 ```bash
-./mvnw test        # backend
+./mvnw test         # backend (JUnit + Mockito)
+cd frontend && npm run test    # frontend (Vitest + Testing Library)
 cd frontend && npm run build   # typecheck + build do frontend
 ```
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) roda backend e frontend
+(lint + testes + build) a cada push/PR em `main`.
+
+## Deploy público (demonstração/defesa)
+
+Guia passo a passo para publicar no Railway (backup contra depender de
+`docker compose up` rodando ao vivo no dia da apresentação):
+[`Docs/deploy-railway.md`](Docs/deploy-railway.md).
+
+## Dados de demonstração (apresentação/defesa)
+
+Para popular uma conta com dados realistas (decks, flashcards com histórico
+de revisão maduro, data-alvo de prova e tentativas de quiz já registradas —
+útil para o Dashboard, Evolução e Previsão de Prontidão não aparecerem
+vazios ao vivo), defina `SEED_DEMO_ENABLED=true` no `.env` antes de subir a
+aplicação (ver `SeedDemoDataRunner`). Cria a conta `banca@studyweb.local` /
+`Banca@2026`, idempotente (não duplica se a conta já existir).
+
+As datas de revisão (streak, gráfico de evolução) são relativas ao momento
+em que o seed roda — para ficarem "frescas" na apresentação, rode-o com o
+banco limpo (ou após excluir essa conta pela própria aplicação) pouco antes
+de apresentar. Mantenha `SEED_DEMO_ENABLED=false` fora desse momento.
