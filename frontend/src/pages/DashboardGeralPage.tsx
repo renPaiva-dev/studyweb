@@ -69,7 +69,7 @@ export function DashboardGeralPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Decks</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{dashboard.totalDecks}</p>
+            <p className="font-heading text-2xl font-semibold">{dashboard.totalDecks}</p>
             <p className="text-xs text-muted-foreground">
               {dashboard.totalFlashcards} flashcard{dashboard.totalFlashcards === 1 ? '' : 's'} no total
             </p>
@@ -82,7 +82,7 @@ export function DashboardGeralPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Sequência de estudo</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">
+            <p className="font-heading text-2xl font-semibold">
               {dashboard.streakDias} dia{dashboard.streakDias === 1 ? '' : 's'}
             </p>
             <p className="text-xs text-muted-foreground">consecutivos com revisão</p>
@@ -95,7 +95,7 @@ export function DashboardGeralPage() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Quizzes/provas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{dashboard.totalTentativasQuiz}</p>
+            <p className="font-heading text-2xl font-semibold">{dashboard.totalTentativasQuiz}</p>
             <p className="text-xs text-muted-foreground">
               {dashboard.totalTentativasQuiz > 0
                 ? `pontuação média de ${dashboard.pontuacaoMediaQuiz}%`

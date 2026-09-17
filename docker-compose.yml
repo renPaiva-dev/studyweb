@@ -6,7 +6,10 @@ services:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      # Host 5433, nao 5432: evita conflito com um Postgres local ja rodando
+      # na maquina host - o backend fala com este servico pela rede interna
+      # do compose (db:5432), o mapeamento de porta so afeta acesso externo.
+      - "5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

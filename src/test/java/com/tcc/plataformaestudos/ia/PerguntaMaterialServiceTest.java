@@ -25,6 +25,8 @@ import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.material.MaterialOrigemRepository;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
 
+import tools.jackson.databind.ObjectMapper;
+
 /**
  * UC32/RN41 — ver Docs/extensao-pergunta-material.md §6 para o roteiro de
  * teste manual complementar a estes testes unitários.
@@ -61,7 +63,7 @@ class PerguntaMaterialServiceTest {
 
 	@BeforeEach
 	void configurar() {
-		perguntaMaterialService = new PerguntaMaterialService(deckService, materialOrigemRepository, geminiClient);
+		perguntaMaterialService = new PerguntaMaterialService(deckService, materialOrigemRepository, geminiClient, new ObjectMapper());
 	}
 
 	@Test
@@ -72,7 +74,9 @@ class PerguntaMaterialServiceTest {
 				.thenReturn(List.of(
 						materialProcessado("aula1.pdf", "Texto sobre mitose."),
 						materialProcessado("aula2.pdf", "Texto sobre meiose.")));
-		when(geminiClient.gerarConteudo(any())).thenReturn("Resposta ancorada nos dois materiais.");
+		// GeminiClient força responseMimeType=application/json (ver sua javadoc) -
+		// a resposta real nunca é texto puro, mesmo o prompt pedindo isso.
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"resposta\": \"Resposta ancorada nos dois materiais.\"}");
 
 		PerguntaMaterialResponseDTO resposta = perguntaMaterialService.perguntar(
 				DECK_ID, new PerguntaMaterialRequestDTO("Qual a diferença entre mitose e meiose?"));
@@ -122,6 +126,37 @@ class PerguntaMaterialServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// Regressão: sem interpretar o JSON que o GeminiClient sempre força, o
+	// objeto cru vazava pro usuário (mesma classe de bug corrigida em
+	// RecomendacaoEstudoService/ExplicacaoService).
+	@Test
+	void deveExtrairTextoDeDentroDoObjetoJsonRetornadoPelaIa() {
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck());
+		when(materialOrigemRepository.findByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNull(
+				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO)))
+				.thenReturn(List.of(materialProcessado("aula1.pdf", "Texto qualquer.")));
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"resposta\": \"A resposta está no material enviado.\"}");
+
+		PerguntaMaterialResponseDTO resposta = perguntaMaterialService.perguntar(
+				DECK_ID, new PerguntaMaterialRequestDTO("Alguma pergunta?"));
+
+		assertThat(resposta.resposta()).isEqualTo("A resposta está no material enviado.");
+	}
+
+	@Test
+	void deveLancarGeracaoRespostaMaterialExceptionQuandoIaRetornaJsonMalFormado() {
+		when(deckService.buscarDeckDoUsuarioAutenticado(DECK_ID)).thenReturn(deck());
+		when(materialOrigemRepository.findByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNull(
+				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO)))
+				.thenReturn(List.of(materialProcessado("aula1.pdf", "Texto qualquer.")));
+		when(geminiClient.gerarConteudo(any())).thenReturn("Resposta em texto puro, sem JSON.");
+
+		assertThatThrownBy(() -> perguntaMaterialService.perguntar(DECK_ID, new PerguntaMaterialRequestDTO("Alguma pergunta?")))
+				.isInstanceOf(GeracaoRespostaMaterialException.class);
+
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
 	// GeracaoRespostaMaterialException) para falha real de infraestrutura
 	// (timeout, rate limit, rede) — o retry precisa cobrir esse caso, não só
@@ -134,7 +169,7 @@ class PerguntaMaterialServiceTest {
 				.thenReturn(List.of(materialProcessado("aula1.pdf", "Texto qualquer.")));
 		when(geminiClient.gerarConteudo(any()))
 				.thenThrow(new GeracaoConteudoIAException("Serviço de IA retornou status 429"))
-				.thenReturn("Resposta gerada após retry.");
+				.thenReturn("{\"resposta\": \"Resposta gerada após retry.\"}");
 
 		PerguntaMaterialResponseDTO resposta = perguntaMaterialService.perguntar(
 				DECK_ID, new PerguntaMaterialRequestDTO("Alguma pergunta?"));

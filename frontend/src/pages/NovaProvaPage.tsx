@@ -213,7 +213,7 @@ export function NovaProvaPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="font-medium">{quiz.titulo}</h1>
+          <h1 className="font-heading text-xl font-semibold">{quiz.titulo}</h1>
           <span className="text-sm text-muted-foreground">
             {totalRespondidas} de {quiz.questoes.length} respondidas
           </span>
@@ -321,7 +321,7 @@ export function NovaProvaPage() {
               flashcards.map((flashcard) => (
                 <label
                   key={flashcard.id}
-                  className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent"
+                  className="flex items-start gap-2 rounded-none border px-3 py-2 text-sm hover:bg-accent"
                 >
                   <Checkbox
                     className="mt-0.5"
@@ -347,7 +347,7 @@ export function NovaProvaPage() {
                 type="button"
                 onClick={() => setEstilo(opcao.valor)}
                 className={cn(
-                  'rounded-lg border p-3 text-left transition-colors',
+                  'rounded-none border p-3 text-left transition-colors',
                   estilo === opcao.valor ? 'border-primary bg-primary/5' : 'hover:bg-accent',
                 )}
               >

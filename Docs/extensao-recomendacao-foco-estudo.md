@@ -59,10 +59,19 @@ javadoc do service (mesmo padrão do `DashboardService`):
   excluído do agrupamento antes de escolher o vencedor.
 - **Dados suficientes** = o tópico vencedor (excluindo "Sem categoria") tem
   pelo menos `LIMIAR_MINIMO_FLASHCARDS_EM_RISCO` flashcards em risco.
-  Valor adotado: **3** (mesmo espírito do "ex.: 15" da RN08 — um número de
+  Valor adotado: **2** (mesmo espírito do "ex.: 15" da RN08 — um número de
   exemplo, ajustável, não uma constante de negócio fechada). Abaixo disso
   (ou se não houver nenhum tópico elegível): `baseadoEmDados: false`,
   mensagem padrão, **sem chamar a IA** (RN18, RNF07 — custo de cota).
+
+  > **Revisão pós-implementação (2026-09-17):** o valor original era 3.
+  > Testado com um conjunto de dados realista (5 decks, ~10-15 flashcards
+  > cada, tópicos com granularidade típica de 2-4 flashcards), a
+  > recomendação **nunca disparava em nenhum dos 5 decks** — mesmo em
+  > decks com 40%+ dos flashcards em risco no total, esse risco ficava
+  > espalhado entre vários tópicos pequenos, nenhum sozinho atingindo 3.
+  > Reduzido para 2, que ainda preserva a intenção da RN (um flashcard
+  > isolado em risco não é "concentração", só 2+ no mesmo tópico conta).
 
 ## 2. Reuso de infraestrutura — e um pequeno refactor necessário
 

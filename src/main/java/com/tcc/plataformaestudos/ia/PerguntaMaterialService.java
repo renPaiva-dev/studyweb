@@ -15,6 +15,8 @@ import com.tcc.plataformaestudos.material.MaterialOrigemRepository;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * UC32 — Perguntar sobre o material do deck (RN41), detalhado em
@@ -42,6 +44,7 @@ public class PerguntaMaterialService {
 	private final DeckService deckService;
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final GeminiClient geminiClient;
+	private final ObjectMapper objectMapper;
 
 	@Transactional(readOnly = true)
 	public PerguntaMaterialResponseDTO perguntar(Long deckId, PerguntaMaterialRequestDTO request) {
@@ -73,7 +76,7 @@ public class PerguntaMaterialService {
 
 			try {
 				String textoGerado = geminiClient.gerarConteudo(prompt);
-				String resposta = validarResposta(textoGerado);
+				String resposta = interpretarResposta(textoGerado);
 
 				log.info("Resposta sobre material do deck concluída: deckId={}, tentativa={}, status=SUCESSO", deckId, tentativa);
 				return resposta;
@@ -88,11 +91,28 @@ public class PerguntaMaterialService {
 		throw ultimaFalha;
 	}
 
-	private String validarResposta(String textoGerado) {
-		if (textoGerado == null || textoGerado.isBlank()) {
+	/**
+	 * {@link GeminiClient} força {@code responseMimeType=application/json} em
+	 * toda chamada (ver sua javadoc) — mesmo pedindo "texto simples" no
+	 * prompt, a resposta sempre vem como JSON. Por isso o prompt pede
+	 * explicitamente o formato {@code {"resposta": "..."}} e este método o
+	 * interpreta, em vez de tratar a resposta como texto puro (mesma classe
+	 * de bug corrigida em RecomendacaoEstudoService/ExplicacaoService).
+	 */
+	private String interpretarResposta(String textoGerado) {
+		RespostaGeradaDTO resposta;
+
+		try {
+			resposta = objectMapper.readValue(textoGerado, RespostaGeradaDTO.class);
+		} catch (JacksonException e) {
+			throw new GeracaoRespostaMaterialException("JSON retornado pela IA está mal formatado", e);
+		}
+
+		if (resposta.resposta() == null || resposta.resposta().isBlank()) {
 			throw new GeracaoRespostaMaterialException("IA não retornou nenhuma resposta");
 		}
-		return textoGerado.trim();
+
+		return resposta.resposta().trim();
 	}
 
 	private String montarPrompt(String pergunta, List<MaterialOrigem> materiais) {
@@ -107,13 +127,17 @@ public class PerguntaMaterialService {
 				Use SOMENTE o texto de referência abaixo (extraído dos materiais que
 				o próprio estudante enviou) para responder. Se a resposta não estiver
 				nesse texto, diga isso claramente em vez de inventar informação.
-				Responda em texto simples, sem markdown.
+				Responda apenas com um objeto JSON no formato
+				{"resposta": "..."}, sem markdown, sem crases, sem texto fora do JSON.
 
 				Pergunta: %s
 
 				Texto de referência:
 				%s
 				""".formatted(pergunta, contexto);
+	}
+
+	private record RespostaGeradaDTO(String resposta) {
 	}
 
 }

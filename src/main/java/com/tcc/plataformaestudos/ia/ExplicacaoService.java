@@ -14,6 +14,8 @@ import com.tcc.plataformaestudos.material.MaterialOrigemRepository;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
 
 import lombok.RequiredArgsConstructor;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * UC14 — Solicitar explicação de um flashcard (RN19), detalhado em
@@ -41,6 +43,7 @@ public class ExplicacaoService {
 	private final FlashcardService flashcardService;
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final GeminiClient geminiClient;
+	private final ObjectMapper objectMapper;
 
 	@Transactional(readOnly = true)
 	public ExplicacaoResponseDTO gerarExplicacao(Long flashcardId) {
@@ -72,7 +75,7 @@ public class ExplicacaoService {
 
 			try {
 				String textoGerado = geminiClient.gerarConteudo(prompt);
-				String explicacao = validarResposta(textoGerado);
+				String explicacao = interpretarResposta(textoGerado);
 
 				log.info("Explicação de flashcard concluída: flashcardId={}, ancoradaNoMaterial={}, tentativa={}, status=SUCESSO",
 						flashcardId, ancoradaNoMaterial, tentativa);
@@ -88,11 +91,28 @@ public class ExplicacaoService {
 		throw ultimaFalha;
 	}
 
-	private String validarResposta(String textoGerado) {
-		if (textoGerado == null || textoGerado.isBlank()) {
+	/**
+	 * {@link GeminiClient} força {@code responseMimeType=application/json} em
+	 * toda chamada (ver sua javadoc) — mesmo pedindo "texto simples" no
+	 * prompt, a resposta sempre vem como JSON (em teste manual ponta a ponta,
+	 * o modelo chegou a devolver um objeto JSON aninhado inteiro como string
+	 * dentro do campo "explicacao"). Por isso o prompt pede explicitamente o
+	 * formato {@code {"explicacao": "..."}} e este método o interpreta.
+	 */
+	private String interpretarResposta(String textoGerado) {
+		ExplicacaoGeradaDTO resposta;
+
+		try {
+			resposta = objectMapper.readValue(textoGerado, ExplicacaoGeradaDTO.class);
+		} catch (JacksonException e) {
+			throw new GeracaoExplicacaoException("JSON retornado pela IA está mal formatado", e);
+		}
+
+		if (resposta.explicacao() == null || resposta.explicacao().isBlank()) {
 			throw new GeracaoExplicacaoException("IA não retornou nenhuma explicação");
 		}
-		return textoGerado.trim();
+
+		return resposta.explicacao().trim();
 	}
 
 	private String montarPromptAncorado(Flashcard flashcard, String textoExtraido) {
@@ -105,7 +125,9 @@ public class ExplicacaoService {
 				Use SOMENTE o texto de referência abaixo (extraído do material que o
 				próprio estudante enviou) para escrever uma explicação alternativa e
 				mais didática da resposta. Não invente informação que não esteja
-				nesse texto. Responda em texto simples, sem markdown.
+				nesse texto.
+				Responda apenas com um objeto JSON no formato
+				{"explicacao": "..."}, sem markdown, sem crases, sem texto fora do JSON.
 
 				Texto de referência:
 				%s
@@ -115,11 +137,15 @@ public class ExplicacaoService {
 	private String montarPromptSemAncoragem(Flashcard flashcard) {
 		return """
 				Você é um assistente de estudos. Escreva uma explicação alternativa e
-				mais didática para o flashcard abaixo. Responda em texto simples, sem
-				markdown.
+				mais didática para o flashcard abaixo.
+				Responda apenas com um objeto JSON no formato
+				{"explicacao": "..."}, sem markdown, sem crases, sem texto fora do JSON.
 				Pergunta: %s
 				Resposta: %s
 				""".formatted(flashcard.getPergunta(), flashcard.getResposta());
+	}
+
+	private record ExplicacaoGeradaDTO(String explicacao) {
 	}
 
 }

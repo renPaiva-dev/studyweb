@@ -24,6 +24,8 @@ import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.material.MaterialOrigemRepository;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
 
+import tools.jackson.databind.ObjectMapper;
+
 /**
  * UC14/RN19 — ver Docs/extensao-explicacao-rag-lite.md §6 para o roteiro de
  * teste manual complementar a estes testes unitários.
@@ -59,7 +61,7 @@ class ExplicacaoServiceTest {
 
 	@org.junit.jupiter.api.BeforeEach
 	void configurar() {
-		explicacaoService = new ExplicacaoService(flashcardService, materialOrigemRepository, geminiClient);
+		explicacaoService = new ExplicacaoService(flashcardService, materialOrigemRepository, geminiClient, new ObjectMapper());
 	}
 
 	@Test
@@ -71,7 +73,9 @@ class ExplicacaoServiceTest {
 		when(materialOrigemRepository.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
 				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.of(material));
 
-		when(geminiClient.gerarConteudo(any())).thenReturn("Explicação ancorada no material.");
+		// GeminiClient força responseMimeType=application/json (ver sua javadoc) -
+		// a resposta real nunca é texto puro, mesmo o prompt pedindo isso.
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"explicacao\": \"Explicação ancorada no material.\"}");
 
 		ExplicacaoResponseDTO resposta = explicacaoService.gerarExplicacao(FLASHCARD_ID);
 
@@ -87,7 +91,7 @@ class ExplicacaoServiceTest {
 		when(materialOrigemRepository.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
 				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.empty());
 
-		when(geminiClient.gerarConteudo(any())).thenReturn("Explicação genérica.");
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"explicacao\": \"Explicação genérica.\"}");
 
 		ExplicacaoResponseDTO resposta = explicacaoService.gerarExplicacao(FLASHCARD_ID);
 
@@ -118,6 +122,36 @@ class ExplicacaoServiceTest {
 		verify(geminiClient, times(2)).gerarConteudo(any());
 	}
 
+	// Regressão: em teste manual ponta a ponta, a IA chegou a devolver um
+	// objeto JSON aninhado inteiro como string dentro do campo "explicacao"
+	// ({"explicacao": "{\n \"pergunta\": ...}"}) e isso vazava cru pro
+	// usuário, porque o código só fazia trim() no texto bruto. Ver
+	// ExplicacaoService.interpretarResposta.
+	@Test
+	void deveExtrairTextoDeDentroDoObjetoJsonRetornadoPelaIa() {
+		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcardComDeck());
+		when(materialOrigemRepository.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
+				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.empty());
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"explicacao\": \"A mitose é a divisão que gera células idênticas.\"}");
+
+		ExplicacaoResponseDTO resposta = explicacaoService.gerarExplicacao(FLASHCARD_ID);
+
+		assertThat(resposta.explicacao()).isEqualTo("A mitose é a divisão que gera células idênticas.");
+	}
+
+	@Test
+	void deveLancarGeracaoExplicacaoExceptionQuandoIaRetornaJsonMalFormado() {
+		when(flashcardService.buscarFlashcardDoUsuarioAutenticado(FLASHCARD_ID)).thenReturn(flashcardComDeck());
+		when(materialOrigemRepository.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
+				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.empty());
+		when(geminiClient.gerarConteudo(any())).thenReturn("Explicação em texto puro, sem JSON.");
+
+		assertThatThrownBy(() -> explicacaoService.gerarExplicacao(FLASHCARD_ID))
+				.isInstanceOf(GeracaoExplicacaoException.class);
+
+		verify(geminiClient, times(2)).gerarConteudo(any());
+	}
+
 	// B10: GeminiClient.gerarConteudo lança GeracaoConteudoIAException (não
 	// GeracaoExplicacaoException) para falha real de infraestrutura (timeout,
 	// rate limit, rede) — o retry precisa cobrir esse caso, não só resposta em
@@ -129,7 +163,7 @@ class ExplicacaoServiceTest {
 				eq(DECK_ID), eq(StatusProcessamento.PROCESSADO))).thenReturn(Optional.empty());
 		when(geminiClient.gerarConteudo(any()))
 				.thenThrow(new GeracaoConteudoIAException("Serviço de IA retornou status 429"))
-				.thenReturn("Explicação gerada após retry.");
+				.thenReturn("{\"explicacao\": \"Explicação gerada após retry.\"}");
 
 		ExplicacaoResponseDTO resposta = explicacaoService.gerarExplicacao(FLASHCARD_ID);
 

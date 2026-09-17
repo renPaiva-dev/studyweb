@@ -98,6 +98,29 @@ class RecomendacaoEstudoServiceTest {
 		verify(geminiClient, times(1)).gerarConteudo(any());
 	}
 
+	// Limiar = 2 (revisado de 3 — ver javadoc de LIMIAR_MINIMO_FLASHCARDS_EM_RISCO):
+	// granularidade de tópico típica de um deck real raramente concentra 3+
+	// cartões em risco no mesmo tópico; 2 já preserva a intenção da RN
+	// (1 cartão isolado não conta como "concentração", ver o teste abaixo).
+	@Test
+	void deveChamarIaQuandoTopicoTemExatamenteDoisFlashcardsEmRisco() {
+		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
+				emRiscoPorQualidadeBaixa(1L, "Anatomia"),
+				emRiscoPorQualidadeBaixa(2L, "Anatomia"),
+				dominado(3L, "Anatomia"));
+		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
+
+		Flashcard flashcard = new Flashcard();
+		flashcard.setPergunta("O que é a mitose?");
+		when(flashcardRepository.findAllById(anyList())).thenReturn(List.of(flashcard));
+		when(geminiClient.gerarConteudo(any())).thenReturn("{\"recomendacao\": \"Foque em Anatomia.\"}");
+
+		RecomendacaoEstudoResponseDTO resposta = recomendacaoEstudoService.gerarRecomendacao(DECK_ID);
+
+		assertThat(resposta.baseadoEmDados()).isTrue();
+		assertThat(resposta.topicoFoco()).isEqualTo("Anatomia");
+	}
+
 	@Test
 	void deveRetornarMensagemPadraoSemChamarIaQuandoNenhumFlashcardEstaEmRisco() {
 		List<UltimaRevisaoComTopicoProjecao> estados = List.of(dominado(1L, "Anatomia"), dominado(2L, "Anatomia"));
@@ -113,9 +136,11 @@ class RecomendacaoEstudoServiceTest {
 
 	@Test
 	void deveRetornarMensagemPadraoQuandoTopicoVencedorFicaAbaixoDoLimiarMinimo() {
+		// Limiar = 2 (ver LIMIAR_MINIMO_FLASHCARDS_EM_RISCO): 1 flashcard em risco
+		// isolado não é "concentração" — fica abaixo do limiar.
 		List<UltimaRevisaoComTopicoProjecao> estados = List.of(
 				emRiscoPorQualidadeBaixa(1L, "Anatomia"),
-				emRiscoPorQualidadeBaixa(2L, "Anatomia"),
+				dominado(2L, "Anatomia"),
 				dominado(3L, "Anatomia"));
 		when(dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(DECK_ID)).thenReturn(estados);
 

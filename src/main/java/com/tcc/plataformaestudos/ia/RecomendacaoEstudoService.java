@@ -40,7 +40,12 @@ import tools.jackson.databind.ObjectMapper;
  * (não percentual); "Sem categoria" (tópico nulo) nunca é elegível como
  * foco; dados suficientes = tópico vencedor com pelo menos
  * {@value #LIMIAR_MINIMO_FLASHCARDS_EM_RISCO} flashcards em risco (valor de
- * exemplo, mesmo espírito do "ex.: 15" da RN08).
+ * exemplo, mesmo espírito do "ex.: 15" da RN08 — revisado de 3 para 2 após
+ * teste com dados realistas: com a granularidade de tópico típica de um
+ * deck real, 2-4 flashcards por tópico, o limiar de 3 raramente era
+ * atingido por um único tópico mesmo em decks com uma proporção alta de
+ * cartões em risco no total, fazendo a feature nunca disparar na prática;
+ * 2 ainda preserva a intenção da RN — 1 cartão isolado não é "concentração").
  */
 @Service
 @RequiredArgsConstructor
@@ -48,7 +53,7 @@ public class RecomendacaoEstudoService {
 
 	private static final Logger log = LoggerFactory.getLogger(RecomendacaoEstudoService.class);
 
-	private static final int LIMIAR_MINIMO_FLASHCARDS_EM_RISCO = 3;
+	private static final int LIMIAR_MINIMO_FLASHCARDS_EM_RISCO = 2;
 	private static final int MAXIMO_PERGUNTAS_NO_PROMPT = 10;
 	private static final int MAXIMO_TENTATIVAS = 2;
 	private static final String MENSAGEM_PADRAO =
