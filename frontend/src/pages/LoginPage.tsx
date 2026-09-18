@@ -57,7 +57,7 @@ export function LoginPage() {
 
     try {
       await login(email, senha)
-      navigate('/')
+      navigate('/inicio')
     } catch (erro) {
       // 401 (RN: credenciais invalidas) e demais falhas caem no mesmo
       // tratamento amigavel - nunca expor o JSON cru do erro. 403 e o caso

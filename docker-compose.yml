@@ -40,6 +40,9 @@ services:
       MAIL_PORT: ${MAIL_PORT:-587}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      # Dados de demonstracao (banca@studyweb.local) - ver README secao "Dados
+      # de demonstracao" e SeedDemoDataRunner. Default false.
+      SEED_DEMO_ENABLED: ${SEED_DEMO_ENABLED:-false}
     ports:
       - "8080:8080"
     volumes:

@@ -20,6 +20,16 @@ necessária).
    `PGDATABASE`, `PGUSER`, `PGPASSWORD` prontas para referenciar de outro
    serviço.
 
+> **Banco não exposto publicamente**: por padrão, o plugin de Postgres do
+> Railway não expõe porta pública — só é alcançável pelos outros serviços do
+> mesmo projeto, pela rede interna. Não gere um domínio/proxy TCP público
+> para o serviço de banco a menos que exista uma razão explícita para isso
+> (ex.: acessar via `psql` da sua máquina); se precisar, restrinja
+> imediatamente depois. Localmente (`docker-compose.yml`), o Postgres também
+> só é exposto na rede interna do compose (a porta mapeada no host,
+> `5433`, é só para acesso do desenvolvedor, não é preciso desativar para
+> rodar a aplicação).
+
 ## 2. Serviço de backend
 
 **New** → **GitHub Repo** (mesmo repositório) → em **Settings**, deixe o

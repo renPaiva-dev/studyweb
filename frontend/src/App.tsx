@@ -15,6 +15,7 @@ import { HistoricoProvaDetalhePage } from '@/pages/HistoricoProvaDetalhePage'
 import { InicioPage } from '@/pages/InicioPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NovaProvaPage } from '@/pages/NovaProvaPage'
+import { PaginaRaiz } from '@/pages/PaginaRaiz'
 import { PerfilPage } from '@/pages/PerfilPage'
 import { PoliticaDePrivacidadePage } from '@/pages/PoliticaDePrivacidadePage'
 import { ProvasPage } from '@/pages/ProvasPage'
@@ -35,10 +36,11 @@ function App() {
           <Route path="/termos-de-uso" element={<TermosDeUsoPage />} />
           <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidadePage />} />
           <Route path="/compartilhado/:token" element={<DeckCompartilhadoPage />} />
+          <Route path="/" element={<PaginaRaiz />} />
 
           <Route element={<RotaProtegida />}>
             <Route element={<Layout />}>
-              <Route path="/" element={<InicioPage />} />
+              <Route path="/inicio" element={<InicioPage />} />
               <Route path="/decks" element={<DecksPage />} />
               <Route path="/decks/:id" element={<DeckDetalhePage />} />
               <Route path="/dashboard-geral" element={<DashboardGeralPage />} />

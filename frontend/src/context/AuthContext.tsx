@@ -16,7 +16,14 @@ interface AuthContextValue {
   usuario: UsuarioArmazenado | null
   token: string | null
   login: (email: string, senha: string) => Promise<void>
-  cadastro: (nome: string, nomeUsuario: string, email: string, senha: string, termosAceitos: boolean) => Promise<void>
+  cadastro: (
+    nome: string,
+    nomeUsuario: string,
+    email: string,
+    senha: string,
+    termosAceitos: boolean,
+    telefoneConfirmacao: string,
+  ) => Promise<void>
   logout: () => void
   atualizarUsuarioLocal: (perfil: Perfil) => void
 }
@@ -46,14 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuarioState(usuarioLogado)
   }
 
-  async function cadastro(nome: string, nomeUsuario: string, email: string, senha: string, termosAceitos: boolean) {
+  async function cadastro(
+    nome: string,
+    nomeUsuario: string,
+    email: string,
+    senha: string,
+    termosAceitos: boolean,
+    telefoneConfirmacao: string,
+  ) {
     // UC01/UC21/RN26: a conta nasce com emailVerificado=false e o login
     // (POST /api/auth/login) rejeita com 403 enquanto o e-mail nao for
     // confirmado - por isso NAO autentica automaticamente apos o cadastro
     // (antes disso resultava num login que falhava sempre). O chamador
     // (CadastroPage) encaminha o usuario para a tela de confirmacao de
     // e-mail em vez de navegar direto para a area logada.
-    await authApi.cadastrar({ nome, nomeUsuario, email, senha, termosAceitos })
+    await authApi.cadastrar({ nome, nomeUsuario, email, senha, termosAceitos, telefoneConfirmacao })
   }
 
   function logout() {

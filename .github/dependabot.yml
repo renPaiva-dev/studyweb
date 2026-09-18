@@ -1,0 +1,49 @@
+version: 2
+
+updates:
+  # Backend — pom.xml está na raiz do repositório.
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      backend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "build(deps)"
+    labels:
+      - "dependencies"
+      - "backend"
+
+  # Frontend — package.json está em /frontend.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      frontend-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "build(deps)"
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  # Mantém as actions do próprio workflow de CI em dia (checkout, setup-java, setup-node).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "build(ci)"
+    labels:
+      - "dependencies"
+      - "ci"

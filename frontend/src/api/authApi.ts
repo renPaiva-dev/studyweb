@@ -9,6 +9,8 @@ export interface CadastroRequest {
   email: string
   senha: string
   termosAceitos: boolean
+  /** Honeypot anti-bot (ver Docs/seguranca.md) - sempre vazio num envio real. */
+  telefoneConfirmacao: string
 }
 
 export interface CadastroResponse {

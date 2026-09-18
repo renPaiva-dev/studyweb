@@ -28,5 +28,14 @@ public record CadastroRequestDTO(
 		// a versao vigente do termo e definida pelo backend (UsuarioService),
 		// nunca confiada ao cliente.
 		@AssertTrue(message = "É necessário aceitar os termos de uso para se cadastrar")
-		boolean termosAceitos) {
+		boolean termosAceitos,
+
+		// Honeypot anti-bot (medida tecnica, nao RN de negocio - ver
+		// Docs/seguranca.md "Estado atual"): campo invisivel via CSS no
+		// frontend, fora da ordem de tab. Nenhum usuario humano preenche isto;
+		// um bot que preenche todo input do form acaba preenchendo. Sem
+		// anotacao de validacao de proposito - qualquer valor (inclusive
+		// ausente/vazio, o caso normal) precisa passar pelo bind; a decisao do
+		// que fazer e do UsuarioService, nao do Bean Validation.
+		String telefoneConfirmacao) {
 }

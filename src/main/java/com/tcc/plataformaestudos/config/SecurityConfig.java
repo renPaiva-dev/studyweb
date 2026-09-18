@@ -14,6 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -89,10 +90,20 @@ public class SecurityConfig {
 			// suficiente para negar carregamento de qualquer recurso ativo, mais
 			// frameOptions/contentTypeOptions explícitos (já vinham por padrão do
 			// Spring Security, mas documentados aqui em vez de implícitos).
+			// Referrer-Policy e Permissions-Policy NÃO vêm habilitados por padrão
+			// no Spring Security (seus header writers só nascem quando o
+			// customizer correspondente é chamado) — adicionados explicitamente
+			// aqui. HSTS, por outro lado, já vem ativo por padrão independente do
+			// resto deste bloco — não precisa de código extra; só tem efeito em
+			// requisições HTTPS, coerente com TLS ficar a cargo do deploy
+			// (Railway/proxy — ver Docs/deploy-railway.md).
 			.headers(headers -> headers
 				.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'"))
 				.frameOptions(frame -> frame.deny())
-				.contentTypeOptions(withDefaults()))
+				.contentTypeOptions(withDefaults())
+				.referrerPolicy(referrer -> referrer.policy(ReferrerPolicy.NO_REFERRER))
+				.permissionsPolicyHeader(permissions -> permissions.policy(
+						"geolocation=(), camera=(), microphone=()")))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 				.requestMatchers(HttpMethod.POST, "/api/auth/cadastro", "/api/auth/login",

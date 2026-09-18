@@ -36,6 +36,7 @@ export function CadastroPage() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [termosAceitos, setTermosAceitos] = useState(false)
+  const [telefoneConfirmacao, setTelefoneConfirmacao] = useState('')
   const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
 
@@ -78,7 +79,7 @@ export function CadastroPage() {
     setEnviando(true)
 
     try {
-      await cadastro(nome.trim(), nomeUsuario, email, senha, termosAceitos)
+      await cadastro(nome.trim(), nomeUsuario, email, senha, termosAceitos, telefoneConfirmacao)
       // UC01/UC21/RN26: a conta nasce com o e-mail nao verificado - o login
       // so e liberado apos a confirmacao, entao aqui ainda nao ha uma area
       // logada a redirecionar.
@@ -103,6 +104,22 @@ export function CadastroPage() {
         </CardHeader>
         <form onSubmit={aoSubmeter} noValidate>
           <CardContent className="space-y-4">
+            {/* Honeypot anti-bot (ver Docs/seguranca.md) - nunca visivel/preenchido
+                por humanos. Off-screen via CSS (nao display:none/type=hidden, que
+                bots simples ignoram) + aria-hidden (leitor de tela pula) +
+                tabIndex=-1 (fora da ordem de tab) + autoComplete=off (gerenciador
+                de senha nao sugere). */}
+            <div className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+              <Label htmlFor="telefoneConfirmacao">Telefone</Label>
+              <Input
+                id="telefoneConfirmacao"
+                name="telefoneConfirmacao"
+                tabIndex={-1}
+                autoComplete="off"
+                value={telefoneConfirmacao}
+                onChange={(evento) => setTelefoneConfirmacao(evento.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="nome">Nome</Label>
               <Input
