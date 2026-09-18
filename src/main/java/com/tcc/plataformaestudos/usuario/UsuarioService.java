@@ -35,6 +35,15 @@ public class UsuarioService {
 
 	@Transactional
 	public UsuarioResponseDTO cadastrar(CadastroRequestDTO request) {
+		// Honeypot anti-bot: se o campo tecnico veio preenchido, finge sucesso
+		// sem tocar o banco nem disparar e-mail - nao ensina ao bot o que foi
+		// detectado (ver Docs/seguranca.md). Usuarios reais nunca preenchem
+		// este campo (invisivel, fora da ordem de tab).
+		if (request.telefoneConfirmacao() != null && !request.telefoneConfirmacao().isBlank()) {
+			log.warn("Tentativa de cadastro bloqueada por honeypot preenchido (e-mail informado: {})", request.email());
+			return respostaFalsaHoneypot(request);
+		}
+
 		usuarioRepository.findByEmail(request.email()).ifPresent(usuarioExistente -> {
 			throw new EmailJaCadastradoException(request.email());
 		});
@@ -60,6 +69,16 @@ public class UsuarioService {
 		verificacaoEmailService.enviarTokenVerificacao(salvo);
 
 		return UsuarioResponseDTO.fromEntity(salvo);
+	}
+
+	/**
+	 * Resposta sintetica para uma tentativa de cadastro bloqueada por honeypot
+	 * - mesmo formato/status (201) de um cadastro real, sem persistir nada nem
+	 * checar unicidade, para nao revelar a um bot que a tentativa falhou.
+	 */
+	private UsuarioResponseDTO respostaFalsaHoneypot(CadastroRequestDTO request) {
+		return new UsuarioResponseDTO(-1L, request.nome(), request.nomeUsuario(), request.email(),
+				PapelUsuario.ESTUDANTE, LocalDateTime.now());
 	}
 
 	/** UC19 — retorna os dados do usuário autenticado (RN01 implícito: sempre o próprio). */

@@ -195,6 +195,11 @@ POST /api/flashcards/57/revisoes
 
 `POST /api/auth/cadastro` ganha o campo `termosAceitos: boolean` (obrigatório `true`, RN30).
 
+`POST /api/auth/cadastro` também aceita `telefoneConfirmacao: string` (opcional, honeypot anti-bot —
+ver `Docs/seguranca.md`): campo invisível no frontend, nunca preenchido por um usuário real. Se vier
+preenchido, a resposta é `201` com o mesmo formato de sucesso, mas nada é persistido nem e-mail de
+verificação é enviado.
+
 ## Compartilhamento de Deck (UC29)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |

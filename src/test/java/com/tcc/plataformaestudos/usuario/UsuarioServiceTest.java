@@ -65,7 +65,7 @@ class UsuarioServiceTest {
 
 	@Test
 	void deveCadastrarUsuarioQuandoEmailENomeUsuarioAindaNaoExistem() {
-		CadastroRequestDTO request = new CadastroRequestDTO("Ana Estudante", "ana_estudante", "ana@email.com", "senha123", true);
+		CadastroRequestDTO request = new CadastroRequestDTO("Ana Estudante", "ana_estudante", "ana@email.com", "senha123", true, null);
 
 		when(usuarioRepository.findByEmail(request.email())).thenReturn(Optional.empty());
 		when(usuarioRepository.findByNomeUsuarioIgnoreCase(request.nomeUsuario())).thenReturn(Optional.empty());
@@ -90,8 +90,21 @@ class UsuarioServiceTest {
 	}
 
 	@Test
+	void deveRetornarRespostaFalsaSemPersistirQuandoHoneypotPreenchido() {
+		CadastroRequestDTO request = new CadastroRequestDTO(
+				"Bot", "bot123", "bot@spam.com", "senha123", true, "5511999999999");
+
+		UsuarioResponseDTO resposta = usuarioService.cadastrar(request);
+
+		assertThat(resposta.email()).isEqualTo("bot@spam.com");
+		verify(usuarioRepository, never()).findByEmail(any());
+		verify(usuarioRepository, never()).save(any(Usuario.class));
+		verify(verificacaoEmailService, never()).enviarTokenVerificacao(any());
+	}
+
+	@Test
 	void deveLancarEmailJaCadastradoExceptionQuandoEmailJaExisteNoCadastro() {
-		CadastroRequestDTO request = new CadastroRequestDTO("Ana", "ana_estudante", "ana@email.com", "senha123", true);
+		CadastroRequestDTO request = new CadastroRequestDTO("Ana", "ana_estudante", "ana@email.com", "senha123", true, null);
 		Usuario existente = new Usuario();
 		existente.setEmail("ana@email.com");
 
@@ -105,7 +118,7 @@ class UsuarioServiceTest {
 
 	@Test
 	void deveLancarNomeUsuarioJaCadastradoExceptionQuandoNomeUsuarioJaExisteNoCadastro() {
-		CadastroRequestDTO request = new CadastroRequestDTO("Ana", "ana_estudante", "ana@email.com", "senha123", true);
+		CadastroRequestDTO request = new CadastroRequestDTO("Ana", "ana_estudante", "ana@email.com", "senha123", true, null);
 		Usuario existente = new Usuario();
 		existente.setNomeUsuario("ana_estudante");
 

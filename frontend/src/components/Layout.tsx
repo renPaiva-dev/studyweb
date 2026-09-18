@@ -50,7 +50,7 @@ function LayoutConteudo() {
       <header className="border-b-2 border-tinta">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
+            <Link to="/inicio" className="flex items-center gap-2 font-heading text-lg font-semibold text-foreground">
               <Logo className="h-6 w-6" />
               Sinapse
             </Link>
