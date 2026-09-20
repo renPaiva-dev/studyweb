@@ -1,7 +1,7 @@
 -- UC21/RN26: verificacao de posse do e-mail no cadastro. Mesmo padrao de
 -- token de uso unico da V5 (token_redefinicao_senha), mas com validade de
--- 24h em vez de 1h - nao ha urgencia de seguranca aqui, so confirmacao de
--- titularidade do e-mail informado. ON DELETE CASCADE ja inline (V5 so
+-- 10 minutos em vez de 1h - nao ha urgencia de seguranca aqui, so confirmacao
+-- de titularidade do e-mail informado. ON DELETE CASCADE ja inline (V5 so
 -- ganhou isso depois, na V6, porque a tabela dela e anterior a esse
 -- esforco de cascata em duas camadas).
 CREATE TABLE token_verificacao_email (
