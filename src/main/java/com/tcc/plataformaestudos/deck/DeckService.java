@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tcc.plataformaestudos.colecao.Colecao;
+import com.tcc.plataformaestudos.colecao.ColecaoRepository;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.flashcard.ContagemFlashcardsPorDeckDTO;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
@@ -39,6 +41,7 @@ public class DeckService {
 	private final UsuarioRepository usuarioRepository;
 	private final FlashcardRepository flashcardRepository;
 	private final ArquivoFisicoService arquivoFisicoService;
+	private final ColecaoRepository colecaoRepository;
 
 	@Transactional
 	public DeckResponseDTO criar(DeckRequestDTO request) {
@@ -49,6 +52,7 @@ public class DeckService {
 		deck.setUsuario(usuario);
 		deck.setTitulo(request.titulo());
 		deck.setDescricao(request.descricao());
+		deck.setColecao(resolverColecao(request.colecaoId(), usuarioId));
 
 		Deck salvo = deckRepository.save(deck);
 		log.info("Deck criado: deckId={}, usuarioId={}", salvo.getId(), usuarioId);
@@ -88,9 +92,11 @@ public class DeckService {
 
 	@Transactional
 	public DeckResponseDTO atualizar(Long deckId, DeckRequestDTO request) {
+		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 		Deck deck = buscarDeckDoUsuarioAutenticado(deckId);
 		deck.setTitulo(request.titulo());
 		deck.setDescricao(request.descricao());
+		deck.setColecao(resolverColecao(request.colecaoId(), usuarioId));
 
 		Deck atualizado = deckRepository.save(deck);
 		log.info("Deck atualizado: deckId={}", deckId);
@@ -126,6 +132,20 @@ public class DeckService {
 
 		return deckRepository.findByIdAndUsuarioId(deckId, usuarioId)
 				.orElseThrow(() -> new RecursoNaoEncontradoException("Deck não encontrado"));
+	}
+
+	/**
+	 * RN42/UC33 — mesmo padrão RN01 de {@link #buscarDeckDoUsuarioAutenticado}:
+	 * a coleção informada (se houver) precisa pertencer ao usuário
+	 * autenticado, senão 404. {@code colecaoId} nulo é válido (deck sem
+	 * coleção).
+	 */
+	private Colecao resolverColecao(Long colecaoId, Long usuarioId) {
+		if (colecaoId == null) {
+			return null;
+		}
+		return colecaoRepository.findByIdAndUsuarioId(colecaoId, usuarioId)
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Coleção não encontrada"));
 	}
 
 }

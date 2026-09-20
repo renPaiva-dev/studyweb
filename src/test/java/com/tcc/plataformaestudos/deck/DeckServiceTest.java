@@ -26,6 +26,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.tcc.plataformaestudos.colecao.Colecao;
+import com.tcc.plataformaestudos.colecao.ColecaoRepository;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.flashcard.ContagemFlashcardsPorDeckDTO;
 import com.tcc.plataformaestudos.flashcard.FlashcardRepository;
@@ -52,6 +54,9 @@ class DeckServiceTest {
 	@Mock
 	private ArquivoFisicoService arquivoFisicoService;
 
+	@Mock
+	private ColecaoRepository colecaoRepository;
+
 	@InjectMocks
 	private DeckService deckService;
 
@@ -69,7 +74,7 @@ class DeckServiceTest {
 
 	@Test
 	void deveCriarDeckComSucesso() {
-		DeckRequestDTO request = new DeckRequestDTO("Anatomia", "Sistema cardiovascular");
+		DeckRequestDTO request = new DeckRequestDTO("Anatomia", "Sistema cardiovascular", null);
 		Usuario usuario = new Usuario();
 		usuario.setId(USUARIO_ID);
 
@@ -93,7 +98,7 @@ class DeckServiceTest {
 	@Test
 	void deveFalharValidacaoAntesDeChegarNoRepositorioQuandoTituloVazio() {
 		Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-		DeckRequestDTO request = new DeckRequestDTO("", "descrição qualquer");
+		DeckRequestDTO request = new DeckRequestDTO("", "descrição qualquer", null);
 
 		Set<ConstraintViolation<DeckRequestDTO>> violacoes = validator.validate(request);
 
@@ -190,10 +195,54 @@ class DeckServiceTest {
 		when(deckRepository.findByIdAndUsuarioId(10L, USUARIO_ID)).thenReturn(Optional.of(deck));
 		when(deckRepository.save(deck)).thenReturn(deck);
 
-		DeckResponseDTO resposta = deckService.atualizar(10L, new DeckRequestDTO("Novo título", "Nova descrição"));
+		DeckResponseDTO resposta = deckService.atualizar(10L, new DeckRequestDTO("Novo título", "Nova descrição", null));
 
 		assertThat(resposta.titulo()).isEqualTo("Novo título");
 		assertThat(resposta.descricao()).isEqualTo("Nova descrição");
+	}
+
+	/** RN42/UC33 — associar um deck a uma coleção que pertence ao próprio usuário. */
+	@Test
+	void deveAssociarDeckAColecaoDoUsuarioAoAtualizar() {
+		Deck deck = criarDeckExistente(10L, USUARIO_ID);
+		Colecao colecao = new Colecao();
+		colecao.setId(5L);
+		when(deckRepository.findByIdAndUsuarioId(10L, USUARIO_ID)).thenReturn(Optional.of(deck));
+		when(colecaoRepository.findByIdAndUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.of(colecao));
+		when(deckRepository.save(deck)).thenReturn(deck);
+
+		deckService.atualizar(10L, new DeckRequestDTO("Anatomia", "Sistema cardiovascular", 5L));
+
+		assertThat(deck.getColecao()).isEqualTo(colecao);
+	}
+
+	/** RN42/UC33 — mesmo padrão RN01: coleção de outro usuário (ou inexistente) não pode ser associada. */
+	@Test
+	void deveLancarRecursoNaoEncontradoExceptionQuandoColecaoInformadaNaoPertenceAoUsuario() {
+		Deck deck = criarDeckExistente(10L, USUARIO_ID);
+		when(deckRepository.findByIdAndUsuarioId(10L, USUARIO_ID)).thenReturn(Optional.of(deck));
+		when(colecaoRepository.findByIdAndUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> deckService.atualizar(10L, new DeckRequestDTO("Anatomia", "Sistema cardiovascular", 5L)))
+				.isInstanceOf(RecursoNaoEncontradoException.class);
+
+		verify(deckRepository, never()).save(any());
+	}
+
+	/** RN42/UC33 — remover um deck de sua coleção (colecaoId: null). */
+	@Test
+	void deveDesvincularDeckDaColecaoQuandoColecaoIdForNuloAoAtualizar() {
+		Deck deck = criarDeckExistente(10L, USUARIO_ID);
+		Colecao colecao = new Colecao();
+		colecao.setId(5L);
+		deck.setColecao(colecao);
+		when(deckRepository.findByIdAndUsuarioId(10L, USUARIO_ID)).thenReturn(Optional.of(deck));
+		when(deckRepository.save(deck)).thenReturn(deck);
+
+		deckService.atualizar(10L, new DeckRequestDTO("Anatomia", "Sistema cardiovascular", null));
+
+		assertThat(deck.getColecao()).isNull();
+		verify(colecaoRepository, never()).findByIdAndUsuarioId(any(), any());
 	}
 
 	@Test

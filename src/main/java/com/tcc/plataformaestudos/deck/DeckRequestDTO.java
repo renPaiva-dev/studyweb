@@ -10,5 +10,8 @@ public record DeckRequestDTO(
 		String titulo,
 
 		@Size(max = 500, message = "Descrição deve ter no máximo 500 caracteres")
-		String descricao) {
+		String descricao,
+
+		/** RN42/UC33 — coleção à qual o deck passa a pertencer; null = nenhuma. */
+		Long colecaoId) {
 }
