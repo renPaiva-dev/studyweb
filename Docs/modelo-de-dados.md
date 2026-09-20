@@ -46,6 +46,17 @@
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 | atualizado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 | data_alvo_prova | DATE | NULL (RN40/UC31 — data de prova definida pelo estudante; usada para estimar a retenção esperada de cada flashcard naquela data) |
+| colecao_id | BIGINT | NULL, FK → COLECAO(id) ON DELETE SET NULL (RN42/UC33 — deck pode pertencer a no máximo uma coleção, de forma opcional) |
+
+### COLECAO
+| Atributo | Tipo | Restrições |
+|---|---|---|
+| id | BIGINT | PK, auto_increment |
+| usuario_id | BIGINT | NOT NULL, FK → USUARIO(id) ON DELETE CASCADE |
+| nome | VARCHAR(100) | NOT NULL |
+| descricao | VARCHAR(500) | NULL |
+| criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
+| atualizado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 
 ### COMPARTILHAMENTO_DECK
 | Atributo | Tipo | Restrições |
@@ -139,10 +150,12 @@ TENTATIVA_QUIZ, sozinha, não permite isso).
 
 ```
 USUARIO (1) ──< (N) DECK                        um usuário possui vários decks
+USUARIO (1) ──< (N) COLECAO                      um usuário possui várias coleções (RN42/UC33)
 USUARIO (1) ──< (N) TOKEN_REDEFINICAO_SENHA      um usuário pode ter vários tokens de redefinição (histórico)
 USUARIO (1) ──< (N) TOKEN_VERIFICACAO_EMAIL      um usuário pode ter vários tokens de verificação (histórico/reenvio)
 USUARIO (1) ──< (N) REVISAO_FLASHCARD            um usuário realiza várias revisões
 USUARIO (1) ──< (N) TENTATIVA_QUIZ               um usuário realiza várias tentativas
+COLECAO (1) ──< (N) DECK                         uma coleção agrupa vários decks; deck vinculado a no máximo uma coleção (opcional — RN42/UC33)
 DECK    (1) ──< (N) MATERIAL_ORIGEM              um deck pode ter vários PDFs enviados
 DECK    (1) ──< (N) FLASHCARD                    um deck contém vários flashcards
 DECK    (1) ──< (N) QUIZ                         um deck pode gerar vários quizzes
@@ -154,8 +167,9 @@ TENTATIVA_QUIZ (1) ──< (N) RESPOSTA_TENTATIVA_QUIZ   uma tentativa tem uma r
 QUESTAO_QUIZ   (1) ──< (N) RESPOSTA_TENTATIVA_QUIZ   uma questão pode ser respondida em várias tentativas
 ```
 
-Todas as relações são 1:N (sem N:N neste modelo) e obrigatórias do lado N —
-toda FK é `NOT NULL`.
+Todas as relações são 1:N (sem N:N neste modelo). A FK do lado N é
+`NOT NULL` em todos os casos, **exceto** `deck.colecao_id` (RN42/UC33), que é
+opcional — um deck pode não estar em nenhuma coleção.
 
 ## DDL SQL
 
@@ -203,6 +217,17 @@ CREATE TABLE deck (
 );
 -- RN40/UC31: adicionada em V10, coluna nullable ate o estudante definir uma data-alvo
 ALTER TABLE deck ADD COLUMN data_alvo_prova DATE;
+
+-- RN42/UC33: coleções agrupando decks (V11)
+CREATE TABLE colecao (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuario(id) ON DELETE CASCADE,
+    nome VARCHAR(100) NOT NULL,
+    descricao VARCHAR(500),
+    criado_em TIMESTAMP NOT NULL DEFAULT now(),
+    atualizado_em TIMESTAMP NOT NULL DEFAULT now()
+);
+ALTER TABLE deck ADD COLUMN colecao_id BIGINT REFERENCES colecao(id) ON DELETE SET NULL;
 
 CREATE TABLE compartilhamento_deck (
     id BIGSERIAL PRIMARY KEY,
