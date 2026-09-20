@@ -1,4 +1,4 @@
-import { ClipboardList, LayoutDashboard, LogOut, User, UserCircle } from 'lucide-react'
+import { ClipboardList, LayoutDashboard, Library, LogOut, User, UserCircle } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 import { Logo } from '@/components/Logo'
@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 const ITENS_NAV = [
   { to: '/dashboard-geral', label: 'Visão geral', icon: LayoutDashboard },
   { to: '/decks', label: 'Meus decks', icon: null },
+  { to: '/colecoes', label: 'Coleções', icon: Library },
   { to: '/provas', label: 'Provas', icon: ClipboardList },
 ]
 

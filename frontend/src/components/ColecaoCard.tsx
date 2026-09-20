@@ -1,6 +1,6 @@
-import { Layers, Library, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Layers, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 
-import type { Deck } from '@/api/deckApi'
+import type { Colecao } from '@/api/colecaoApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,17 +11,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-interface DeckCardProps {
-  deck: Deck
+interface ColecaoCardProps {
+  colecao: Colecao
   onAbrir: () => void
   onEditar: () => void
   onExcluir: () => void
 }
 
-// UC02 - card de um deck na grid de /decks. Clicar no card navega para
-// /decks/:id; o menu de opcoes (editar/excluir) fica num DropdownMenu
-// que nao deve propagar o clique para o card.
-export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) {
+// UC33 - card de uma coleção na grid de /colecoes. Mesmo padrão de DeckCard:
+// clicar no card navega para o detalhe, o menu de opções fica num
+// DropdownMenu que não propaga o clique para o card.
+export function ColecaoCard({ colecao, onAbrir, onEditar, onExcluir }: ColecaoCardProps) {
   return (
     <Card
       interactive
@@ -36,8 +36,8 @@ export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) 
     >
       <CardHeader className="flex-row items-start justify-between space-y-0">
         <div className="min-w-0">
-          <CardTitle className="truncate">{deck.titulo}</CardTitle>
-          {deck.descricao && <CardDescription className="mt-1 line-clamp-2">{deck.descricao}</CardDescription>}
+          <CardTitle className="truncate">{colecao.nome}</CardTitle>
+          {colecao.descricao && <CardDescription className="mt-1 line-clamp-2">{colecao.descricao}</CardDescription>}
         </div>
 
         <DropdownMenu>
@@ -47,7 +47,7 @@ export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) 
               size="icon"
               className="-mr-2 -mt-1 shrink-0"
               onClick={(evento) => evento.stopPropagation()}
-              aria-label="Opções do deck"
+              aria-label="Opções da coleção"
             >
               <MoreVertical className="h-4 w-4" />
             </Button>
@@ -64,17 +64,11 @@ export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) 
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
+      <CardContent>
         <Badge variant="secondary" className="gap-1">
           <Layers className="h-3 w-3" />
-          {deck.totalFlashcards} flashcard{deck.totalFlashcards === 1 ? '' : 's'}
+          {colecao.totalDecks} deck{colecao.totalDecks === 1 ? '' : 's'}
         </Badge>
-        {deck.colecaoNome && (
-          <Badge variant="outline" className="gap-1">
-            <Library className="h-3 w-3" />
-            {deck.colecaoNome}
-          </Badge>
-        )}
       </CardContent>
     </Card>
   )

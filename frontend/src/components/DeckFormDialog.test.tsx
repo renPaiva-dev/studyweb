@@ -10,6 +10,10 @@ vi.mock('@/api/deckApi', () => ({
   atualizarDeck: vi.fn(),
 }))
 
+vi.mock('@/api/colecaoApi', () => ({
+  listarColecoes: vi.fn().mockResolvedValue([]),
+}))
+
 const { criarDeck, atualizarDeck } = await import('@/api/deckApi')
 
 const DECK_EXISTENTE: Deck = {
@@ -18,6 +22,8 @@ const DECK_EXISTENTE: Deck = {
   descricao: 'Sistema nervoso',
   criadoEm: '2026-01-01T00:00:00Z',
   totalFlashcards: 12,
+  colecaoId: null,
+  colecaoNome: null,
 }
 
 // UC02 - criar/editar deck via Dialog (POST/PUT /api/decks). E1 da spec:
@@ -49,7 +55,9 @@ describe('DeckFormDialog', () => {
     await usuario.type(screen.getByLabelText('Descrição'), '  Limites e derivadas  ')
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    await waitFor(() => expect(criarDeck).toHaveBeenCalledWith({ titulo: 'Cálculo I', descricao: 'Limites e derivadas' }))
+    await waitFor(() =>
+      expect(criarDeck).toHaveBeenCalledWith({ titulo: 'Cálculo I', descricao: 'Limites e derivadas', colecaoId: null }),
+    )
     expect(atualizarDeck).not.toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
     expect(onSalvo).toHaveBeenCalledTimes(1)
@@ -73,7 +81,7 @@ describe('DeckFormDialog', () => {
     await usuario.click(screen.getByRole('button', { name: 'Salvar' }))
 
     await waitFor(() =>
-      expect(atualizarDeck).toHaveBeenCalledWith(7, { titulo: 'Anatomia', descricao: 'Sistema nervoso' }),
+      expect(atualizarDeck).toHaveBeenCalledWith(7, { titulo: 'Anatomia', descricao: 'Sistema nervoso', colecaoId: null }),
     )
     expect(criarDeck).not.toHaveBeenCalled()
   })
