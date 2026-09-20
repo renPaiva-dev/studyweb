@@ -32,7 +32,7 @@
 | id | BIGINT | PK, auto_increment |
 | usuario_id | BIGINT | NOT NULL, FK → USUARIO(id) ON DELETE CASCADE |
 | token | VARCHAR(64) | NOT NULL, UNIQUE |
-| expira_em | TIMESTAMP | NOT NULL (válido por 24h a partir da criação — RN26/UC21; contas não verificadas expiradas são removidas por job agendado a cada 5 min) |
+| expira_em | TIMESTAMP | NOT NULL (válido por 10 minutos a partir da criação — RN26/UC21; contas não verificadas expiradas são removidas por job agendado a cada 5 min) |
 | usado | BOOLEAN | NOT NULL, DEFAULT FALSE |
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 
