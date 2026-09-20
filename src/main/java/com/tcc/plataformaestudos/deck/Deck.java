@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.tcc.plataformaestudos.colecao.Colecao;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.quiz.Quiz;
@@ -63,6 +64,16 @@ public class Deck {
 	/** RN40/UC31 — data de prova definida pelo estudante; nula até ser definida. */
 	@Column(name = "data_alvo_prova")
 	private LocalDate dataAlvoProva;
+
+	/**
+	 * RN42/UC33 — coleção à qual o deck pertence, no máximo uma, de forma
+	 * opcional. Sem {@code @OnDelete}: a exclusão de uma coleção nunca é
+	 * cascateada pelo JPA — o desvínculo (`colecao_id` → NULL) é garantido
+	 * pela FK do banco (`ON DELETE SET NULL`, ver V11).
+	 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "colecao_id")
+	private Colecao colecao;
 
 	/**
 	 * RN13: excluir o deck remove em cascata seus materiais, flashcards e

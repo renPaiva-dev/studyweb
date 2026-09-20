@@ -8,6 +8,8 @@ export interface Deck {
   descricao: string
   criadoEm: string
   totalFlashcards: number
+  colecaoId: number | null
+  colecaoNome: string | null
 }
 
 export interface DeckDetalhe {
@@ -16,11 +18,15 @@ export interface DeckDetalhe {
   descricao: string
   criadoEm: string
   atualizadoEm: string
+  colecaoId: number | null
+  colecaoNome: string | null
 }
 
 export interface DeckRequest {
   titulo: string
   descricao: string
+  /** RN42/UC33 - coleção à qual o deck passa a pertencer; null = nenhuma. */
+  colecaoId: number | null
 }
 
 /** GET /api/decks -> 200 */

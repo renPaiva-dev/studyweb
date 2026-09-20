@@ -28,10 +28,10 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks` | — | `200` — `[ { id, titulo, descricao, criadoEm, totalFlashcards } ]` | `401` |
-| POST | `/api/decks` | `{ titulo, descricao }` | `201` — `{ id, titulo, descricao, criadoEm }` | `400` (título vazio) · `401` |
-| GET | `/api/decks/{id}` | — | `200` — `{ id, titulo, descricao, criadoEm, atualizadoEm }` | `401` · `404` (não existe ou não é seu — RN01) |
-| PUT | `/api/decks/{id}` | `{ titulo, descricao }` | `200` — deck atualizado | `400` · `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/decks` | — | `200` — `[ { id, titulo, descricao, criadoEm, totalFlashcards, colecaoId, colecaoNome } ]` | `401` |
+| POST | `/api/decks` | `{ titulo, descricao, colecaoId? }` | `201` — `{ id, titulo, descricao, criadoEm, colecaoId, colecaoNome }` | `400` (título vazio) · `401` · `404` (`colecaoId` informado não existe ou não é seu — RN01/RN42) |
+| GET | `/api/decks/{id}` | — | `200` — `{ id, titulo, descricao, criadoEm, atualizadoEm, colecaoId, colecaoNome }` | `401` · `404` (não existe ou não é seu — RN01) |
+| PUT | `/api/decks/{id}` | `{ titulo, descricao, colecaoId? }` | `200` — deck atualizado (`colecaoId: null` remove o deck da coleção — RN42/UC33) | `400` · `401` · `404` (deck ou `colecaoId` informado não existe/não é seu — RN01/RN42) |
 | DELETE | `/api/decks/{id}` | — | `204` (exclusão em cascata — RN13, inclui os arquivos físicos dos PDFs — B1) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Upload de Material — PDF (UC03)
@@ -229,3 +229,17 @@ O job automático diário (RN39) não é um endpoint — roda internamente (`@Sc
 | GET | `/api/decks/{id}/prontidao-prova` | — | `200` — `{ dataAlvoProva, diasRestantes, totalFlashcards, prontidaoGeral, topicos: [ { topico, totalFlashcards, retencaoMediaEstimada, flashcardsPrecisandoRevisao } ], mensagem }` (RN40; `topicos` ordenado por `retencaoMediaEstimada` ascendente — mais urgente primeiro) | `400` (data-alvo não definida) · `401` · `404` (RN01) |
 
 Sem chamada à IA nem serviço externo nesta feature (100% algorítmica, a partir do estado SM-2 já persistido) — sem rate limiting específico (RNF10 não se aplica).
+
+## Coleções de Decks (UC33)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| GET | `/api/colecoes` | — | `200` — `[ { id, nome, descricao, criadoEm, totalDecks } ]` | `401` |
+| POST | `/api/colecoes` | `{ nome, descricao }` | `201` — `{ id, nome, descricao, criadoEm }` | `400` (nome vazio) · `401` |
+| GET | `/api/colecoes/{id}` | — | `200` — `{ id, nome, descricao, criadoEm, atualizadoEm, decks: [ { id, titulo, totalFlashcards } ] }` | `401` · `404` (não existe ou não é sua — RN01) |
+| PUT | `/api/colecoes/{id}` | `{ nome, descricao }` | `200` — coleção atualizada | `400` · `401` · `404` (não existe ou não é sua — RN01) |
+| DELETE | `/api/colecoes/{id}` | — | `204` (desvincula os decks — `colecao_id` → `NULL` — RN42; os decks em si não são excluídos) | `401` · `404` (não existe ou não é sua — RN01) |
+
+A associação/remoção de um deck a uma coleção é feita via `POST`/`PUT` em
+`/api/decks` (campo `colecaoId`, ver seção "Decks (UC02)") — não há endpoint
+dedicado para mover um deck entre coleções.

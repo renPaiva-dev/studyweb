@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.tcc.plataformaestudos.colecao.Colecao;
 import com.tcc.plataformaestudos.deck.Deck;
 
 import jakarta.persistence.CascadeType;
@@ -79,6 +80,10 @@ public class Usuario {
 	 */
 	@OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Deck> decks = new ArrayList<>();
+
+	/** RN32/RN42 — mesma defesa em duas camadas de {@code #decks} para as coleções do usuário. */
+	@OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Colecao> colecoes = new ArrayList<>();
 
 	@PrePersist
 	private void prePersist() {

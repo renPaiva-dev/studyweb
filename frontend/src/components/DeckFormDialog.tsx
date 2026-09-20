@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
+import { listarColecoes, type Colecao } from '@/api/colecaoApi'
 import { atualizarDeck, criarDeck, type Deck } from '@/api/deckApi'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,6 +15,9 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const SEM_COLECAO = 'nenhuma'
 
 interface DeckFormDialogProps {
   open: boolean
@@ -27,10 +31,24 @@ interface DeckFormDialogProps {
 export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: DeckFormDialogProps) {
   const [titulo, setTitulo] = useState('')
   const [descricao, setDescricao] = useState('')
+  const [colecaoId, setColecaoId] = useState<number | null>(null)
+  const [colecoes, setColecoes] = useState<Colecao[]>([])
   const [erroTitulo, setErroTitulo] = useState<string | undefined>()
   const [enviando, setEnviando] = useState(false)
 
   const editando = deckParaEditar !== null
+
+  // RN42/UC33 - lista de coleções para o seletor; carrega sempre que o
+  // dialog abre (uma coleção pode ter sido criada desde a última abertura).
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+
+    listarColecoes()
+      .then(setColecoes)
+      .catch(() => setColecoes([]))
+  }, [open])
 
   // Reseta o formulario quando o dialog transiciona de fechado para
   // aberto (idioma React: ajustar estado durante a renderizacao ao
@@ -42,6 +60,7 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
     if (open) {
       setTitulo(deckParaEditar?.titulo ?? '')
       setDescricao(deckParaEditar?.descricao ?? '')
+      setColecaoId(deckParaEditar?.colecaoId ?? null)
       setErroTitulo(undefined)
     }
   }
@@ -57,7 +76,7 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
     setEnviando(true)
 
     try {
-      const dados = { titulo: titulo.trim(), descricao: descricao.trim() }
+      const dados = { titulo: titulo.trim(), descricao: descricao.trim(), colecaoId }
 
       if (editando) {
         await atualizarDeck(deckParaEditar.id, dados)
@@ -107,6 +126,25 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
                 value={descricao}
                 onChange={(evento) => setDescricao(evento.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="colecao">Coleção</Label>
+              <Select
+                value={colecaoId !== null ? String(colecaoId) : SEM_COLECAO}
+                onValueChange={(valor) => setColecaoId(valor === SEM_COLECAO ? null : Number(valor))}
+              >
+                <SelectTrigger id="colecao">
+                  <SelectValue placeholder="Nenhuma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={SEM_COLECAO}>Nenhuma</SelectItem>
+                  {colecoes.map((colecao) => (
+                    <SelectItem key={colecao.id} value={String(colecao.id)}>
+                      {colecao.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter className="mt-6">

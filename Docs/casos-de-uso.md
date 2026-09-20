@@ -409,3 +409,19 @@
   5. Sistema retorna a resposta e quantos materiais foram usados como contexto.
 - **Fluxos de exceção:** E1 — deck sem nenhum material processado → 400. E2 — falha na API de IA → 502 (com retry).
 - **Regras relacionadas:** RN41, RN01, RN19
+
+## UC33 — Organizar decks em coleções
+
+- **Ator:** Estudante
+- **Objetivo:** Agrupar decks relacionados sob um rótulo temático (ex.: "Medicina" reunindo os decks "Anatomia" e "Sistema Cardiovascular").
+- **Pré-condições:** Usuário autenticado.
+- **Pós-condições:** Coleção criada/editada/removida, vinculada ao usuário; deck vinculado a no máximo uma coleção por vez.
+- **Fluxo principal:**
+  1. Estudante acessa "Coleções" e seleciona "Nova coleção", informa nome e descrição.
+  2. Sistema valida (nome obrigatório) e cria a coleção vinculada ao usuário autenticado.
+  3. Ao criar ou editar um deck, o estudante pode selecionar uma coleção existente (ou "Nenhuma").
+  4. Sistema aplica RN01 (a coleção selecionada deve pertencer ao usuário autenticado) e associa o deck à coleção (`colecao_id`).
+  5. Coleção exibida na lista, com os decks nela contidos.
+- **Alternativos:** A1 — editar nome/descrição da coleção; A2 — remover um deck de uma coleção (edição do deck, `colecaoId: null`); A3 — mover um deck de uma coleção para outra.
+- **Exceções:** E1 — nome da coleção vazio → bloqueia envio. E2 — excluir uma coleção → decks associados não são excluídos, apenas desvinculados (RN42).
+- **Regras relacionadas:** RN01, RN42

@@ -8,10 +8,15 @@ public record DeckResponseDTO(
 		String descricao,
 		LocalDateTime criadoEm,
 		LocalDateTime atualizadoEm,
-		int totalFlashcards) {
+		int totalFlashcards,
+		Long colecaoId,
+		String colecaoNome) {
 
 	public static DeckResponseDTO fromEntity(Deck deck, long totalFlashcards) {
-		return new DeckResponseDTO(deck.getId(), deck.getTitulo(), deck.getDescricao(), deck.getCriadoEm(), deck.getAtualizadoEm(), (int) totalFlashcards);
+		Long colecaoId = deck.getColecao() != null ? deck.getColecao().getId() : null;
+		String colecaoNome = deck.getColecao() != null ? deck.getColecao().getNome() : null;
+		return new DeckResponseDTO(deck.getId(), deck.getTitulo(), deck.getDescricao(), deck.getCriadoEm(),
+				deck.getAtualizadoEm(), (int) totalFlashcards, colecaoId, colecaoNome);
 	}
 
 }

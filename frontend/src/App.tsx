@@ -6,6 +6,8 @@ import { Toaster } from '@/components/ui/sonner'
 import { VLibrasWidget } from '@/components/VLibrasWidget'
 import { AuthProvider } from '@/context/AuthContext'
 import { CadastroPage } from '@/pages/CadastroPage'
+import { ColecaoDetalhePage } from '@/pages/ColecaoDetalhePage'
+import { ColecoesPage } from '@/pages/ColecoesPage'
 import { DashboardGeralPage } from '@/pages/DashboardGeralPage'
 import { DeckCompartilhadoPage } from '@/pages/DeckCompartilhadoPage'
 import { DeckDetalhePage } from '@/pages/DeckDetalhePage'
@@ -43,6 +45,8 @@ function App() {
               <Route path="/inicio" element={<InicioPage />} />
               <Route path="/decks" element={<DecksPage />} />
               <Route path="/decks/:id" element={<DeckDetalhePage />} />
+              <Route path="/colecoes" element={<ColecoesPage />} />
+              <Route path="/colecoes/:id" element={<ColecaoDetalhePage />} />
               <Route path="/dashboard-geral" element={<DashboardGeralPage />} />
               <Route path="/provas" element={<ProvasPage />} />
               <Route path="/provas/nova" element={<NovaProvaPage />} />
