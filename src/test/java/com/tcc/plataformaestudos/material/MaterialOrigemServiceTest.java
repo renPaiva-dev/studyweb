@@ -201,6 +201,9 @@ class MaterialOrigemServiceTest {
 		MaterialOrigemResponseDTO resposta = materialOrigemService.enviarPdf(DECK_ID, arquivo);
 
 		assertThat(resposta.statusProcessamento()).isEqualTo(StatusProcessamento.ERRO);
+		// I4 (Docs/auditoria-coerencia-seguranca-2026-09.md): o motivo do erro
+		// precisa vir preenchido, nao so o status.
+		assertThat(resposta.motivoErro()).isNotBlank();
 	}
 
 	@Test
@@ -218,18 +221,16 @@ class MaterialOrigemServiceTest {
 	}
 
 	@Test
-	void deveLancarAcessoNegadoExceptionQuandoMaterialPertenceADeckDeOutroUsuario() {
+	void deveLancarRecursoNaoEncontradoExceptionQuandoMaterialPertenceADeckDeOutroUsuario() {
 		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(materialOrigemRepository.existsById(5L)).thenReturn(true);
 
 		assertThatThrownBy(() -> materialOrigemService.buscarPorId(5L))
-				.isInstanceOf(AcessoNegadoException.class);
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 	@Test
 	void deveLancarRecursoNaoEncontradoExceptionQuandoMaterialNaoExiste() {
 		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(materialOrigemRepository.existsById(5L)).thenReturn(false);
 
 		assertThatThrownBy(() -> materialOrigemService.buscarPorId(5L))
 				.isInstanceOf(RecursoNaoEncontradoException.class);
@@ -326,12 +327,11 @@ class MaterialOrigemServiceTest {
 	}
 
 	@Test
-	void deveLancarAcessoNegadoExceptionAoExcluirMaterialDeOutroUsuario() {
+	void deveLancarRecursoNaoEncontradoExceptionAoExcluirMaterialDeOutroUsuario() {
 		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(materialOrigemRepository.existsById(5L)).thenReturn(true);
 
 		assertThatThrownBy(() -> materialOrigemService.excluir(5L))
-				.isInstanceOf(AcessoNegadoException.class);
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 
 		verify(materialOrigemRepository, never()).delete(any());
 	}
@@ -339,7 +339,6 @@ class MaterialOrigemServiceTest {
 	@Test
 	void deveLancarRecursoNaoEncontradoExceptionAoExcluirMaterialInexistente() {
 		when(materialOrigemRepository.findByIdAndDeckUsuarioId(5L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(materialOrigemRepository.existsById(5L)).thenReturn(false);
 
 		assertThatThrownBy(() -> materialOrigemService.excluir(5L))
 				.isInstanceOf(RecursoNaoEncontradoException.class);

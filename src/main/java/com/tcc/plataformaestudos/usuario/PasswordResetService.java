@@ -23,6 +23,11 @@ public class PasswordResetService {
 	private static final long VALIDADE_HORAS = 1;
 	private static final String MENSAGEM_SOLICITACAO =
 			"Se este e-mail estiver cadastrado, enviamos um link para redefinir sua senha.";
+	// C4 (Docs/auditoria-coerencia-seguranca-2026-09.md): destinatário usado
+	// para simular o envio de e-mail quando o cadastro não existe - nunca o
+	// e-mail informado pelo cliente (evita mandar e-mail não solicitado a um
+	// estranho), só para gastar o mesmo tempo de rede do envio real.
+	private static final String DESTINATARIO_DUMMY_ANTI_TIMING = "timing-dummy@plataformaestudos.local";
 
 	private final UsuarioRepository usuarioRepository;
 	private final TokenRedefinicaoSenhaRepository tokenRepository;
@@ -45,9 +50,10 @@ public class PasswordResetService {
 
 	@Transactional
 	public MensagemResponseDTO solicitarRedefinicao(String email) {
-		usuarioRepository.findByEmail(email).ifPresent(usuario -> {
-			String token = UUID.randomUUID().toString();
+		Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+		String token = UUID.randomUUID().toString();
 
+		if (usuario != null) {
 			TokenRedefinicaoSenha tokenRedefinicao = new TokenRedefinicaoSenha();
 			tokenRedefinicao.setUsuario(usuario);
 			tokenRedefinicao.setToken(token);
@@ -55,15 +61,20 @@ public class PasswordResetService {
 			tokenRepository.save(tokenRedefinicao);
 
 			log.info("Token de redefinição de senha gerado: usuarioId={}", usuario.getId());
+		}
 
-			// O e-mail traz um link clicavel (nao so o token cru) para a tela de
-			// redefinicao do frontend, que ja sabe ler ?token= e pre-preencher o campo.
-			String link = frontendUrl + "/redefinir-senha?token=" + token;
-			emailService.enviarEmail(
-					usuario.getEmail(),
-					"Redefinição de senha",
-					"Clique no link a seguir para redefinir sua senha (válido por 1 hora): " + link);
-		});
+		// C4: o e-mail (ou um simulacro dele, se o cadastro não existe) é
+		// sempre disparado, para que o tempo de resposta não denuncie por
+		// timing se aquele e-mail está cadastrado - mesmo cuidado da
+		// mensagem genérica de RN24 abaixo, mas para o tempo de resposta.
+		// O e-mail traz um link clicavel (nao so o token cru) para a tela de
+		// redefinicao do frontend, que ja sabe ler ?token= e pre-preencher o campo.
+		String link = frontendUrl + "/redefinir-senha?token=" + token;
+		String destinatario = usuario != null ? usuario.getEmail() : DESTINATARIO_DUMMY_ANTI_TIMING;
+		emailService.enviarEmail(
+				destinatario,
+				"Redefinição de senha",
+				"Clique no link a seguir para redefinir sua senha (válido por 1 hora): " + link);
 
 		// RN24: mesma resposta independente de o e-mail existir ou não.
 		return new MensagemResponseDTO(MENSAGEM_SOLICITACAO);
@@ -71,11 +82,16 @@ public class PasswordResetService {
 
 	@Transactional
 	public MensagemResponseDTO redefinirSenha(String token, String novaSenha) {
+		// N9 (Docs/auditoria-coerencia-seguranca-2026-09.md): mensagem em
+		// linguagem humana ("link"), não jargão técnico ("token") - esse
+		// texto chega cru ao usuário via toast no frontend.
 		TokenRedefinicaoSenha tokenRedefinicao = tokenRepository.findByTokenAndUsadoFalse(token)
-				.orElseThrow(() -> new TokenRedefinicaoInvalidoException("Token inválido ou já utilizado"));
+				.orElseThrow(() -> new TokenRedefinicaoInvalidoException(
+						"Link inválido ou já utilizado. Solicite um novo link para redefinir sua senha."));
 
 		if (tokenRedefinicao.getExpiraEm().isBefore(LocalDateTime.now())) {
-			throw new TokenRedefinicaoInvalidoException("Token expirado");
+			throw new TokenRedefinicaoInvalidoException(
+					"Link expirado. Solicite um novo link para redefinir sua senha.");
 		}
 
 		Usuario usuario = tokenRedefinicao.getUsuario();

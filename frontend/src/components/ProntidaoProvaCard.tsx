@@ -19,6 +19,20 @@ interface ProntidaoProvaCardProps {
   deckId: number
 }
 
+// I6 (Docs/auditoria-coerencia-seguranca-2026-09.md): reusa o mesmo criterio
+// de classificarPontuacao.ts (verde-lousa >= 70, faixa neutra 40-69, sem
+// amarelo/laranja fora da paleta aprovada, vermelho-correcao abaixo disso)
+// em vez de inventar uma escala nova so para este indicador.
+function corProntidaoGeral(percentual: number): string {
+  if (percentual >= 70) {
+    return 'text-verde-lousa'
+  }
+  if (percentual >= 40) {
+    return 'text-foreground'
+  }
+  return 'text-vermelho-correcao'
+}
+
 // UC31 - previsao de prontidao para prova (RN40). GET/PUT/DELETE
 // /api/decks/{id}/prova-alvo + GET /api/decks/{id}/prontidao-prova
 // (docs/contrato-api.md). Diferente das demais features de IA do deck,
@@ -150,7 +164,9 @@ export function ProntidaoProvaCard({ deckId }: ProntidaoProvaCardProps) {
                   ? `Faltam ${prontidao.diasRestantes} dia(s) para a prova`
                   : 'A data da prova já passou'}
               </p>
-              <p className="font-heading text-2xl font-semibold text-verde-lousa">{prontidao.prontidaoGeral}%</p>
+              <p className={`font-heading text-2xl font-semibold ${corProntidaoGeral(prontidao.prontidaoGeral)}`}>
+                {prontidao.prontidaoGeral}%
+              </p>
             </div>
 
             <p className="text-sm">{prontidao.mensagem}</p>

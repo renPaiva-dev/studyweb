@@ -37,7 +37,7 @@ export function VerificarEmailPage() {
 
     verificarEmail(token)
       .then((resposta) => {
-        setMensagem(resposta.mensagem)
+        setMensagem(resposta.message)
         setEstado('verificado')
       })
       .catch((erro) => {
@@ -59,7 +59,7 @@ export function VerificarEmailPage() {
 
     try {
       const resposta = await reenviarVerificacao(email)
-      setMensagem(resposta.mensagem)
+      setMensagem(resposta.message)
     } catch {
       // RN26 (mesmo racional anti-enumeração de RN24): nao ha mensagem de
       // erro diferenciada a mostrar aqui.
@@ -79,7 +79,10 @@ export function VerificarEmailPage() {
           </span>
           <CardTitle className="font-heading text-3xl">Confirme seu e-mail</CardTitle>
           {estado === 'reenviar' && (
-            <CardDescription>Enviamos um link de confirmação para o seu e-mail ao criar a conta</CardDescription>
+            <CardDescription>
+              Enviamos um link de confirmação para o seu e-mail ao criar a conta. Confirme em até 10 minutos, senão
+              sua conta expira automaticamente e será preciso se cadastrar de novo.
+            </CardDescription>
           )}
         </CardHeader>
 

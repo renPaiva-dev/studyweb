@@ -11,12 +11,14 @@ const CONFIGURACAO: Record<StatusProcessamento, { rotulo: string; variant: Badge
 }
 
 // UC03 - badge de statusProcessamento (PENDENTE/PROCESSADO/ERRO) com
-// cores distintas por status.
-export function MaterialStatusBadge({ status }: { status: StatusProcessamento }) {
+// cores distintas por status. `motivo` (achado I4) vira o title nativo do
+// navegador quando o status é ERRO - o texto completo também aparece embaixo
+// do card em MaterialItem.tsx, isso aqui é só um reforço no hover do badge.
+export function MaterialStatusBadge({ status, motivo }: { status: StatusProcessamento; motivo?: string | null }) {
   const { rotulo, variant, Icone } = CONFIGURACAO[status]
 
   return (
-    <Badge variant={variant} className="gap-1">
+    <Badge variant={variant} className="gap-1" title={motivo ?? undefined}>
       <Icone className="h-3 w-3" />
       {rotulo}
     </Badge>

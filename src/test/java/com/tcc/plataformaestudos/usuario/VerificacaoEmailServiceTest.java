@@ -79,32 +79,38 @@ class VerificacaoEmailServiceTest {
 
 		MensagemResponseDTO resposta = verificacaoEmailService.reenviarVerificacao("ana@email.com");
 
-		assertThat(resposta.mensagem()).isEqualTo(MENSAGEM_REENVIO);
+		assertThat(resposta.message()).isEqualTo(MENSAGEM_REENVIO);
 		verify(tokenRepository).save(any());
 		verify(emailService).enviarEmail(eq("ana@email.com"), anyString(), anyString());
 	}
 
 	@Test
-	void naoDeveReenviarTokenQuandoEmailNaoExisteMasRespostaEIgual() {
+	void naoDeveReenviarTokenMasDeveSimularEnvioDeEmailQuandoEmailNaoExisteMasRespostaEIgual() {
 		when(usuarioRepository.findByEmail("desconhecido@email.com")).thenReturn(Optional.empty());
 
 		MensagemResponseDTO resposta = verificacaoEmailService.reenviarVerificacao("desconhecido@email.com");
 
-		assertThat(resposta.mensagem()).isEqualTo(MENSAGEM_REENVIO);
+		assertThat(resposta.message()).isEqualTo(MENSAGEM_REENVIO);
 		verify(tokenRepository, never()).save(any());
-		verify(emailService, never()).enviarEmail(any(), any(), any());
+		// C4 (Docs/auditoria-coerencia-seguranca-2026-09.md): mesmo sem
+		// cadastro, um e-mail é "enviado" - para um destinatário descartado,
+		// nunca para o e-mail informado - só para gastar o mesmo tempo de
+		// rede do caminho em que o reenvio acontece de verdade.
+		verify(emailService).enviarEmail(eq("timing-dummy@plataformaestudos.local"), anyString(), anyString());
+		verify(emailService, never()).enviarEmail(eq("desconhecido@email.com"), any(), any());
 	}
 
 	@Test
-	void naoDeveReenviarTokenQuandoEmailJaEstaVerificadoMasRespostaEIgual() {
+	void naoDeveReenviarTokenMasDeveSimularEnvioDeEmailQuandoEmailJaEstaVerificadoMasRespostaEIgual() {
 		Usuario usuario = usuarioComId(1L, "ana@email.com", true);
 		when(usuarioRepository.findByEmail("ana@email.com")).thenReturn(Optional.of(usuario));
 
 		MensagemResponseDTO resposta = verificacaoEmailService.reenviarVerificacao("ana@email.com");
 
-		assertThat(resposta.mensagem()).isEqualTo(MENSAGEM_REENVIO);
+		assertThat(resposta.message()).isEqualTo(MENSAGEM_REENVIO);
 		verify(tokenRepository, never()).save(any());
-		verify(emailService, never()).enviarEmail(any(), any(), any());
+		verify(emailService).enviarEmail(eq("timing-dummy@plataformaestudos.local"), anyString(), anyString());
+		verify(emailService, never()).enviarEmail(eq("ana@email.com"), any(), any());
 	}
 
 	@Test
@@ -116,7 +122,7 @@ class VerificacaoEmailServiceTest {
 
 		MensagemResponseDTO resposta = verificacaoEmailService.verificarEmail("token-fake");
 
-		assertThat(resposta.mensagem()).isEqualTo("E-mail verificado com sucesso.");
+		assertThat(resposta.message()).isEqualTo("E-mail verificado com sucesso.");
 		assertThat(usuario.isEmailVerificado()).isTrue();
 		assertThat(token.isUsado()).isTrue();
 		verify(usuarioRepository).save(usuario);

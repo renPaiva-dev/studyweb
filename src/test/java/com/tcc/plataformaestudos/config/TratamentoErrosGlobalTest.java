@@ -12,12 +12,12 @@ import org.springframework.web.context.request.WebRequest;
 
 /**
  * B18 (auditoria 2026-09) — corrida "check-then-act" no cadastro/atualização
- * de perfil (unicidade de e-mail/nomeUsuario checada antes do save): duas
+ * de perfil (unicidade de nomeUsuario checada antes do save — a de e-mail
+ * não gera mais 409 desde o achado I1, ver UsuarioService#cadastrar): duas
  * requisições concorrentes podem passar a checagem antes de qualquer commit,
  * e o segundo INSERT/UPDATE estoura DataIntegrityViolationException no
  * banco. Sem handler dedicado, caía no fallback genérico (500) em vez do 409
- * já usado para os outros casos de duplicidade
- * (EmailJaCadastradoException/NomeUsuarioJaCadastradoException).
+ * já usado para os outros casos de duplicidade (NomeUsuarioJaCadastradoException).
  */
 class TratamentoErrosGlobalTest {
 

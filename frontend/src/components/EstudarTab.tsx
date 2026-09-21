@@ -19,6 +19,7 @@ interface EstudarTabProps {
 interface UltimaAvaliacao {
   qualidade: number
   contador: number
+  intervaloDias: number
 }
 
 function notaAvaliacao(qualidade: number): { texto: string; cor: string } {
@@ -83,8 +84,12 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
     setEnviando(true)
 
     try {
-      await avaliarRevisao(itemAtual.flashcardId, qualidadeResposta)
-      setUltimaAvaliacao((atual) => ({ qualidade: qualidadeResposta, contador: (atual?.contador ?? 0) + 1 }))
+      const resultado = await avaliarRevisao(itemAtual.flashcardId, qualidadeResposta)
+      setUltimaAvaliacao((atual) => ({
+        qualidade: qualidadeResposta,
+        contador: (atual?.contador ?? 0) + 1,
+        intervaloDias: resultado.intervaloDias,
+      }))
       setIndiceAtual((atual) => atual + 1)
       setVirado(false)
     } catch (erro) {
@@ -108,15 +113,15 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
         </div>
 
         {ultimaAvaliacao && (
-          <p
+          <div
             key={ultimaAvaliacao.contador}
-            className={cn(
-              'animate-caderno-entrada border-l-2 pl-3 font-medium',
-              notaAvaliacao(ultimaAvaliacao.qualidade).cor,
-            )}
+            className={cn('animate-caderno-entrada space-y-0.5 border-l-2 pl-3', notaAvaliacao(ultimaAvaliacao.qualidade).cor)}
           >
-            {notaAvaliacao(ultimaAvaliacao.qualidade).texto}
-          </p>
+            <p className="font-medium">{notaAvaliacao(ultimaAvaliacao.qualidade).texto}</p>
+            <p className="text-xs font-normal text-muted-foreground">
+              Você vai rever este card em {ultimaAvaliacao.intervaloDias} dia{ultimaAvaliacao.intervaloDias === 1 ? '' : 's'}.
+            </p>
+          </div>
         )}
 
         {notasCard && <div className="space-y-3 border-t border-manilha pt-4 text-foreground">{notasCard}</div>}

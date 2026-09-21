@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { Download, Mail } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -22,7 +23,9 @@ interface Erros {
 
 // UC19 - Editar perfil. GET/PUT /api/usuario/perfil (docs/contrato-api.md).
 // RN22: nomeUsuario e unico - 409 do backend quando ja esta em uso por
-// outro usuario e mostrado como erro de validacao do campo.
+// outro usuario e mostrado como erro de validacao do campo nomeUsuario
+// (ver aoSubmeter) - achado N11 da auditoria: antes o comentario descrevia
+// esse comportamento, mas a implementacao so mostrava um toast generico.
 export function PerfilPage() {
   const { atualizarUsuarioLocal } = useAuth()
 
@@ -85,7 +88,13 @@ export function PerfilPage() {
       atualizarUsuarioLocal(atualizado)
       toast.success('Perfil atualizado com sucesso.')
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível atualizar seu perfil.'))
+      // RN22: nomeUsuario em uso por outro usuario vira 409 - mostrado como
+      // erro do campo (nao so um toast generico, achado N11 da auditoria).
+      if (isAxiosError(erro) && erro.response?.status === 409) {
+        setErros({ nomeUsuario: 'Este nome de usuário já está em uso.' })
+      } else {
+        toast.error(extrairMensagemErro(erro, 'Não foi possível atualizar seu perfil.'))
+      }
     } finally {
       setSalvando(false)
     }

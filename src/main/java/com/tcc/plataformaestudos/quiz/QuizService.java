@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -182,13 +181,13 @@ public class QuizService {
 	public HistoricoProvaDetalheDTO buscarDetalheTentativa(Long tentativaId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
+		// N7 (Docs/auditoria-coerencia-seguranca-2026-09.md): sempre 404 - mesmo
+		// padrão de buscarQuizDoUsuarioAutenticado abaixo e de
+		// DeckService#buscarDeckDoUsuarioAutenticado (B15) - para não permitir
+		// enumerar IDs de tentativa de outros usuários pela diferença entre
+		// 403 e 404.
 		TentativaQuiz tentativa = tentativaQuizRepository.buscarDetalheDoUsuario(tentativaId, usuarioId)
-				.orElseGet(() -> {
-					if (tentativaQuizRepository.existsById(tentativaId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar esta tentativa");
-					}
-					throw new RecursoNaoEncontradoException("Tentativa não encontrada");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Tentativa não encontrada"));
 
 		// B12: popula em lote o fetch de resposta.questao para esta tentativa
 		// (mesmo contexto de persistência de tentativa.getRespostas()), evitando
@@ -202,19 +201,19 @@ public class QuizService {
 
 	/**
 	 * Centraliza RN01 para um quiz individual: busca e garante que pertence
-	 * (via deck) ao usuário autenticado. 404 se não existe; 403 se existe mas
-	 * é de outro usuário.
+	 * (via deck) ao usuário autenticado. N7
+	 * (Docs/auditoria-coerencia-seguranca-2026-09.md): sempre 404 - tanto
+	 * quando o quiz não existe quanto quando existe mas pertence a outro
+	 * usuário - mesmo padrão de
+	 * {@link com.tcc.plataformaestudos.deck.DeckService#buscarDeckDoUsuarioAutenticado(Long)}
+	 * (B15), para não permitir enumerar IDs de quiz de outros usuários pela
+	 * diferença entre 403 e 404.
 	 */
 	public Quiz buscarQuizDoUsuarioAutenticado(Long quizId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
 		return quizRepository.findByIdAndDeckUsuarioId(quizId, usuarioId)
-				.orElseGet(() -> {
-					if (quizRepository.existsById(quizId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar este quiz");
-					}
-					throw new RecursoNaoEncontradoException("Quiz não encontrado");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Quiz não encontrado"));
 	}
 
 	private QuestaoQuiz gerarQuestao(Flashcard flashcard, List<Flashcard> todosFlashcards, Quiz quiz) {

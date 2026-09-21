@@ -29,7 +29,20 @@ interface FlashcardEstudoCardProps {
 // próximo.
 export function FlashcardEstudoCard({ item, virado, onNotasChange }: FlashcardEstudoCardProps) {
   const [carregandoExplicacao, setCarregandoExplicacao] = useState(false)
+  const [carregandoExplicacaoDemorando, setCarregandoExplicacaoDemorando] = useState(false)
   const [explicacao, setExplicacao] = useState<Explicacao | null>(null)
+
+  // N4 (Docs/auditoria-coerencia-seguranca-2026-09.md): o backend tenta a
+  // chamada a IA ate 2x antes de desistir - mesmo padrao de MaterialItem.tsx.
+  useEffect(() => {
+    if (!carregandoExplicacao) {
+      setCarregandoExplicacaoDemorando(false)
+      return
+    }
+
+    const temporizador = setTimeout(() => setCarregandoExplicacaoDemorando(true), 15_000)
+    return () => clearTimeout(temporizador)
+  }, [carregandoExplicacao])
 
   async function aoPedirExplicacao() {
     setCarregandoExplicacao(true)
@@ -61,14 +74,21 @@ export function FlashcardEstudoCard({ item, virado, onNotasChange }: FlashcardEs
           <p>{explicacao.explicacao}</p>
         </div>
       ) : (
-        <Button size="sm" variant="ghost" onClick={() => void aoPedirExplicacao()} disabled={carregandoExplicacao}>
-          {carregandoExplicacao ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <div className="space-y-1">
+          <Button size="sm" variant="ghost" onClick={() => void aoPedirExplicacao()} disabled={carregandoExplicacao}>
+            {carregandoExplicacao ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <MessageCircleQuestion className="mr-2 h-4 w-4" />
+            )}
+            {carregandoExplicacao ? 'Gerando explicação...' : 'Não entendi, explique melhor'}
+          </Button>
+          {carregandoExplicacaoDemorando ? (
+            <p className="text-xs text-muted-foreground">Ainda gerando a explicação, pode levar um pouco mais que o normal...</p>
           ) : (
-            <MessageCircleQuestion className="mr-2 h-4 w-4" />
+            !carregandoExplicacao && <p className="text-xs text-muted-foreground">Limitado a 10 gerações por minuto.</p>
           )}
-          {carregandoExplicacao ? 'Gerando explicação...' : 'Não entendi, explique melhor'}
-        </Button>
+        </div>
       )}
     </div>
   )
@@ -80,7 +100,7 @@ export function FlashcardEstudoCard({ item, virado, onNotasChange }: FlashcardEs
     // notas e recriado a cada render (JSX novo); a dependencia real e o
     // conteudo que a compoe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onNotasChange, virado, item.mnemonico, explicacao, carregandoExplicacao])
+  }, [onNotasChange, virado, item.mnemonico, explicacao, carregandoExplicacao, carregandoExplicacaoDemorando])
 
   return (
     <div className="mx-auto w-full max-w-xl" style={{ perspective: '1600px' }}>

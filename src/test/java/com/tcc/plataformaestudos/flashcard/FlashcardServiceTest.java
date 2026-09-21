@@ -26,7 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.tcc.plataformaestudos.config.AcessoNegadoException;
+import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
 import com.tcc.plataformaestudos.usuario.Usuario;
@@ -138,14 +138,13 @@ class FlashcardServiceTest {
 	}
 
 	@Test
-	void deveLancarAcessoNegadoExceptionAoAtualizarFlashcardDeOutroUsuario() {
+	void deveLancarRecursoNaoEncontradoExceptionAoAtualizarFlashcardDeOutroUsuario() {
 		when(flashcardRepository.findByIdAndDeckUsuarioId(FLASHCARD_ID, USUARIO_ID)).thenReturn(Optional.empty());
-		when(flashcardRepository.existsById(FLASHCARD_ID)).thenReturn(true);
 
 		FlashcardRequestDTO request = new FlashcardRequestDTO("Pergunta", "Resposta", null, null);
 
 		assertThatThrownBy(() -> flashcardService.atualizar(FLASHCARD_ID, request))
-				.isInstanceOf(AcessoNegadoException.class);
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 	@Test
@@ -159,12 +158,11 @@ class FlashcardServiceTest {
 	}
 
 	@Test
-	void deveLancarAcessoNegadoExceptionAoExcluirFlashcardDeOutroUsuario() {
+	void deveLancarRecursoNaoEncontradoExceptionAoExcluirFlashcardDeOutroUsuario() {
 		when(flashcardRepository.findByIdAndDeckUsuarioId(FLASHCARD_ID, USUARIO_ID)).thenReturn(Optional.empty());
-		when(flashcardRepository.existsById(FLASHCARD_ID)).thenReturn(true);
 
 		assertThatThrownBy(() -> flashcardService.excluir(FLASHCARD_ID))
-				.isInstanceOf(AcessoNegadoException.class);
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 	@Test

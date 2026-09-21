@@ -9,6 +9,8 @@ export interface Material {
   id: number
   nomeArquivo: string
   statusProcessamento: StatusProcessamento
+  /** I4 (docs/contrato-api.md) - preenchido só quando statusProcessamento é ERRO. */
+  motivoErro: string | null
   criadoEm: string
 }
 
@@ -17,6 +19,7 @@ export interface MaterialCriado {
   id: number
   nomeArquivo: string
   statusProcessamento: StatusProcessamento
+  motivoErro: string | null
 }
 
 export interface SugestaoFlashcard {

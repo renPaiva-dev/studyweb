@@ -1,5 +1,5 @@
 import { Loader2, Sparkles, Target } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
@@ -18,7 +18,20 @@ interface RecomendacaoEstudoCardProps {
 // FlashcardEstudoCard).
 export function RecomendacaoEstudoCard({ deckId }: RecomendacaoEstudoCardProps) {
   const [carregando, setCarregando] = useState(false)
+  const [carregandoDemorando, setCarregandoDemorando] = useState(false)
   const [recomendacao, setRecomendacao] = useState<RecomendacaoEstudo | null>(null)
+
+  // N4 (Docs/auditoria-coerencia-seguranca-2026-09.md): o backend tenta a
+  // chamada a IA ate 2x antes de desistir - mesmo padrao de MaterialItem.tsx.
+  useEffect(() => {
+    if (!carregando) {
+      setCarregandoDemorando(false)
+      return
+    }
+
+    const temporizador = setTimeout(() => setCarregandoDemorando(true), 15_000)
+    return () => clearTimeout(temporizador)
+  }, [carregando])
 
   async function aoPedirRecomendacao() {
     setCarregando(true)
@@ -48,6 +61,13 @@ export function RecomendacaoEstudoCard({ deckId }: RecomendacaoEstudoCardProps) 
               {carregando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}
               {carregando ? 'Analisando seus tópicos...' : 'Ver recomendação de foco'}
             </Button>
+            {carregandoDemorando ? (
+              <p className="text-xs text-muted-foreground">
+                Ainda analisando seus tópicos, pode levar um pouco mais que o normal...
+              </p>
+            ) : (
+              !carregando && <p className="text-xs text-muted-foreground">Limitado a 10 gerações por minuto.</p>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
@@ -62,6 +82,11 @@ export function RecomendacaoEstudoCard({ deckId }: RecomendacaoEstudoCardProps) 
               {carregando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Atualizar recomendação
             </Button>
+            {carregandoDemorando && (
+              <p className="text-xs text-muted-foreground">
+                Ainda analisando seus tópicos, pode levar um pouco mais que o normal...
+              </p>
+            )}
           </div>
         )}
       </CardContent>

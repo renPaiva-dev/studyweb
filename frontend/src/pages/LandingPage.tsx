@@ -69,7 +69,7 @@ const RECURSOS = [
   {
     icone: Share2,
     titulo: 'Compartilhamento de decks',
-    descricao: 'Gere um link público somente leitura para compartilhar um deck com outra pessoa.',
+    descricao: 'Gere um link público para compartilhar um deck com outra pessoa.',
   },
   {
     icone: Mail,
@@ -232,11 +232,11 @@ export function LandingPage() {
         <section className="border-b border-manilha bg-papel-margem">
           <div className="container space-y-10 py-16">
             <div className="max-w-2xl space-y-2">
-              <p className="text-eyebrow text-muted-foreground">Não é só um wrapper de IA</p>
-              <h2 className="font-heading text-2xl font-semibold sm:text-3xl">Ciência da memória, não só IA generativa.</h2>
+              <p className="text-eyebrow text-muted-foreground">IA e ciência da memória, juntas</p>
+              <h2 className="font-heading text-2xl font-semibold sm:text-3xl">Inteligência artificial a serviço da sua memória.</h2>
               <p className="text-muted-foreground">
-                A IA gera conteúdo — flashcards, provas, explicações. Mas quem decide quando você revisa é um algoritmo
-                determinístico e auditável, sem chamar IA nenhuma.
+                A IA gera conteúdo — flashcards, provas, explicações — aliada a matemática avançada e cálculos
+                probabilísticos que decidem a melhor forma de fixar cada assunto na sua memória.
               </p>
             </div>
 
@@ -246,8 +246,8 @@ export function LandingPage() {
                   <IconeComBadge icone={Repeat} tom="verde-lousa" />
                   <p className="font-heading text-lg font-semibold">Repetição espaçada (SM-2)</p>
                   <p className="text-sm text-muted-foreground">
-                    A cada revisão, o sistema recalcula fator de facilidade, intervalo e repetições com base na sua nota
-                    de 0 a 5 — é matemática pura decidindo quando revisar, não a IA "achando".
+                    A cada revisão, o sistema recalcula fator de facilidade, intervalo e repetições com base na sua
+                    nota de 0 a 5 — é matemática pura misturada com inteligência artificial para aprimorar seus estudos.
                   </p>
                 </div>
                 <div className="space-y-2 border bg-card p-6">
@@ -255,7 +255,7 @@ export function LandingPage() {
                   <p className="font-heading text-lg font-semibold">Previsão de prontidão para prova</p>
                   <p className="text-sm text-muted-foreground">
                     Defina a data da sua prova e o sistema aplica um modelo de curva de esquecimento sobre o seu
-                    histórico real, dizendo tópico por tópico o que revisar antes de quando — 100% algorítmico, sem IA.
+                    histórico real, dizendo tópico por tópico o que revisar antes da sua avaliação.
                   </p>
                 </div>
               </div>

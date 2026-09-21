@@ -41,11 +41,24 @@ export function NovaProvaPage() {
   const [flashcardIdsSelecionados, setFlashcardIdsSelecionados] = useState<number[]>([])
   const [estilo, setEstilo] = useState<EstiloProva | null>(null)
   const [gerando, setGerando] = useState(false)
+  const [gerandoDemorando, setGerandoDemorando] = useState(false)
 
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [respostas, setRespostas] = useState<Record<number, string>>({})
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState<ResultadoTentativa | null>(null)
+
+  // N4 (Docs/auditoria-coerencia-seguranca-2026-09.md): o backend tenta a
+  // chamada a IA ate 2x antes de desistir - mesmo padrao de MaterialItem.tsx.
+  useEffect(() => {
+    if (!gerando) {
+      setGerandoDemorando(false)
+      return
+    }
+
+    const temporizador = setTimeout(() => setGerandoDemorando(true), 15_000)
+    return () => clearTimeout(temporizador)
+  }, [gerando])
 
   const carregarDecks = useCallback(async () => {
     setErroCarregamento(null)
@@ -360,10 +373,17 @@ export function NovaProvaPage() {
       )}
 
       {estilo !== null && (
-        <Button size="lg" className="gap-2" onClick={() => void aoGerarProva()} disabled={gerando}>
-          {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {gerando ? 'Gerando prova...' : 'Gerar prova'}
-        </Button>
+        <div className="space-y-1">
+          <Button size="lg" className="gap-2" onClick={() => void aoGerarProva()} disabled={gerando}>
+            {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {gerando ? 'Gerando prova...' : 'Gerar prova'}
+          </Button>
+          {gerandoDemorando ? (
+            <p className="text-xs text-muted-foreground">Ainda gerando a prova, pode levar um pouco mais que o normal...</p>
+          ) : (
+            !gerando && <p className="text-xs text-muted-foreground">Limitado a 10 gerações por minuto.</p>
+          )}
+        </div>
       )}
     </div>
   )

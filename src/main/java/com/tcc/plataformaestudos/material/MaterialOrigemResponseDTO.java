@@ -6,6 +6,7 @@ public record MaterialOrigemResponseDTO(
 		Long id,
 		String nomeArquivo,
 		StatusProcessamento statusProcessamento,
+		String motivoErro,
 		LocalDateTime criadoEm) {
 
 	public static MaterialOrigemResponseDTO fromEntity(MaterialOrigem material) {
@@ -13,6 +14,7 @@ public record MaterialOrigemResponseDTO(
 				material.getId(),
 				material.getNomeArquivo(),
 				material.getStatusProcessamento(),
+				material.getMotivoErro(),
 				material.getCriadoEm());
 	}
 

@@ -68,12 +68,12 @@ public class LembreteRevisaoService {
 
 	private String montarCorpo(LembreteRevisaoDTO lembrete) {
 		if (lembrete.totalPendentes() == 0) {
-			return "Olá, " + lembrete.nomeUsuario() + "! Você está em dia com suas revisões — nenhum flashcard "
+			return "Olá, " + lembrete.nome() + "! Você está em dia com suas revisões — nenhum flashcard "
 					+ "pendente hoje.";
 		}
 
 		StringBuilder corpo = new StringBuilder();
-		corpo.append("Olá, ").append(lembrete.nomeUsuario()).append("!\n\n");
+		corpo.append("Olá, ").append(lembrete.nome()).append("!\n\n");
 		corpo.append("Você tem ").append(lembrete.totalPendentes())
 				.append(lembrete.totalPendentes() == 1 ? " flashcard pendente" : " flashcards pendentes")
 				.append(" de revisão hoje:\n\n");

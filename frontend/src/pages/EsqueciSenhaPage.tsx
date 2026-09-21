@@ -34,7 +34,7 @@ export function EsqueciSenhaPage() {
 
     try {
       const resposta = await esqueciSenha(email)
-      setMensagem(resposta.mensagem)
+      setMensagem(resposta.message)
     } catch {
       // RN24: mesmo em erro de rede/servidor, nao ha uma mensagem
       // diferenciada a mostrar aqui sem arriscar revelar se o e-mail existe -

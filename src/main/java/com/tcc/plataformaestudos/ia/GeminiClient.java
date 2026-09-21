@@ -31,6 +31,13 @@ public class GeminiClient {
 	// mede-se, na prática, em até ~80s com o modelo configurado — 30s
 	// cortava a chamada no meio antes de completar (HttpTimeoutException).
 	private static final Duration TIMEOUT = Duration.ofSeconds(120);
+	// I8 (Docs/auditoria-coerencia-seguranca-2026-09.md): mensagem amigável
+	// única para qualquer falha de infraestrutura da IA - o detalhe técnico
+	// (status HTTP, exceção de E/S, etc.) vai só para o log abaixo, nunca
+	// para o campo "message" da resposta (que chega cru ao usuário via
+	// toast no frontend - jargão como "status 429" ou "Gemini" não deveria
+	// vazar pra quem só quer saber que precisa tentar de novo).
+	private static final String MENSAGEM_FALHA_IA = "Não foi possível gerar o conteúdo agora. Tente novamente em instantes.";
 
 	private final HttpClient httpClient = HttpClient.newHttpClient();
 	private final ObjectMapper objectMapper;
@@ -58,7 +65,7 @@ public class GeminiClient {
 
 		if (response.statusCode() != 200) {
 			log.error("Chamada à API Gemini falhou: status={}", response.statusCode());
-			throw new GeracaoConteudoIAException("Serviço de IA retornou status " + response.statusCode());
+			throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA);
 		}
 
 		log.info("Chamada à API Gemini concluída com sucesso: status={}", response.statusCode());
@@ -70,10 +77,10 @@ public class GeminiClient {
 			return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 		} catch (IOException e) {
 			log.error("Falha de E/S ao chamar o serviço de IA", e);
-			throw new GeracaoConteudoIAException("Falha ao chamar o serviço de IA", e);
+			throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA, e);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			throw new GeracaoConteudoIAException("Chamada ao serviço de IA interrompida", e);
+			throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA, e);
 		}
 	}
 
@@ -85,7 +92,7 @@ public class GeminiClient {
 
 			return objectMapper.writeValueAsString(corpo);
 		} catch (JacksonException e) {
-			throw new GeracaoConteudoIAException("Falha ao montar a requisição para o serviço de IA", e);
+			throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA, e);
 		}
 	}
 
@@ -95,12 +102,14 @@ public class GeminiClient {
 			JsonNode texto = raiz.path("candidates").path(0).path("content").path("parts").path(0).path("text");
 
 			if (texto.isMissingNode() || texto.asText().isBlank()) {
-				throw new GeracaoConteudoIAException("Resposta da API Gemini não contém texto gerado");
+				log.error("Resposta da API Gemini não contém texto gerado");
+				throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA);
 			}
 
 			return texto.asText();
 		} catch (JacksonException e) {
-			throw new GeracaoConteudoIAException("Falha ao interpretar a resposta do serviço de IA", e);
+			log.error("Falha ao interpretar a resposta do serviço de IA", e);
+			throw new GeracaoConteudoIAException(MENSAGEM_FALHA_IA, e);
 		}
 	}
 

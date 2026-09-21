@@ -1,5 +1,5 @@
 import { FileText, Loader2, Sparkles, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
@@ -33,8 +33,24 @@ interface MaterialItemProps {
 // nao sao afetados (mesmo aviso do dialogo de confirmacao).
 export function MaterialItem({ material, onSugestoesGeradas, onExcluido }: MaterialItemProps) {
   const [gerando, setGerando] = useState(false)
+  const [gerandoDemorando, setGerandoDemorando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
   const [dialogoAberto, setDialogoAberto] = useState(false)
+
+  // N4/N6 (Docs/auditoria-coerencia-seguranca-2026-09.md): RNF01 promete
+  // "até 15s em 90% dos casos", mas o backend tenta de novo (até 2x) em
+  // falha de infraestrutura da IA (achado N4) e o timeout real é bem maior
+  // (120s) - sem isso, o spinner ficava preso no texto "até 15 segundos"
+  // mesmo bem depois desse prazo, sem nenhuma pista do que está havendo.
+  useEffect(() => {
+    if (!gerando) {
+      setGerandoDemorando(false)
+      return
+    }
+
+    const temporizador = setTimeout(() => setGerandoDemorando(true), 15_000)
+    return () => clearTimeout(temporizador)
+  }, [gerando])
 
   async function aoGerarFlashcards() {
     setGerando(true)
@@ -84,7 +100,7 @@ export function MaterialItem({ material, onSugestoesGeradas, onExcluido }: Mater
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          <MaterialStatusBadge status={material.statusProcessamento} />
+          <MaterialStatusBadge status={material.statusProcessamento} motivo={material.motivoErro} />
           {material.statusProcessamento === 'PROCESSADO' && (
             <Button size="sm" variant="secondary" onClick={() => void aoGerarFlashcards()} disabled={gerando}>
               {gerando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
@@ -125,7 +141,15 @@ export function MaterialItem({ material, onSugestoesGeradas, onExcluido }: Mater
         </div>
       </div>
 
-      {gerando && <p className="mt-2 text-right text-xs text-muted-foreground">Isso pode levar até 15 segundos.</p>}
+      {gerando && (
+        <p className="mt-2 text-right text-xs text-muted-foreground">
+          {gerandoDemorando ? 'Ainda gerando, pode levar um pouco mais que o normal...' : 'Isso pode levar até 15 segundos.'}
+        </p>
+      )}
+
+      {material.statusProcessamento === 'ERRO' && material.motivoErro && (
+        <p className="mt-2 text-xs text-destructive">{material.motivoErro}</p>
+      )}
     </div>
   )
 }

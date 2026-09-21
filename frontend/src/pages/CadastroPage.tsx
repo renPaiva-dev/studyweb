@@ -25,8 +25,12 @@ interface Erros {
 }
 
 // UC01/UC17 - Cadastrar-se, com nome de usuario (docs/contrato-api.md).
-// RN02: 409 se o e-mail ja estiver cadastrado. RN22: 409 se o nomeUsuario ja
-// estiver cadastrado (mensagem diferenciada, vinda do backend).
+// RN22: 409 se o nomeUsuario ja estiver cadastrado (mensagem vinda do
+// backend). Se o e-mail ja estiver cadastrado, o backend NAO retorna 409 -
+// responde 201 normalmente (sem persistir nada) e avisa o dono real por
+// e-mail, para nao revelar a existencia da conta a quem preencheu o
+// formulario (achado I1 da auditoria) - por isso o fluxo de sucesso abaixo e
+// sempre o mesmo, mesmo quando o cadastro "de verdade" nao aconteceu.
 export function CadastroPage() {
   const { cadastro } = useAuth()
   const navigate = useNavigate()
@@ -83,7 +87,9 @@ export function CadastroPage() {
       // UC01/UC21/RN26: a conta nasce com o e-mail nao verificado - o login
       // so e liberado apos a confirmacao, entao aqui ainda nao ha uma area
       // logada a redirecionar.
-      toast.success('Conta criada! Enviamos um link de confirmação para o seu e-mail.')
+      toast.success(
+        'Conta criada! Enviamos um link de confirmação para o seu e-mail — confirme em até 10 minutos, senão sua conta expira e você pode se cadastrar novamente.',
+      )
       navigate(`/verificar-email?email=${encodeURIComponent(email)}`)
     } catch (erro) {
       toast.error(extrairMensagemErro(erro, 'Não foi possível criar sua conta. Tente novamente.'))

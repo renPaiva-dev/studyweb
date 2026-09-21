@@ -1,5 +1,5 @@
 import { Loader2, MessageCircleQuestion, Sparkles } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { perguntarSobreMaterial } from '@/api/perguntaApi'
@@ -25,8 +25,24 @@ interface Troca {
 export function PerguntarTab({ deckId }: PerguntarTabProps) {
   const [pergunta, setPergunta] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [enviandoDemorando, setEnviandoDemorando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [historico, setHistorico] = useState<Troca[]>([])
+
+  // N4 (Docs/auditoria-coerencia-seguranca-2026-09.md): o backend tenta a
+  // chamada a IA ate 2x antes de desistir - sem isso, o spinner fica preso
+  // no texto "Consultando o material..." sem nenhuma pista do que esta
+  // havendo se a primeira tentativa falhar/demorar (mesmo padrao de
+  // MaterialItem.tsx).
+  useEffect(() => {
+    if (!enviando) {
+      setEnviandoDemorando(false)
+      return
+    }
+
+    const temporizador = setTimeout(() => setEnviandoDemorando(true), 15_000)
+    return () => clearTimeout(temporizador)
+  }, [enviando])
 
   async function aoPerguntar(evento: FormEvent) {
     evento.preventDefault()
@@ -98,12 +114,18 @@ export function PerguntarTab({ deckId }: PerguntarTabProps) {
           disabled={enviando}
           rows={3}
         />
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">Limitado a 10 perguntas por minuto.</p>
           <Button type="submit" disabled={enviando || !pergunta.trim()}>
             {enviando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {enviando ? 'Consultando o material...' : 'Perguntar'}
           </Button>
         </div>
+        {enviandoDemorando && (
+          <p className="text-right text-xs text-muted-foreground">
+            Ainda consultando o material, pode levar um pouco mais que o normal...
+          </p>
+        )}
       </form>
     </div>
   )

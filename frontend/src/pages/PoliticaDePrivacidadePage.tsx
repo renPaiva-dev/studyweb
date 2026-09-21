@@ -31,8 +31,11 @@ export function PoliticaDePrivacidadePage() {
             resultados de quizzes que você cria ao usar a plataforma.
           </p>
           <p>
-            <strong className="text-foreground">2. Isolamento entre usuários.</strong> Seus dados são visíveis
-            apenas para você — nenhum outro usuário tem acesso ao seu conteúdo ou desempenho.
+            <strong className="text-foreground">2. Isolamento entre usuários.</strong> Seus dados só são visíveis
+            para você, exceto quando você opta ativamente por gerar um link público de compartilhamento de um deck
+            (recurso opt-in, revogável a qualquer momento) — nesse caso, qualquer pessoa com o link pode visualizar o
+            conteúdo daquele deck sem precisar de conta. Fora essa exceção, nenhum outro usuário tem acesso ao seu
+            conteúdo ou desempenho.
           </p>
           <p>
             <strong className="text-foreground">3. Seus direitos.</strong> Você pode, a qualquer momento, na tela de
