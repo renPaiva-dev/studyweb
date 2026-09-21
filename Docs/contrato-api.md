@@ -2,7 +2,7 @@
 
 Convenções gerais:
 - Todos os endpoints exigem `Authorization: Bearer {token}`, exceto os marcados com **(**)**.
-- Toda rota que recebe `{id}` de um recurso pertencente a outro usuário retorna `403` (RN01) — **exceto** as rotas escopadas diretamente por `deckId` (`/api/decks/{id}` e toda subrota `/api/decks/{id}/...`), que respondem `404` tanto se o deck não existe quanto se pertence a outro usuário. Essa unificação (achado B15 da auditoria, `Docs/auditoria-erros-2026-09.md`) evita que um usuário autenticado enumere IDs de decks de terceiros por diferença de status — mesmo critério já usado no endpoint público de compartilhamento (RN37). Rotas escopadas por `{id}` de outro recurso (flashcard, material, quiz, tentativa) continuam distinguindo `403`/`404` normalmente.
+- Toda rota que recebe `{id}` de um recurso pertencente a outro usuário responde `404` (RN01) tanto se o recurso não existe quanto se existe mas pertence a outro usuário — nunca `403` nesse caso. Essa unificação evita que um usuário autenticado enumere IDs de recursos de terceiros por diferença de status, mesmo critério já usado no endpoint público de compartilhamento (RN37). Aplicada a `deck`/`colecao` (achado B15 da auditoria, `Docs/auditoria-erros-2026-09.md`) e, desde `Docs/auditoria-coerencia-seguranca-2026-09.md`, também a `material`, `flashcard`, `quiz` e `tentativa` (achados C1/C3/N7).
 - Um token JWT de uma conta já excluída (RN32) é aceito pela autenticação, mas os endpoints que dependem do usuário existente respondem `401` (não mais um erro genérico do servidor) — ver seção "Conta e Perfil" e achado B17 da auditoria.
 - Rate limiting em janela fixa de 60s (`RateLimitingFilter`), aplicado por IP nas rotas de `/api/auth/*` (força bruta/spam de e-mail) e por usuário autenticado nas rotas de IA e no lembrete de revisão — `429` é retornado ao exceder o limite; os limites exatos estão anotados em cada endpoint abaixo.
 - Formato padrão de erro:
@@ -21,7 +21,7 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/cadastro` (**) | `{ nome, email, senha }` | `201` — `{ id, nome, email, criadoEm }` | `400` (dados inválidos) · `409` (e-mail já cadastrado — RN02) · `429` (limite de 5/min por IP) |
+| POST | `/api/auth/cadastro` (**) | `{ nome, email, senha }` | `201` — `{ id, nome, email, criadoEm }` (achado I1: sempre `201`, mesmo se o e-mail já existir — RN02 não gera mais `409` de e-mail, para não revelar a existência da conta; ver seção "Conta e Perfil") | `400` (dados inválidos) · `429` (limite de 5/min por IP) |
 | POST | `/api/auth/login` (**) | `{ email, senha }` | `200` — `{ token, tipo: "Bearer", expiraEm }` | `401` (credenciais inválidas) · `429` (limite de 10/min por IP) |
 
 ## Decks (UC02)
@@ -38,15 +38,15 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PENDENTE" }` | `400` (não é PDF/excede tamanho/nome de arquivo > 255 caracteres — RN06) · `401` · `404` (não existe ou não é seu — RN01) |
-| GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, criadoEm }` | `401` · `403` · `404` |
-| GET | `/api/decks/{id}/materiais?pagina={n}&tamanho={n}` | — | `200` — `{ itens: [ { id, nomeArquivo, statusProcessamento, criadoEm } ], pagina, tamanho, totalItens, totalPaginas }`, mais recentes primeiro (paginado — achado B5, `pagina` padrão 0, `tamanho` padrão 20, limitado a 50) | `401` · `404` (não existe ou não é seu — RN01) |
+| POST | `/api/decks/{id}/materiais` | `multipart/form-data` — campo `arquivo` (.pdf, máx. 15MB) | `201` — `{ id, nomeArquivo, statusProcessamento: "PROCESSADO" \| "ERRO", motivoErro }` (achado I3: a extração de texto é síncrona e já roda antes da resposta — `statusProcessamento` nunca vem `"PENDENTE"` na prática, apesar de esse ser o valor inicial gravado internamente; `motivoErro` só vem preenchido quando `statusProcessamento` é `"ERRO"` — achado I4) | `400` (não é PDF/excede tamanho/nome de arquivo > 255 caracteres — RN06) · `401` · `404` (não existe ou não é seu — RN01) |
+| GET | `/api/materiais/{id}` | — | `200` — `{ id, nomeArquivo, statusProcessamento, motivoErro, criadoEm }` (`motivoErro` só é preenchido quando `statusProcessamento` é `ERRO` — achado I4) | `401` · `404` (não existe ou não é seu — RN01, achado C1) |
+| GET | `/api/decks/{id}/materiais?pagina={n}&tamanho={n}` | — | `200` — `{ itens: [ { id, nomeArquivo, statusProcessamento, motivoErro, criadoEm } ], pagina, tamanho, totalItens, totalPaginas }`, mais recentes primeiro (paginado — achado B5, `pagina` padrão 0, `tamanho` padrão 20, limitado a 50) | `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Geração de Flashcards via IA (UC04/UC05)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta, topico } ] }` (máx. 15 — RN08; nada persistido ainda; topico ver RN17) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `403` · `404` · `429` (limite de 10/min) · `502` (falha no serviço de IA, com retry — B10) |
+| POST | `/api/materiais/{id}/gerar-flashcards` | — (usa texto já extraído) | `200` — `{ sugestoes: [ { pergunta, resposta, topico } ] }` (máx. 15 — RN08; nada persistido ainda; topico ver RN17) | `400` (status ERRO/texto insuficiente — RN07) · `401` · `404` (não existe ou não é seu — RN01, achado C1) · `429` (limite de 10/min) · `502` (falha no serviço de IA, com retry — B10) |
 | POST | `/api/decks/{id}/flashcards/confirmar-sugestoes` | `{ sugestoes: [ { pergunta, resposta, aceitar: true } ] }` | `201` — flashcards criados com `origem: "IA"` | `400` · `401` · `404` (não existe ou não é seu — RN01) |
 
 ## Flashcards (UC05/UC06)
@@ -55,15 +55,15 @@ Convenções gerais:
 |---|---|---|---|---|
 | GET | `/api/decks/{id}/flashcards` | — | `200` — `[ { id, pergunta, resposta, mnemonico, origem } ]` | `401` · `404` (não existe ou não é seu — RN01) |
 | POST | `/api/decks/{id}/flashcards` | `{ pergunta, resposta, mnemonico? }` | `201` — flashcard criado com `origem: "MANUAL"` | `400` (campos obrigatórios) · `401` · `404` (não existe ou não é seu — RN01) |
-| PUT | `/api/flashcards/{id}` | `{ pergunta, resposta, mnemonico? }` | `200` — flashcard atualizado | `400` · `401` · `403` (RN01) · `404` |
-| DELETE | `/api/flashcards/{id}` | — | `204` (revisões associadas removidas em cascata) | `401` · `403` · `404` |
+| PUT | `/api/flashcards/{id}` | `{ pergunta, resposta, mnemonico? }` | `200` — flashcard atualizado | `400` · `401` · `404` (não existe ou não é seu — RN01, achado C3) |
+| DELETE | `/api/flashcards/{id}` | — | `204` (revisões associadas removidas em cascata) | `401` · `404` (não existe ou não é seu — RN01, achado C3) |
 
 ## Estudo com Repetição Espaçada (UC07/UC08/UC09)
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
 | GET | `/api/decks/{id}/fila-estudo?incluirTodos={boolean}` | — | `200` — `[ { flashcardId, pergunta, resposta, mnemonico } ]` (RN10; por padrão só os pendentes de revisão — `incluirTodos=true`, default `false`, ignora RN10 e traz o deck inteiro, usado pelo botão "Revisar mesmo assim" quando não há pendências) | `401` · `404` (não existe ou não é seu — RN01) |
-| POST | `/api/flashcards/{id}/revisoes` | `{ qualidadeResposta: 0-5 }` | `201` — `{ fatorFacilidade, intervaloDias, repeticoes, proximaRevisao }` (SM-2 — RN09/RN11/RN12) | `400` (fora de 0-5) · `401` · `403` · `404` |
+| POST | `/api/flashcards/{id}/revisoes` | `{ qualidadeResposta: 0-5 }` | `201` — `{ fatorFacilidade, intervaloDias, repeticoes, proximaRevisao }` (SM-2 — RN09/RN11/RN12) | `400` (fora de 0-5) · `401` · `404` (não existe ou não é seu — RN01, achado C3) |
 
 Exemplo completo:
 
@@ -88,8 +88,8 @@ POST /api/flashcards/57/revisoes
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
 | POST | `/api/decks/{id}/quizzes` | — (a partir dos flashcards, opcionalmente via IA) | `201` — `{ id, titulo, questoes: [ { id, enunciado, alternativas } ] }` | `400` (flashcards insuficientes) · `401` · `404` (não existe ou não é seu — RN01) · `429` (limite de 10/min) |
-| GET | `/api/quizzes/{id}` | — | `200` — `{ id, titulo, questoes: [...] }` (sem expor `resposta_correta`) | `401` · `403` · `404` |
-| POST | `/api/quizzes/{id}/tentativas` | `{ respostas: [ { questaoId, alternativaEscolhida } ] }` | `201` — `{ pontuacao, acertos, total, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN15: todas as questões; `questoes` revela a revisão completa, só disponível depois de respondida) | `400` (respostas incompletas — RN15) · `401` · `403` · `404` |
+| GET | `/api/quizzes/{id}` | — | `200` — `{ id, titulo, questoes: [...] }` (sem expor `resposta_correta`) | `401` · `404` (não existe ou não é seu — RN01, achado N7) |
+| POST | `/api/quizzes/{id}/tentativas` | `{ respostas: [ { questaoId, alternativaEscolhida } ] }` | `201` — `{ pontuacao, acertos, total, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN15: todas as questões; `questoes` revela a revisão completa, só disponível depois de respondida) | `400` (respostas incompletas — RN15) · `401` · `404` (não existe ou não é seu — RN01, achado N7) |
 
 ## Dashboard de Progresso (UC11)
 
@@ -115,7 +115,7 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/flashcards/{id}/explicacao` | — | `200` — `{ explicacao, ancoradaNoMaterial }` (RN19) | `401` · `403` (RN01) · `404` · `429` (limite de 10/min — adicionado no achado B11, endpoint não tinha rate limit) · `502` (falha na IA, com retry — B10) |
+| POST | `/api/flashcards/{id}/explicacao` | — | `200` — `{ explicacao, ancoradaNoMaterial }` (RN19) | `401` · `404` (não existe ou não é seu — RN01, achado C3) · `429` (limite de 10/min — adicionado no achado B11, endpoint não tinha rate limit) · `502` (falha na IA, com retry — B10) |
 
 ## Dashboard Avançado (UC15)
 
@@ -135,7 +135,7 @@ POST /api/flashcards/57/revisoes
 |---|---|---|---|---|
 | POST | `/api/decks/{id}/provas` | `{ flashcardIds: [...], estilo: "ENEM" \| "VESTIBULAR" \| "GERAL" }` | `201` — mesmo formato de `QuizResponseDTO` (`{ id, titulo, questoes: [...] }`, sem expor `respostaCorreta`) | `400` (`flashcardIds` vazio, ou flashcard não pertence ao deck — RN01) · `401` · `404` (deck não existe ou não é seu — RN01) · `429` (limite de 10/min) · `502` (falha na IA, com retry — B10) |
 | GET | `/api/usuario/provas` | — | `200` — `[ { tentativaId, quizId, titulo, origem, estilo, dataTentativa, pontuacao, acertos, total } ]`, mais recentes primeiro (RN36) | `401` |
-| GET | `/api/usuario/provas/{tentativaId}` | — | `200` — `{ tentativaId, quizId, titulo, origem, estilo, dataTentativa, pontuacao, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN36) | `401` · `403` (RN01) · `404` |
+| GET | `/api/usuario/provas/{tentativaId}` | — | `200` — `{ tentativaId, quizId, titulo, origem, estilo, dataTentativa, pontuacao, questoes: [ { questaoId, enunciado, alternativas, respostaCorreta, alternativaEscolhida, correta, explicacao } ] }` (RN36) | `401` · `404` (não existe ou não é seu — RN01, achado N7) |
 
 `GET /api/quizzes/{id}` e `POST /api/quizzes/{id}/tentativas` (já existentes, seção "Quiz") funcionam sem alteração para provas personalizadas — o quiz gerado por `POST /api/decks/{id}/provas` é respondido pelo mesmo `POST /api/quizzes/{id}/tentativas`.
 
@@ -143,7 +143,7 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/auth/cadastro` (**) | `{ nome, nomeUsuario, email, senha }` | `201` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `400` · `409` (e-mail ou nomeUsuario duplicado — RN02/RN22, inclusive em cadastros concorrentes com os mesmos dados — B18) |
+| POST | `/api/auth/cadastro` (**) | `{ nome, nomeUsuario, email, senha }` | `201` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` (achado I1: se o e-mail já existir, a resposta é `201` sintética — `id: -1`, nada persistido — e o dono real recebe um e-mail avisando da tentativa, em vez de `409`; evita confirmar a existência da conta) | `400` · `409` (nomeUsuario duplicado — RN22, inclusive em cadastros concorrentes com os mesmos dados — B18; nomeUsuario é identificador público, não um dado sensível) |
 | GET | `/api/usuario/perfil` | — | `200` — `{ id, nome, nomeUsuario, email, papel, criadoEm }` | `401` (também para token de conta já excluída — RN32) |
 | PUT | `/api/usuario/perfil` | `{ nome, nomeUsuario }` | `200` — perfil atualizado | `400` · `401` (também para token de conta já excluída — RN32) · `409` (nomeUsuario em uso, inclusive em atualizações concorrentes — B18) |
 
@@ -173,7 +173,7 @@ POST /api/flashcards/57/revisoes
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| DELETE | `/api/materiais/{id}` | — | `204` | `401` · `403` (RN01) · `404` |
+| DELETE | `/api/materiais/{id}` | — | `204` | `401` · `404` (não existe ou não é seu — RN01, achado C1) |
 
 ## Troca de Senha Autenticado (UC26)
 
@@ -215,7 +215,7 @@ verificação é enviado.
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| POST | `/api/usuario/lembrete-revisao/teste` | — | `200` — `{ mensagem }` (envia para o próprio e-mail, mesmo sem pendências — RN39) | `401` · `429` (limite de 3/min) |
+| POST | `/api/usuario/lembrete-revisao/teste` | — | `200` — `{ message }` (envia para o próprio e-mail, mesmo sem pendências — RN39; achado N10: campo `message`, não `mensagem`, mesmo nome usado nas respostas de erro) | `401` · `429` (limite de 3/min) |
 
 O job automático diário (RN39) não é um endpoint — roda internamente (`@Scheduled`, cron configurável via `app.lembrete-revisao.cron`).
 

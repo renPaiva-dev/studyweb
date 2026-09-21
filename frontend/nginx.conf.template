@@ -5,6 +5,26 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
+    # N8 (Docs/auditoria-coerencia-seguranca-2026-09.md): headers de
+    # seguranca do lado do navegador - SecurityConfig.java ja os configura
+    # para a API (JSON puro), mas quem serve o HTML/JS que o navegador de
+    # fato executa e este Nginx, onde nao havia nenhum. O JWT fica em
+    # localStorage (sem httpOnly, ver authStorage.ts) - sem CSP/X-Frame-Options
+    # essa camada de defesa em profundidade ficava ausente justamente na
+    # pagina que roda o codigo.
+    #
+    # connect-src permite 'https:' (qualquer origem HTTPS, ja que
+    # VITE_API_URL aponta pro backend em outro dominio/servico em producao -
+    # ver Dockerfile) mais o default local de docker-compose (HTTP). script-src
+    # e frame-src liberam vlibras.gov.br (widget oficial de acessibilidade em
+    # Libras, injetado dinamicamente por VLibrasWidget.tsx); style-src libera
+    # fonts.googleapis.com (import de fonte em index.css).
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://vlibras.gov.br; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://vlibras.gov.br; connect-src 'self' https: http://localhost:8080; frame-src https://vlibras.gov.br; worker-src 'self' blob: https://vlibras.gov.br; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Permissions-Policy "geolocation=(), camera=(), microphone=()" always;
+
     location / {
         try_files $uri $uri/ /index.html;
     }
