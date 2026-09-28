@@ -11,7 +11,13 @@ vi.mock('@/api/estudoApi', () => ({
   avaliarRevisao: vi.fn(),
 }))
 
+vi.mock('@/api/elaboracaoApi', () => ({
+  pedirFeedbackAutoexplicacao: vi.fn(),
+  gerarAnalogia: vi.fn(),
+}))
+
 const { buscarFilaEstudo, avaliarRevisao } = await import('@/api/estudoApi')
+const { pedirFeedbackAutoexplicacao } = await import('@/api/elaboracaoApi')
 
 function item(flashcardId: number, pergunta: string): ItemFilaEstudo {
   return { flashcardId, pergunta, resposta: `Resposta ${flashcardId}`, mnemonico: null }
@@ -23,6 +29,7 @@ function item(flashcardId: number, pergunta: string): ItemFilaEstudo {
 describe('EstudarTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
   })
 
   it('mostra a pergunta, depois vira o card e avalia avançando para o próximo item da fila', async () => {
@@ -92,5 +99,53 @@ describe('EstudarTab', () => {
 
     expect(await screen.findByText('Pergunta A')).toBeInTheDocument()
     expect(buscarFilaEstudo).toHaveBeenCalledTimes(2)
+  })
+
+  // RN44 - a elaboração (UC34) nunca bloqueia a avaliação: avaliar com uma
+  // correção em andamento avança normalmente e cancela a requisição.
+  it('permite avaliar e avançar com uma correção de autoexplicação ainda em andamento', async () => {
+    vi.mocked(buscarFilaEstudo).mockResolvedValue([item(1, 'Pergunta A'), item(2, 'Pergunta B')])
+    vi.mocked(avaliarRevisao).mockResolvedValue({
+      fatorFacilidade: 2.5,
+      intervaloDias: 1,
+      repeticoes: 1,
+      proximaRevisao: '2026-09-18',
+    })
+    let sinalDaCorrecao: AbortSignal | undefined
+    vi.mocked(pedirFeedbackAutoexplicacao).mockImplementation((_id, _texto, signal) => {
+      sinalDaCorrecao = signal
+      return new Promise(() => {})
+    })
+    const usuario = userEvent.setup()
+
+    renderComMargem(<EstudarTab deckId={42} />)
+
+    await screen.findByText('Pergunta A')
+    await usuario.click(screen.getByRole('button', { name: /Virar card/ }))
+    await usuario.click(screen.getByRole('button', { name: /Explicar com minhas palavras/ }))
+    await usuario.type(screen.getByLabelText('Sua explicação'), 'Uma explicação com mais de vinte caracteres.')
+    await usuario.click(screen.getByRole('button', { name: /Pedir correção/ }))
+
+    const botaoBom = screen.getByRole('button', { name: /^4/ })
+    expect(botaoBom).toBeEnabled()
+    await usuario.click(botaoBom)
+
+    await waitFor(() => expect(avaliarRevisao).toHaveBeenCalledWith(1, 4))
+    expect(await screen.findByText('Pergunta B')).toBeInTheDocument()
+    expect(sinalDaCorrecao?.aborted).toBe(true)
+  })
+
+  it('oculta as opções de aprofundamento e guarda a preferência', async () => {
+    vi.mocked(buscarFilaEstudo).mockResolvedValue([item(1, 'Pergunta A')])
+    const usuario = userEvent.setup()
+
+    renderComMargem(<EstudarTab deckId={42} />)
+
+    await screen.findByText('Pergunta A')
+    await usuario.click(screen.getByRole('button', { name: /Virar card/ }))
+    await usuario.click(screen.getByRole('button', { name: 'Ocultar opções de aprofundamento' }))
+
+    expect(screen.queryByRole('button', { name: /Explicar com minhas palavras/ })).not.toBeInTheDocument()
+    expect(localStorage.getItem('sinapse.elaboracao.visivel')).toBe('false')
   })
 })

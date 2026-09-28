@@ -382,7 +382,7 @@ nova.
   `EstudarTab`:
   - Veredito em `font-heading` (Fraunces) com `border-l-2 pl-3`:
     `CONSISTENTE` → "Consistente com o material" (`border-verde-lousa text-verde-lousa`);
-    `PARCIAL` → "No caminho — faltou um ponto" (`border-manilha`, texto em `text-foreground`);
+    `PARCIAL` → "No caminho — faltou um ponto" (`border-grafite`, texto em `text-foreground`; Manilha sumiria sobre o fundo da margem);
     `EQUIVOCADA` → "Há um equívoco para rever" (`border-vermelho-correcao text-vermelho-correcao`).
     Sem ancoragem, "com o material" vira "com a resposta do card".
   - Em seguida vêm o `comentarioGeral` e as notas numeradas (`¹ Certo — …`).
