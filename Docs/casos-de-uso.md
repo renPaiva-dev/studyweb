@@ -425,3 +425,19 @@
 - **Alternativos:** A1 — editar nome/descrição da coleção; A2 — remover um deck de uma coleção (edição do deck, `colecaoId: null`); A3 — mover um deck de uma coleção para outra.
 - **Exceções:** E1 — nome da coleção vazio → bloqueia envio. E2 — excluir uma coleção → decks associados não são excluídos, apenas desvinculados (RN42).
 - **Regras relacionadas:** RN01, RN42
+
+## UC34 — Elaborar um flashcard com a IA
+
+- **Ator:** Estudante
+- **Objetivo:** Consolidar o entendimento de um flashcard explicando-o com as próprias palavras, ou vendo o conceito aplicado numa analogia ou num exemplo concreto.
+- **Pré-condições:** Usuário autenticado; flashcard de um deck do próprio usuário (RN01); card já virado na sessão de estudo (UC07).
+- **Pós-condições:** Feedback ou analogia exibidos; nada persistido (RN43); SM-2 intacto (RN44).
+- **Fluxo principal:**
+  1. Com o card virado, o estudante escolhe "Explicar com minhas palavras" e escreve a explicação (20–1000 caracteres).
+  2. O sistema aplica RN01 e busca o material de referência (critério de RN19).
+  3. A IA compara a explicação com a resposta do card e com o material, e devolve o feedback estruturado, que o sistema valida e sanitiza.
+  4. O texto do estudante é exibido corrigido (trechos sublinhados e numerados), com as notas na margem.
+  5. O estudante avalia o card (UC08) quando quiser.
+- **Alternativos:** A1 — pedir analogia/exemplo concreto (e "Outra analogia"); A2 — reescrever e pedir nova correção; A3 — avaliar sem elaborar ou com uma requisição em andamento (o resultado é descartado); A4 — ocultar as opções e reativá-las no perfil.
+- **Exceções:** E1 — texto fora de 20–1000 caracteres → 400. E2 — falha da IA depois do retry → 502, texto preservado. E3 — limite excedido → 429.
+- **Regras relacionadas:** RN43, RN44, RN19, RN01, RN16. Detalhamento em `Docs/extensao-elaboracao-flashcard.md`.
