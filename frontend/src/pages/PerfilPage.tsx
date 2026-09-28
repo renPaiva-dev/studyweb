@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { extrairMensagemErro } from '@/api/apiError'
 import { atualizarPerfil, buscarPerfil, enviarLembreteTeste, exportarDados, type Perfil } from '@/api/usuarioApi'
 import { ExcluirContaDialog } from '@/components/ExcluirContaDialog'
+import { PreferenciasEstudoCard } from '@/components/PreferenciasEstudoCard'
 import { TrocarSenhaCard } from '@/components/TrocarSenhaCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -217,6 +218,8 @@ export function PerfilPage() {
           </Button>
         </CardContent>
       </Card>
+
+      <PreferenciasEstudoCard />
 
       <Card>
         <CardHeader>

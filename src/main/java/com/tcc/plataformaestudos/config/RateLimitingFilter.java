@@ -81,6 +81,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 			// UC32: também chama geminiClient.gerarConteudo — mesmo limite dos demais
 			// endpoints de IA acima, desde a implementação (não é achado de auditoria).
 			new Regra("POST", "/api/decks/*/perguntas", 10, 60_000, true),
+			// UC34: autoexplicação e analogia também chamam geminiClient.gerarConteudo.
+			new Regra("POST", "/api/flashcards/*/autoexplicacao", 10, 60_000, true),
+			new Regra("POST", "/api/flashcards/*/analogia", 10, 60_000, true),
 			new Regra("POST", "/api/usuario/lembrete-revisao/teste", 3, 60_000, true));
 
 	private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
