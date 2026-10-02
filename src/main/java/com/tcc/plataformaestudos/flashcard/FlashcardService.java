@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -112,20 +111,20 @@ public class FlashcardService {
 	/**
 	 * Centraliza RN01 para um flashcard individual: busca e garante que
 	 * pertence (via deck) ao usuário autenticado, sem carregar a entidade de
-	 * outro usuário além do necessário para essa checagem. 404 se não existe;
-	 * 403 se existe mas é de outro usuário. Público para reuso por
-	 * editar/excluir e, futuramente, pelo fluxo de estudo (UC07/UC08).
+	 * outro usuário além do necessário para essa checagem. C3
+	 * (Docs/auditoria-coerencia-seguranca-2026-09.md): sempre 404 — tanto
+	 * quando o flashcard não existe quanto quando existe mas pertence a outro
+	 * usuário — mesmo padrão de
+	 * {@link DeckService#buscarDeckDoUsuarioAutenticado(Long)} (B15), para não
+	 * permitir enumerar IDs de flashcard de outros usuários pela diferença
+	 * entre 403 e 404. Público para reuso por editar/excluir e pelo fluxo de
+	 * estudo (UC07/UC08).
 	 */
 	public Flashcard buscarFlashcardDoUsuarioAutenticado(Long flashcardId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
 		return flashcardRepository.findByIdAndDeckUsuarioId(flashcardId, usuarioId)
-				.orElseGet(() -> {
-					if (flashcardRepository.existsById(flashcardId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar este flashcard");
-					}
-					throw new RecursoNaoEncontradoException("Flashcard não encontrado");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Flashcard não encontrado"));
 	}
 
 }

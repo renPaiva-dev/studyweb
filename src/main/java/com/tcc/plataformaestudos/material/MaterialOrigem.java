@@ -53,6 +53,10 @@ public class MaterialOrigem {
 	@Column(name = "status_processamento", nullable = false, length = 20)
 	private StatusProcessamento statusProcessamento = StatusProcessamento.PENDENTE;
 
+	/** I4 — motivo curto e amigável de por que a extração falhou (RN07), nulo enquanto não há erro. */
+	@Column(name = "motivo_erro", length = 300)
+	private String motivoErro;
+
 	@Column(name = "criado_em", nullable = false)
 	private LocalDateTime criadoEm;
 

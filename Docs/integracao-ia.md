@@ -12,22 +12,36 @@ Claude Code para recriá-los seguindo este padrão).
   com `GET /v1beta/models?key=...` se voltar a dar 404 no futuro)
 - Chamada HTTP pura via `java.net.http.HttpClient` (sem SDK), para minimizar dependências.
 - Chave configurada via variável de ambiente `GEMINI_API_KEY`, nunca hardcoded.
+  Enviada no header `x-goog-api-key`, não na query string (`?key=`), para não
+  aparecer em logs de proxy nem em mensagens de erro de E/S (ajuste de 2026-10).
 
 ## Fluxo (ver docs/casos-de-uso.md — UC04)
 
 1. `GeminiClient` monta o request com `responseMimeType: "application/json"` (força JSON puro, sem markdown/crases na resposta).
 2. Envia o prompt com o texto extraído do PDF, pedindo no máximo 15 flashcards (RN08).
 3. `FlashcardGenerationService` recebe o texto de resposta, faz parse para `List<FlashcardSugestaoDTO>`.
-4. Se o JSON vier mal formatado **ou** a chamada falhar por motivo de infraestrutura (timeout, rate limit/429, chave inválida/403, erro de rede — todas propagadas por `GeminiClient` como `GeracaoConteudoIAException`), tenta novamente (até 2 tentativas) antes de lançar a exceção específica do fluxo (`GeracaoFlashcardsException`/`GeracaoProvaException`/`GeracaoExplicacaoException`/`GeracaoRecomendacaoException`, todas subclasses de `GeracaoConteudoIAException`). Esse retry unificado vale para os quatro services que chamam `GeminiClient` (`FlashcardGenerationService`, `ProvaGenerationService`, `ExplicacaoService`, `RecomendacaoEstudoService`) — antes só cobria JSON malformado.
+4. Se o JSON vier mal formatado **ou** a chamada falhar por motivo de infraestrutura (timeout, rate limit/429, chave inválida/403, erro de rede — todas propagadas por `GeminiClient` como `GeracaoConteudoIAException`), tenta novamente (até 2 tentativas) antes de lançar a exceção específica do fluxo (`GeracaoFlashcardsException`/`GeracaoProvaException`/`GeracaoExplicacaoException`/`GeracaoRecomendacaoException`/`GeracaoRespostaMaterialException`, todas subclasses de `GeracaoConteudoIAException`). Esse retry unificado vale para os cinco services que chamam `GeminiClient` (`FlashcardGenerationService`, `ProvaGenerationService`, `ExplicacaoService`, `RecomendacaoEstudoService`, `PerguntaMaterialService` — achado I9, adicionado com UC32) — antes só cobria JSON malformado.
 5. Valida que nenhuma sugestão tem pergunta/resposta vazia.
 6. Limita o resultado a 15 itens (RN08), mesmo que a IA tenha retornado mais.
 7. Controller devolve as sugestões (não persistidas) — ver `docs/contrato-api.md`, seção de geração via IA.
 8. Persistência só ocorre no endpoint `/confirmar-sugestoes`, após o usuário revisar (RN05).
 
+### Transações e tamanho do prompt (ajuste de 2026-10)
+
+- Nenhum método que chama `GeminiClient` é `@Transactional`. Os dados são
+  lidos numa transação curta (`TransactionTemplate`), a IA é chamada fora de
+  qualquer transação (até 2 x 120s) e, quando há o que gravar (prova
+  personalizada, UC27), uma segunda transação curta persiste o resultado.
+  Assim uma chamada lenta não prende uma conexão do pool do banco.
+- O `texto_extraido` injetado no prompt (UC04, UC14, UC32) é limitado a
+  60.000 caracteres (`TextoMaterialPrompt`); na pergunta sobre o material
+  (UC32) esse total é dividido entre os materiais do deck. O corte fica
+  registrado em log.
+
 ## Classes envolvidas
 
 - `GeminiClient` — chamada HTTP crua, devolve texto; lança `GeracaoConteudoIAException` (502) em qualquer falha de infraestrutura.
-- `GeracaoConteudoIAException` — exceção base de infraestrutura da IA; `GeracaoFlashcardsException`, `GeracaoProvaException`, `GeracaoExplicacaoException` e `GeracaoRecomendacaoException` a estendem, uma por fluxo, para manter mensagens/logs específicos.
+- `GeracaoConteudoIAException` — exceção base de infraestrutura da IA; `GeracaoFlashcardsException`, `GeracaoProvaException`, `GeracaoExplicacaoException`, `GeracaoRecomendacaoException` e `GeracaoRespostaMaterialException` a estendem, uma por fluxo, para manter mensagens/logs específicos.
 - `FlashcardSugestaoDTO` — record `{ pergunta, resposta, topico }` (RN17).
 - `FlashcardGenerationService` — monta prompt, valida, aplica RN08.
 - `GeracaoFlashcardsController` — expõe o endpoint REST.

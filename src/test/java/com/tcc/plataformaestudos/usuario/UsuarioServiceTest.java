@@ -3,6 +3,7 @@ package com.tcc.plataformaestudos.usuario;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +40,9 @@ class UsuarioServiceTest {
 
 	@Mock
 	private VerificacaoEmailService verificacaoEmailService;
+
+	@Mock
+	private EmailService emailService;
 
 	@InjectMocks
 	private UsuarioService usuarioService;
@@ -103,17 +107,23 @@ class UsuarioServiceTest {
 	}
 
 	@Test
-	void deveLancarEmailJaCadastradoExceptionQuandoEmailJaExisteNoCadastro() {
+	void deveRetornarRespostaSemPersistirENotificarDonoRealQuandoEmailJaExisteNoCadastro() {
 		CadastroRequestDTO request = new CadastroRequestDTO("Ana", "ana_estudante", "ana@email.com", "senha123", true, null);
 		Usuario existente = new Usuario();
 		existente.setEmail("ana@email.com");
 
 		when(usuarioRepository.findByEmail(request.email())).thenReturn(Optional.of(existente));
 
-		assertThatThrownBy(() -> usuarioService.cadastrar(request))
-				.isInstanceOf(EmailJaCadastradoException.class);
+		// I1 (Docs/auditoria-coerencia-seguranca-2026-09.md): nao revela a
+		// existencia da conta - responde como se o cadastro tivesse dado
+		// certo, sem persistir nada, e avisa o dono real por e-mail.
+		UsuarioResponseDTO resposta = usuarioService.cadastrar(request);
 
+		assertThat(resposta.email()).isEqualTo("ana@email.com");
+		verify(usuarioRepository, never()).save(any());
 		verify(usuarioRepository, never()).findByNomeUsuarioIgnoreCase(any());
+		verify(verificacaoEmailService, never()).enviarTokenVerificacao(any());
+		verify(emailService).enviarEmail(eq("ana@email.com"), any(), any());
 	}
 
 	@Test

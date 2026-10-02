@@ -214,7 +214,9 @@ public class DashboardService {
 	/**
 	 * UC20/RN25 — dias consecutivos, a partir de hoje retrocedendo, com ao
 	 * menos uma revisão registrada em qualquer deck do usuário; para no
-	 * primeiro dia sem nenhuma revisão (inclusive hoje, se for o caso).
+	 * primeiro dia sem nenhuma revisão. Hoje ainda sem revisão não quebra a
+	 * sequência (o dia não acabou): nesse caso a contagem começa em ontem,
+	 * em vez de mostrar 0 para quem estudou todos os dias até ontem.
 	 */
 	private int calcularStreak(Long usuarioId) {
 		Set<LocalDate> diasComRevisao = dashboardRepository.buscarDatasDeRevisoesPorUsuario(usuarioId).stream()
@@ -223,6 +225,9 @@ public class DashboardService {
 
 		int streak = 0;
 		LocalDate dia = LocalDate.now();
+		if (!diasComRevisao.contains(dia)) {
+			dia = dia.minusDays(1);
+		}
 		while (diasComRevisao.contains(dia)) {
 			streak++;
 			dia = dia.minusDays(1);

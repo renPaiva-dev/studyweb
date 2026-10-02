@@ -1,11 +1,15 @@
+import { Lightbulb } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { atualizarFlashcard, criarFlashcard, type Flashcard } from '@/api/flashcardApi'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
+import { Campo } from '@/components/ui/campo'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -13,8 +17,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { useValidacao } from '@/hooks/useValidacao'
 
 interface FlashcardFormDialogProps {
   deckId: number
@@ -25,15 +29,22 @@ interface FlashcardFormDialogProps {
 }
 
 // UC05 - criar/editar flashcard manualmente (Dialog do shadcn). UC06 -
-// mnemonico opcional. POST /api/decks/{id}/flashcards ou PUT
+// mnemonico opcional. RN17 - topico opcional; reenviado na edicao para o
+// PUT nao apagar o topico gerado pela IA. POST /api/decks/{id}/flashcards ou PUT
 // /api/flashcards/{id} (docs/contrato-api.md). E1: pergunta/resposta
 // vazias bloqueiam o envio.
 export function FlashcardFormDialog({ deckId, open, onOpenChange, flashcardParaEditar, onSalvo }: FlashcardFormDialogProps) {
   const [pergunta, setPergunta] = useState('')
   const [resposta, setResposta] = useState('')
   const [mnemonico, setMnemonico] = useState('')
-  const [erros, setErros] = useState<{ pergunta?: string; resposta?: string }>({})
+  const [topico, setTopico] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  const validacao = useValidacao({
+    pergunta: () => (!pergunta.trim() ? 'A pergunta é obrigatória.' : undefined),
+    resposta: () => (!resposta.trim() ? 'A resposta é obrigatória.' : undefined),
+  })
 
   const editando = flashcardParaEditar !== null
 
@@ -48,19 +59,22 @@ export function FlashcardFormDialog({ deckId, open, onOpenChange, flashcardParaE
       setPergunta(flashcardParaEditar?.pergunta ?? '')
       setResposta(flashcardParaEditar?.resposta ?? '')
       setMnemonico(flashcardParaEditar?.mnemonico ?? '')
-      setErros({})
+      setTopico(flashcardParaEditar?.topico ?? '')
+      setErroEnvio(null)
+      validacao.resetar()
     }
   }
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    const proximosErros: { pergunta?: string; resposta?: string } = {}
-    if (!pergunta.trim()) proximosErros.pergunta = 'A pergunta é obrigatória.'
-    if (!resposta.trim()) proximosErros.resposta = 'A resposta é obrigatória.'
+    if (enviando) {
+      return
+    }
 
-    if (Object.keys(proximosErros).length > 0) {
-      setErros(proximosErros)
+    setErroEnvio(null)
+
+    if (!validacao.validarTudo()) {
       return
     }
 
@@ -71,6 +85,7 @@ export function FlashcardFormDialog({ deckId, open, onOpenChange, flashcardParaE
         pergunta: pergunta.trim(),
         resposta: resposta.trim(),
         mnemonico: mnemonico.trim() || undefined,
+        topico: topico.trim() || undefined,
       }
 
       if (editando) {
@@ -78,67 +93,86 @@ export function FlashcardFormDialog({ deckId, open, onOpenChange, flashcardParaE
         toast.success('Flashcard atualizado.')
       } else {
         await criarFlashcard(deckId, dados)
-        toast.success('Flashcard criado.')
+        toast.success('Flashcard criado.', { description: 'Ele já entra na sua próxima fila de estudo.' })
       }
 
       onOpenChange(false)
       onSalvo()
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível salvar o flashcard. Tente novamente.'))
+      setErroEnvio(extrairMensagemErro(erro, 'Não foi possível salvar o flashcard. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={(aberto) => !enviando && onOpenChange(aberto)}>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{editando ? 'Editar flashcard' : 'Novo flashcard'}</DialogTitle>
           <DialogDescription>
             {editando
-              ? 'Atualize a pergunta, a resposta e o mnemônico deste flashcard.'
-              : 'Crie um flashcard manualmente para este deck.'}
+              ? 'Atualize a pergunta, a resposta, o mnemônico e o tópico deste flashcard.'
+              : 'Escreva a pergunta como você gostaria de ser testado na prova.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={aoSubmeter} noValidate>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pergunta">Pergunta</Label>
-              <Textarea
-                id="pergunta"
-                placeholder="Ex.: Qual é a função do neurônio motor?"
-                value={pergunta}
-                onChange={(evento) => setPergunta(evento.target.value)}
-                aria-invalid={Boolean(erros.pergunta)}
-                autoFocus
-              />
-              {erros.pergunta && <p className="text-sm text-destructive">{erros.pergunta}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="resposta">Resposta</Label>
-              <Textarea
-                id="resposta"
-                placeholder="Ex.: Transmitir impulsos do sistema nervoso central aos músculos."
-                value={resposta}
-                onChange={(evento) => setResposta(evento.target.value)}
-                aria-invalid={Boolean(erros.resposta)}
-              />
-              {erros.resposta && <p className="text-sm text-destructive">{erros.resposta}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mnemonico">Mnemônico</Label>
-              <Input
-                id="mnemonico"
-                placeholder="Opcional"
-                value={mnemonico}
-                onChange={(evento) => setMnemonico(evento.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button type="submit" disabled={enviando}>
-              {enviando ? 'Salvando...' : 'Salvar'}
+        <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+          <Campo id="pergunta" rotulo="Pergunta" erro={validacao.erro('pergunta')}>
+            <Textarea
+              placeholder="Ex.: Qual é a função do neurônio motor?"
+              value={pergunta}
+              onChange={(evento) => setPergunta(evento.target.value)}
+              autoFocus
+              rows={2}
+              {...validacao.propsCampo('pergunta')}
+            />
+          </Campo>
+          <Campo id="resposta" rotulo="Resposta" erro={validacao.erro('resposta')}>
+            <Textarea
+              placeholder="Ex.: Transmitir impulsos do sistema nervoso central aos músculos."
+              value={resposta}
+              onChange={(evento) => setResposta(evento.target.value)}
+              rows={3}
+              {...validacao.propsCampo('resposta')}
+            />
+          </Campo>
+          <Campo
+            id="mnemonico"
+            rotulo={
+              <span className="inline-flex items-center gap-1.5">
+                <Lightbulb className="h-4 w-4 text-brand-700" aria-hidden="true" />
+                Mnemônico
+              </span>
+            }
+            opcional
+            dica="Uma dica curta para lembrar. Só aparece depois que você vira o card."
+          >
+            <Input placeholder="Ex.: Motor = Movimento" value={mnemonico} onChange={(evento) => setMnemonico(evento.target.value)} />
+          </Campo>
+          <Campo
+            id="topico"
+            rotulo="Tópico"
+            opcional
+            dica="Agrupa o card no painel por tópico e na prontidão para a prova."
+          >
+            <Input
+              placeholder="Ex.: Sistema nervoso"
+              value={topico}
+              maxLength={60}
+              onChange={(evento) => setTopico(evento.target.value)}
+            />
+          </Campo>
+
+          {erroEnvio && <Alerta variante="erro">{erroEnvio}</Alerta>}
+
+          <DialogFooter className="pt-1">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={enviando}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" loading={enviando}>
+              {enviando ? 'Salvando...' : 'Salvar flashcard'}
             </Button>
           </DialogFooter>
         </form>

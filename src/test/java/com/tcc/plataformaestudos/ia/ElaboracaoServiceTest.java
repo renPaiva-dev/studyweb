@@ -23,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
@@ -59,7 +60,7 @@ class ElaboracaoServiceTest {
 
 	@BeforeEach
 	void configurar() {
-		elaboracaoService = new ElaboracaoService(flashcardService, materialOrigemRepository, geminiClient, new ObjectMapper());
+		elaboracaoService = new ElaboracaoService(flashcardService, materialOrigemRepository, geminiClient, new ObjectMapper(), TransacaoDeTeste.template());
 	}
 
 	private Flashcard flashcardComDeck() {

@@ -12,8 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -57,6 +57,7 @@ public class QuizService {
 	private final TentativaQuizRepository tentativaQuizRepository;
 	private final RespostaTentativaQuizRepository respostaTentativaQuizRepository;
 	private final ProvaGenerationService provaGenerationService;
+	private final TransactionTemplate transactionTemplate;
 
 	@Transactional
 	public QuizResponseDTO gerarQuiz(Long deckId) {
@@ -139,32 +140,43 @@ public class QuizService {
 	 * estilo de prova. Reaproveita Quiz/QuestaoQuiz (origem=IA_PERSONALIZADA)
 	 * e os endpoints já existentes de resposta/histórico.
 	 */
-	@Transactional
 	public QuizResponseDTO gerarProvaPersonalizada(Long deckId, GerarProvaRequestDTO request) {
-		Deck deck = deckService.buscarDeckDoUsuarioAutenticado(deckId);
+		// Três etapas, sem transação durante a chamada à IA (até 2 x 120s): uma
+		// transação curta valida deck/flashcards (RN01), a IA roda fora de
+		// qualquer transação e outra transação curta grava a prova.
+		List<Flashcard> flashcardsBase = transactionTemplate.execute(status -> {
+			deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		List<Flashcard> flashcardsBase = flashcardRepository.findByIdInAndDeckId(request.flashcardIds(), deckId);
-		if (flashcardsBase.size() != request.flashcardIds().size()) {
-			throw new FlashcardsInvalidosException("Um ou mais flashcards informados não pertencem a este deck");
-		}
+			// distinct: um id repetido na requisição não pode virar 400.
+			List<Long> idsDistintos = request.flashcardIds().stream().distinct().toList();
+			List<Flashcard> encontrados = flashcardRepository.findByIdInAndDeckId(idsDistintos, deckId);
+			if (encontrados.size() != idsDistintos.size()) {
+				throw new FlashcardsInvalidosException("Um ou mais flashcards informados não pertencem a este deck");
+			}
+			return encontrados;
+		});
 
 		List<ProvaSugestaoDTO> sugestoes = provaGenerationService.gerarQuestoes(flashcardsBase, request.estilo());
 
-		Quiz quiz = new Quiz();
-		quiz.setDeck(deck);
-		quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
-		quiz.setEstilo(request.estilo());
-		quiz.setTitulo("Prova " + request.estilo().getRotulo() + " — " + deck.getTitulo());
+		return transactionTemplate.execute(status -> {
+			Deck deck = deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		for (ProvaSugestaoDTO sugestao : sugestoes) {
-			quiz.getQuestoes().add(montarQuestaoPersonalizada(sugestao, quiz));
-		}
+			Quiz quiz = new Quiz();
+			quiz.setDeck(deck);
+			quiz.setOrigem(OrigemQuiz.IA_PERSONALIZADA);
+			quiz.setEstilo(request.estilo());
+			quiz.setTitulo("Prova " + request.estilo().getRotulo() + " — " + deck.getTitulo());
 
-		Quiz salvo = quizRepository.save(quiz);
-		log.info("Prova personalizada gerada: quizId={}, deckId={}, estilo={}, totalQuestoes={}",
-				salvo.getId(), deckId, request.estilo(), salvo.getQuestoes().size());
+			for (ProvaSugestaoDTO sugestao : sugestoes) {
+				quiz.getQuestoes().add(montarQuestaoPersonalizada(sugestao, quiz));
+			}
 
-		return QuizResponseDTO.fromEntity(salvo);
+			Quiz salvo = quizRepository.save(quiz);
+			log.info("Prova personalizada gerada: quizId={}, deckId={}, estilo={}, totalQuestoes={}",
+					salvo.getId(), deckId, request.estilo(), salvo.getQuestoes().size());
+
+			return QuizResponseDTO.fromEntity(salvo);
+		});
 	}
 
 	/** UC28/RN36 — histórico de provas do usuário autenticado, mais recentes primeiro. */
@@ -182,13 +194,13 @@ public class QuizService {
 	public HistoricoProvaDetalheDTO buscarDetalheTentativa(Long tentativaId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
+		// N7 (Docs/auditoria-coerencia-seguranca-2026-09.md): sempre 404 - mesmo
+		// padrão de buscarQuizDoUsuarioAutenticado abaixo e de
+		// DeckService#buscarDeckDoUsuarioAutenticado (B15) - para não permitir
+		// enumerar IDs de tentativa de outros usuários pela diferença entre
+		// 403 e 404.
 		TentativaQuiz tentativa = tentativaQuizRepository.buscarDetalheDoUsuario(tentativaId, usuarioId)
-				.orElseGet(() -> {
-					if (tentativaQuizRepository.existsById(tentativaId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar esta tentativa");
-					}
-					throw new RecursoNaoEncontradoException("Tentativa não encontrada");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Tentativa não encontrada"));
 
 		// B12: popula em lote o fetch de resposta.questao para esta tentativa
 		// (mesmo contexto de persistência de tentativa.getRespostas()), evitando
@@ -202,19 +214,19 @@ public class QuizService {
 
 	/**
 	 * Centraliza RN01 para um quiz individual: busca e garante que pertence
-	 * (via deck) ao usuário autenticado. 404 se não existe; 403 se existe mas
-	 * é de outro usuário.
+	 * (via deck) ao usuário autenticado. N7
+	 * (Docs/auditoria-coerencia-seguranca-2026-09.md): sempre 404 - tanto
+	 * quando o quiz não existe quanto quando existe mas pertence a outro
+	 * usuário - mesmo padrão de
+	 * {@link com.tcc.plataformaestudos.deck.DeckService#buscarDeckDoUsuarioAutenticado(Long)}
+	 * (B15), para não permitir enumerar IDs de quiz de outros usuários pela
+	 * diferença entre 403 e 404.
 	 */
 	public Quiz buscarQuizDoUsuarioAutenticado(Long quizId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
 		return quizRepository.findByIdAndDeckUsuarioId(quizId, usuarioId)
-				.orElseGet(() -> {
-					if (quizRepository.existsById(quizId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar este quiz");
-					}
-					throw new RecursoNaoEncontradoException("Quiz não encontrado");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Quiz não encontrado"));
 	}
 
 	private QuestaoQuiz gerarQuestao(Flashcard flashcard, List<Flashcard> todosFlashcards, Quiz quiz) {

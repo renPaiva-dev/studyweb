@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { buscarDashboard, type Dashboard } from '@/api/dashboardApi'
 import { extrairMensagemErro } from '@/api/apiError'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CartaoMetrica } from '@/components/CartaoMetrica'
+import { NotaMargem } from '@/components/NotaMargem'
+import { EstadoErro } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { DashboardAtividade } from '@/components/DashboardAtividade'
 import { DashboardEvolucao } from '@/components/DashboardEvolucao'
 import { DashboardTopicos } from '@/components/DashboardTopicos'
@@ -42,16 +43,15 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
 
   useDefinirMargem(
     dashboard ? (
-      <div className="space-y-4 text-sm">
-        <div>
-          <p className="font-heading text-2xl font-semibold text-verde-lousa">{dashboard.percentualDominado}%</p>
-          <p className="text-muted-foreground">dominado</p>
-        </div>
-        <div>
-          <p className="font-heading text-2xl font-semibold text-vermelho-correcao">{dashboard.percentualEmRisco}%</p>
-          <p className="text-muted-foreground">em risco</p>
-        </div>
-      </div>
+      <NotaMargem
+        valor={`${dashboard.percentualDominado}%`}
+        tom="positivo"
+        rotulo="do deck já dominado"
+        detalhes={[
+          { rotulo: 'Em risco', valor: `${dashboard.percentualEmRisco}%`, tom: 'atencao' },
+          { rotulo: 'Flashcards', valor: dashboard.totalFlashcards },
+        ]}
+      />
     ) : null,
     null,
     [dashboard?.percentualDominado, dashboard?.percentualEmRisco],
@@ -59,23 +59,19 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
 
   if (dashboard === null && erroCarregamento === null) {
     return (
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Skeleton className="h-32 w-full rounded-none" />
-        <Skeleton className="h-32 w-full rounded-none" />
-        <Skeleton className="h-32 w-full rounded-none" />
-      </div>
+      <Carregando rotulo="Carregando dashboard..." className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Skeleton className="h-[140px] w-full rounded-xl" />
+          <Skeleton className="h-[140px] w-full rounded-xl" />
+          <Skeleton className="h-[140px] w-full rounded-xl" />
+        </div>
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </Carregando>
     )
   }
 
   if (erroCarregamento !== null) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
-        <p className="text-muted-foreground">{erroCarregamento}</p>
-        <Button variant="outline" onClick={() => void carregarDashboard()}>
-          Tentar novamente
-        </Button>
-      </div>
-    )
+    return <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregarDashboard()} />
   }
 
   if (dashboard === null) {
@@ -85,32 +81,26 @@ export function DashboardTab({ deckId }: DashboardTabProps) {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total de flashcards</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{dashboard.totalFlashcards}</p>
-          </CardContent>
-        </Card>
+        <CartaoMetrica icone={Layers} titulo="Total de flashcards" valor={dashboard.totalFlashcards} detalhe="neste deck" destaque />
 
         <IndicadorPercentual
           icone={TrendingUp}
           titulo="Dominado"
           percentual={dashboard.percentualDominado}
-          corBarra="bg-verde-lousa"
-          corTrilha="bg-verde-lousa/10"
-          corIcone="text-verde-lousa"
+          corBarra="bg-success-600"
+          corTrilha="bg-success-50"
+          corIcone="text-success-700"
+          descricao="Revisados 3+ vezes com nota alta"
         />
 
         <IndicadorPercentual
           icone={AlertTriangle}
           titulo="Em risco"
           percentual={dashboard.percentualEmRisco}
-          corBarra="bg-vermelho-correcao"
-          corTrilha="bg-vermelho-correcao/10"
-          corIcone="text-vermelho-correcao"
+          corBarra="bg-danger-600"
+          corTrilha="bg-danger-50"
+          corIcone="text-danger-700"
+          descricao="Nota baixa ou revisão atrasada"
         />
       </div>
 

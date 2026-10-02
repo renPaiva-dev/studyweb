@@ -11,6 +11,8 @@ export interface Flashcard {
   pergunta: string
   resposta: string
   mnemonico: string | null
+  // RN17: obrigatorio na origem IA, opcional na MANUAL.
+  topico: string | null
   origem: OrigemFlashcard
 }
 
@@ -18,6 +20,8 @@ export interface FlashcardInput {
   pergunta: string
   resposta: string
   mnemonico?: string
+  // PUT substitui o flashcard inteiro: omitir o topico o apaga (RN17).
+  topico?: string
 }
 
 export interface SugestaoParaConfirmar extends SugestaoFlashcard {

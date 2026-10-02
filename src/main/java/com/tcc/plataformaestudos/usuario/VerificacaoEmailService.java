@@ -33,6 +33,11 @@ public class VerificacaoEmailService {
 	private static final long VALIDADE_MINUTOS = 10;
 	private static final String MENSAGEM_REENVIO =
 			"Se este e-mail estiver cadastrado e ainda não confirmado, enviamos um novo link de confirmação.";
+	// C4 (Docs/auditoria-coerencia-seguranca-2026-09.md): destinatário usado
+	// para simular o envio de e-mail quando não há nada real para reenviar
+	// (e-mail inexistente ou já verificado) - nunca o e-mail informado pelo
+	// cliente, só para gastar o mesmo tempo de rede do envio real.
+	private static final String DESTINATARIO_DUMMY_ANTI_TIMING = "timing-dummy@plataformaestudos.local";
 
 	private final UsuarioRepository usuarioRepository;
 	private final TokenVerificacaoEmailRepository tokenRepository;
@@ -73,20 +78,44 @@ public class VerificacaoEmailService {
 
 	@Transactional
 	public MensagemResponseDTO reenviarVerificacao(String email) {
-		usuarioRepository.findByEmail(email)
-				.filter(usuario -> !usuario.isEmailVerificado())
-				.ifPresent(this::enviarTokenVerificacao);
+		Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
+		boolean deveReenviarDeVerdade = usuario != null && !usuario.isEmailVerificado();
+
+		if (deveReenviarDeVerdade) {
+			enviarTokenVerificacao(usuario);
+		} else {
+			// C4: mesmo quando não há nada real para reenviar (e-mail
+			// inexistente ou já verificado), simula o envio para um
+			// destinatário descartado, para que o tempo de resposta não
+			// distinga os três cenários por timing - mesmo cuidado da
+			// mensagem genérica de MENSAGEM_REENVIO, mas para o tempo de
+			// resposta.
+			simularReenvio();
+		}
 
 		return new MensagemResponseDTO(MENSAGEM_REENVIO);
 	}
 
+	private void simularReenvio() {
+		String tokenDescartado = UUID.randomUUID().toString();
+		String link = frontendUrl + "/verificar-email?token=" + tokenDescartado;
+		emailService.enviarEmail(
+				DESTINATARIO_DUMMY_ANTI_TIMING,
+				"Confirme seu e-mail",
+				"Clique no link a seguir para confirmar seu e-mail (válido por 10 minutos): " + link);
+	}
+
 	@Transactional
 	public MensagemResponseDTO verificarEmail(String token) {
+		// N9 (Docs/auditoria-coerencia-seguranca-2026-09.md): mensagem em
+		// linguagem humana ("link"), não jargão técnico ("token") - esse
+		// texto chega cru ao usuário via toast no frontend.
 		TokenVerificacaoEmail tokenVerificacao = tokenRepository.findByTokenAndUsadoFalse(token)
-				.orElseThrow(() -> new TokenVerificacaoInvalidoException("Token inválido ou já utilizado"));
+				.orElseThrow(() -> new TokenVerificacaoInvalidoException(
+						"Link inválido ou já utilizado. Solicite um novo link de confirmação."));
 
 		if (tokenVerificacao.getExpiraEm().isBefore(LocalDateTime.now())) {
-			throw new TokenVerificacaoInvalidoException("Token expirado");
+			throw new TokenVerificacaoInvalidoException("Link expirado. Solicite um novo link de confirmação.");
 		}
 
 		Usuario usuario = tokenVerificacao.getUsuario();

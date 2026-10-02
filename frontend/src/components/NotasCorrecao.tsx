@@ -25,7 +25,7 @@ export function NotasCorrecao({ feedback, numeros, idBaseNotas }: NotasCorrecaoP
 
       <p
         className={cn(
-          'animate-caderno-entrada-margem border-l-2 pl-3 font-heading text-lg font-semibold leading-snug',
+          'animate-entrada-atrasada border-l-2 pl-3 font-heading text-lg font-semibold leading-snug',
           CLASSE_VEREDITO[feedback.veredito],
         )}
         style={atraso(0)}
@@ -33,7 +33,7 @@ export function NotasCorrecao({ feedback, numeros, idBaseNotas }: NotasCorrecaoP
         {textoVeredito(feedback.veredito, feedback.ancoradaNoMaterial)}
       </p>
 
-      <p className="animate-caderno-entrada-margem" style={atraso(1)}>
+      <p className="animate-entrada-atrasada" style={atraso(1)}>
         {feedback.comentarioGeral}
       </p>
 
@@ -47,7 +47,7 @@ export function NotasCorrecao({ feedback, numeros, idBaseNotas }: NotasCorrecaoP
               <li
                 key={indice}
                 id={`${idBaseNotas}-${indice}`}
-                className="animate-caderno-entrada-margem flex gap-2"
+                className="animate-entrada-atrasada flex gap-2"
                 style={atraso(indice + 2)}
               >
                 <span aria-hidden className={cn('w-3 shrink-0 font-mono text-xs font-semibold leading-5', estilo.texto)}>
@@ -64,7 +64,7 @@ export function NotasCorrecao({ feedback, numeros, idBaseNotas }: NotasCorrecaoP
       )}
 
       {feedback.faltou && (
-        <p className="animate-caderno-entrada-margem" style={atraso(feedback.anotacoes.length + 2)}>
+        <p className="animate-entrada-atrasada" style={atraso(feedback.anotacoes.length + 2)}>
           <span className="font-medium">Faltou:</span> {feedback.faltou}
         </p>
       )}

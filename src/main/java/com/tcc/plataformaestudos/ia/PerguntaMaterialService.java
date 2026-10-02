@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -45,24 +45,32 @@ public class PerguntaMaterialService {
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final GeminiClient geminiClient;
 	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
-	@Transactional(readOnly = true)
+	// Leitura numa transação curta; a chamada à IA fica fora dela (ver
+	// FlashcardGenerationService#gerarSugestoes).
 	public PerguntaMaterialResponseDTO perguntar(Long deckId, PerguntaMaterialRequestDTO request) {
-		Deck deck = deckService.buscarDeckDoUsuarioAutenticado(deckId);
+		PromptPergunta preparado = transactionTemplate.execute(status -> {
+			Deck deck = deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		List<MaterialOrigem> materiais = materialOrigemRepository
-				.findByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNull(deck.getId(), StatusProcessamento.PROCESSADO);
+			List<MaterialOrigem> materiais = materialOrigemRepository
+					.findByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNull(deck.getId(), StatusProcessamento.PROCESSADO);
 
-		if (materiais.isEmpty()) {
-			throw new MaterialNaoDisponivelException(
-					"Este deck ainda não tem nenhum material processado para consultar");
-		}
+			if (materiais.isEmpty()) {
+				throw new MaterialNaoDisponivelException(
+						"Este deck ainda não tem nenhum material processado para consultar");
+			}
 
-		String prompt = montarPrompt(request.pergunta(), materiais);
-		String resposta = gerarComRetry(deckId, prompt);
+			return new PromptPergunta(montarPrompt(request.pergunta(), materiais), materiais.size());
+		});
 
-		log.info("Pergunta sobre material do deck respondida: deckId={}, materiaisConsultados={}", deckId, materiais.size());
-		return new PerguntaMaterialResponseDTO(resposta, materiais.size());
+		String resposta = gerarComRetry(deckId, preparado.prompt());
+
+		log.info("Pergunta sobre material do deck respondida: deckId={}, materiaisConsultados={}", deckId, preparado.totalMateriais());
+		return new PerguntaMaterialResponseDTO(resposta, preparado.totalMateriais());
+	}
+
+	private record PromptPergunta(String prompt, int totalMateriais) {
 	}
 
 	private String gerarComRetry(Long deckId, String prompt) {
@@ -116,8 +124,11 @@ public class PerguntaMaterialService {
 	}
 
 	private String montarPrompt(String pergunta, List<MaterialOrigem> materiais) {
+		// O limite total de caracteres é dividido entre os materiais do deck.
+		int limitePorMaterial = TextoMaterialPrompt.MAXIMO_CARACTERES / materiais.size();
 		String contexto = materiais.stream()
-				.map(material -> "Material: %s\n%s".formatted(material.getNomeArquivo(), material.getTextoExtraido()))
+				.map(material -> "Material: %s\n%s".formatted(
+						material.getNomeArquivo(), TextoMaterialPrompt.limitar(material.getTextoExtraido(), limitePorMaterial)))
 				.collect(Collectors.joining("\n\n---\n\n"));
 
 		return """

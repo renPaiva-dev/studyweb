@@ -4,9 +4,12 @@ import { toast } from 'sonner'
 import { extrairMensagemErro } from '@/api/apiError'
 import { listarColecoes, type Colecao } from '@/api/colecaoApi'
 import { atualizarDeck, criarDeck, type Deck } from '@/api/deckApi'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
+import { Campo } from '@/components/ui/campo'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -16,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useValidacao } from '@/hooks/useValidacao'
 
 const SEM_COLECAO = 'nenhuma'
 
@@ -33,8 +37,12 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
   const [descricao, setDescricao] = useState('')
   const [colecaoId, setColecaoId] = useState<number | null>(null)
   const [colecoes, setColecoes] = useState<Colecao[]>([])
-  const [erroTitulo, setErroTitulo] = useState<string | undefined>()
   const [enviando, setEnviando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  const validacao = useValidacao({
+    titulo: () => (!titulo.trim() ? 'O título é obrigatório.' : undefined),
+  })
 
   const editando = deckParaEditar !== null
 
@@ -61,15 +69,21 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
       setTitulo(deckParaEditar?.titulo ?? '')
       setDescricao(deckParaEditar?.descricao ?? '')
       setColecaoId(deckParaEditar?.colecaoId ?? null)
-      setErroTitulo(undefined)
+      setErroEnvio(null)
+      validacao.resetar()
     }
   }
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!titulo.trim()) {
-      setErroTitulo('O título é obrigatório.')
+    if (enviando) {
+      return
+    }
+
+    setErroEnvio(null)
+
+    if (!validacao.validarTudo()) {
       return
     }
 
@@ -83,72 +97,76 @@ export function DeckFormDialog({ open, onOpenChange, deckParaEditar, onSalvo }: 
         toast.success('Deck atualizado.')
       } else {
         await criarDeck(dados)
-        toast.success('Deck criado.')
+        toast.success(`Deck "${dados.titulo}" criado.`, { description: 'Abra o deck para adicionar flashcards ou enviar um PDF.' })
       }
 
       onOpenChange(false)
       onSalvo()
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível salvar o deck. Tente novamente.'))
+      setErroEnvio(extrairMensagemErro(erro, 'Não foi possível salvar o deck. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(aberto) => !enviando && onOpenChange(aberto)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editando ? 'Editar deck' : 'Novo deck'}</DialogTitle>
           <DialogDescription>
-            {editando ? 'Atualize o título e a descrição do deck.' : 'Organize seus estudos criando um novo deck.'}
+            {editando ? 'Atualize o título, a descrição ou a coleção do deck.' : 'Um deck reúne os flashcards de um tema de estudo.'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={aoSubmeter} noValidate>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="titulo">Título</Label>
-              <Input
-                id="titulo"
-                placeholder="Ex.: Anatomia — Sistema Nervoso"
-                value={titulo}
-                onChange={(evento) => setTitulo(evento.target.value)}
-                aria-invalid={Boolean(erroTitulo)}
-                autoFocus
-              />
-              {erroTitulo && <p className="text-sm text-destructive">{erroTitulo}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Input
-                id="descricao"
-                placeholder="Opcional"
-                value={descricao}
-                onChange={(evento) => setDescricao(evento.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
+        <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+          <Campo id="titulo" rotulo="Título" erro={validacao.erro('titulo')}>
+            <Input
+              placeholder="Ex.: Anatomia — Sistema Nervoso"
+              value={titulo}
+              onChange={(evento) => setTitulo(evento.target.value)}
+              autoFocus
+              {...validacao.propsCampo('titulo')}
+            />
+          </Campo>
+          <Campo id="descricao" rotulo="Descrição" opcional>
+            <Input
+              placeholder="Do que trata este deck?"
+              value={descricao}
+              onChange={(evento) => setDescricao(evento.target.value)}
+            />
+          </Campo>
+          <div className="space-y-1.5">
+            <div className="flex items-baseline gap-2">
               <Label htmlFor="colecao">Coleção</Label>
-              <Select
-                value={colecaoId !== null ? String(colecaoId) : SEM_COLECAO}
-                onValueChange={(valor) => setColecaoId(valor === SEM_COLECAO ? null : Number(valor))}
-              >
-                <SelectTrigger id="colecao">
-                  <SelectValue placeholder="Nenhuma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={SEM_COLECAO}>Nenhuma</SelectItem>
-                  {colecoes.map((colecao) => (
-                    <SelectItem key={colecao.id} value={String(colecao.id)}>
-                      {colecao.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <span className="text-xs font-medium text-ink-500">Opcional</span>
             </div>
+            <Select
+              value={colecaoId !== null ? String(colecaoId) : SEM_COLECAO}
+              onValueChange={(valor) => setColecaoId(valor === SEM_COLECAO ? null : Number(valor))}
+            >
+              <SelectTrigger id="colecao">
+                <SelectValue placeholder="Nenhuma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_COLECAO}>Nenhuma</SelectItem>
+                {colecoes.map((colecao) => (
+                  <SelectItem key={colecao.id} value={String(colecao.id)}>
+                    {colecao.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter className="mt-6">
-            <Button type="submit" disabled={enviando}>
+
+          {erroEnvio && <Alerta variante="erro">{erroEnvio}</Alerta>}
+
+          <DialogFooter className="pt-1">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={enviando}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" loading={enviando}>
               {enviando ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>

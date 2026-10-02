@@ -38,7 +38,7 @@ export function FolhaAutoexplicacao({ texto, onTextoChange, corrigindo, onPedirC
   }
 
   return (
-    <div className="animate-caderno-entrada space-y-2">
+    <div className="animate-entrada space-y-2">
       <div className="flex items-baseline justify-between gap-3">
         {/* <label> nativo, não o Label do shadcn: o text-sm/font-medium dele
             sobrescreve o text-eyebrow e desalinha com "Sua explicação, corrigida". */}
@@ -51,8 +51,8 @@ export function FolhaAutoexplicacao({ texto, onTextoChange, corrigindo, onPedirC
         </span>
       </div>
 
-      <div className="relative overflow-hidden border-y border-manilha bg-card transition-colors focus-within:border-tinta/40">
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-8 w-px bg-tinta/20" />
+      <div className="relative overflow-hidden border-y border-ink-200 bg-card transition-colors focus-within:border-ink-900/40">
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-8 w-px bg-ink-900/20" />
         <Textarea
           id={idCampo}
           autoFocus

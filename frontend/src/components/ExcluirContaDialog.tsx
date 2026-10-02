@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { excluirConta } from '@/api/usuarioApi'
+import { Alerta } from '@/components/ui/alerta'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -16,8 +17,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Campo } from '@/components/ui/campo'
+import { Input, PasswordInput } from '@/components/ui/input'
 import { useAuth } from '@/context/AuthContext'
 
 const PALAVRA_CONFIRMACAO = 'EXCLUIR'
@@ -36,9 +37,11 @@ export function ExcluirContaDialog() {
   const [erro, setErro] = useState<string | null>(null)
   const [excluindo, setExcluindo] = useState(false)
 
-  const podeExcluir = senha.length > 0 && confirmacao === PALAVRA_CONFIRMACAO && !excluindo
+  const palavraCorreta = confirmacao === PALAVRA_CONFIRMACAO
+  const podeExcluir = senha.length > 0 && palavraCorreta && !excluindo
 
   function aoAbrirMudar(abrindo: boolean) {
+    if (excluindo) return
     setAberto(abrindo)
     if (!abrindo) {
       setSenha('')
@@ -48,16 +51,18 @@ export function ExcluirContaDialog() {
   }
 
   async function aoConfirmar() {
+    if (!podeExcluir) return
     setErro(null)
     setExcluindo(true)
 
     try {
       await excluirConta(senha)
-      toast.success('Sua conta foi excluída permanentemente.')
+      toast.success('Sua conta foi excluída permanentemente.', { description: 'Sentiremos sua falta. Volte quando quiser.' })
       logout()
       navigate('/login')
     } catch (erroCapturado) {
-      setErro(extrairMensagemErro(erroCapturado, 'Não foi possível excluir sua conta.'))
+      setErro(extrairMensagemErro(erroCapturado, 'Não foi possível excluir sua conta. Confira a senha e tente novamente.'))
+      requestAnimationFrame(() => document.getElementById('senhaExclusao')?.focus())
     } finally {
       setExcluindo(false)
     }
@@ -69,50 +74,68 @@ export function ExcluirContaDialog() {
         <Button variant="destructive">Excluir minha conta</Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
-        <AlertDialogHeader>
-          <div className="flex items-center gap-2 text-destructive">
+        <AlertDialogHeader className="sm:flex-row sm:items-start sm:gap-4">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-danger-100 text-danger-600 ring-4 ring-danger-50">
             <AlertTriangle className="h-5 w-5" />
+          </span>
+          <div className="space-y-1.5">
             <AlertDialogTitle>Excluir conta permanentemente</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é irreversível. Todos os seus decks, flashcards, revisões e resultados de quizzes serão
+              removidos para sempre. Digite sua senha e a palavra <strong className="text-foreground">{PALAVRA_CONFIRMACAO}</strong>{' '}
+              para confirmar.
+            </AlertDialogDescription>
           </div>
-          <AlertDialogDescription>
-            Esta ação é irreversível. Todos os seus decks, flashcards, revisões e resultados de quizzes serão
-            removidos permanentemente. Digite sua senha e a palavra <strong>{PALAVRA_CONFIRMACAO}</strong> para
-            confirmar.
-          </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="senhaExclusao">Senha</Label>
-            <Input
-              id="senhaExclusao"
-              type="password"
-              className="h-10"
+        <form
+          className="space-y-4"
+          onSubmit={(evento) => {
+            evento.preventDefault()
+            void aoConfirmar()
+          }}
+        >
+          <Campo id="senhaExclusao" rotulo="Sua senha">
+            <PasswordInput
               autoComplete="current-password"
               value={senha}
-              onChange={(evento) => setSenha(evento.target.value)}
+              onChange={(evento) => {
+                setSenha(evento.target.value)
+                setErro(null)
+              }}
+              {...(erro ? { 'aria-invalid': true } : {})}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmacaoExclusao">
-              Digite <strong>{PALAVRA_CONFIRMACAO}</strong> para confirmar
-            </Label>
+          </Campo>
+          <Campo
+            id="confirmacaoExclusao"
+            rotulo={
+              <>
+                Digite <strong className="font-mono text-danger-700">{PALAVRA_CONFIRMACAO}</strong> para confirmar
+              </>
+            }
+            dica={confirmacao.length > 0 && !palavraCorreta ? 'Digite exatamente EXCLUIR, em letras maiúsculas.' : undefined}
+          >
             <Input
-              id="confirmacaoExclusao"
-              className="h-10"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="font-mono tracking-wider"
               value={confirmacao}
               onChange={(evento) => setConfirmacao(evento.target.value)}
             />
-          </div>
-          {erro && <p className="text-sm text-destructive">{erro}</p>}
-        </div>
+          </Campo>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
-          <Button variant="destructive" disabled={!podeExcluir} onClick={aoConfirmar}>
-            {excluindo ? 'Excluindo...' : 'Excluir permanentemente'}
-          </Button>
-        </AlertDialogFooter>
+          {erro && <Alerta variante="erro">{erro}</Alerta>}
+
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button" disabled={excluindo}>
+              Cancelar
+            </AlertDialogCancel>
+            <Button type="submit" variant="destructive" disabled={!podeExcluir} loading={excluindo}>
+              {excluindo ? 'Excluindo...' : 'Excluir permanentemente'}
+            </Button>
+          </AlertDialogFooter>
+        </form>
       </AlertDialogContent>
     </AlertDialog>
   )

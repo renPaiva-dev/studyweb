@@ -1,6 +1,5 @@
-import { AlertTriangle, CalendarClock, Loader2 } from 'lucide-react'
+import { AlertTriangle, CalendarClock, CheckCircle2 } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import {
@@ -10,13 +9,28 @@ import {
   removerDataAlvoProva,
   type ProntidaoProva,
 } from '@/api/prontidaoApi'
+import { AnelPontuacao } from '@/components/AnelPontuacao'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { EstadoErro } from '@/components/ui/estados'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 interface ProntidaoProvaCardProps {
   deckId: number
+}
+
+// I6 (Docs/auditoria-coerencia-seguranca-2026-09.md): reusa as mesmas faixas
+// de classificarPontuacao.ts (verde-lousa >= 70, ambar 40-69, vermelho-
+// correcao abaixo disso) em vez de inventar uma escala nova so para este
+// indicador.
+function corRetencao(percentual: number): { barra: string; texto: string } {
+  if (percentual >= 70) return { barra: 'bg-success-600', texto: 'text-success-700' }
+  if (percentual >= 40) return { barra: 'bg-brand-500', texto: 'text-warning-800' }
+  return { barra: 'bg-danger-600', texto: 'text-danger-700' }
 }
 
 // UC31 - previsao de prontidao para prova (RN40). GET/PUT/DELETE
@@ -30,6 +44,7 @@ export function ProntidaoProvaCard({ deckId }: ProntidaoProvaCardProps) {
   const [prontidao, setProntidao] = useState<ProntidaoProva | null>(null)
   const [dataInput, setDataInput] = useState('')
   const [processando, setProcessando] = useState(false)
+  const [erroAcao, setErroAcao] = useState<string | null>(null)
 
   const carregar = useCallback(async () => {
     setCarregando(true)
@@ -59,13 +74,14 @@ export function ProntidaoProvaCard({ deckId }: ProntidaoProvaCardProps) {
     }
 
     setProcessando(true)
+    setErroAcao(null)
 
     try {
       const status = await definirDataAlvoProva(deckId, dataInput)
       setDataAlvo(status.dataAlvo)
       setProntidao(await buscarProntidaoProva(deckId))
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível definir a data da prova.'))
+      setErroAcao(extrairMensagemErro(erro, 'Não foi possível definir a data da prova. Confira se é uma data futura.'))
     } finally {
       setProcessando(false)
     }
@@ -73,6 +89,7 @@ export function ProntidaoProvaCard({ deckId }: ProntidaoProvaCardProps) {
 
   async function aoRemoverData() {
     setProcessando(true)
+    setErroAcao(null)
 
     try {
       await removerDataAlvoProva(deckId)
@@ -80,97 +97,108 @@ export function ProntidaoProvaCard({ deckId }: ProntidaoProvaCardProps) {
       setProntidao(null)
       setDataInput('')
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível remover a data da prova.'))
+      setErroAcao(extrairMensagemErro(erro, 'Não foi possível remover a data da prova.'))
     } finally {
       setProcessando(false)
     }
   }
 
   if (carregando) {
-    return <Skeleton className="h-40 w-full rounded-none" />
+    return <Skeleton className="h-48 w-full rounded-xl" />
   }
 
   if (erroCarregamento !== null) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
-          <p className="text-muted-foreground">{erroCarregamento}</p>
-          <Button variant="outline" onClick={() => void carregar()}>
-            Tentar novamente
-          </Button>
-        </CardContent>
+        <EstadoErro compacto mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
       </Card>
     )
   }
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-        <CalendarClock className="h-4 w-4 text-muted-foreground" />
-        <CardTitle className="text-sm font-medium text-muted-foreground">Prontidão para a prova</CardTitle>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <CalendarClock className="h-5 w-5 text-brand-700" aria-hidden="true" />
+          <CardTitle>Prontidão para a prova</CardTitle>
+        </div>
+        <CardDescription>
+          Estimativa de retenção por tópico, calculada a partir do seu histórico de revisões, sem uso de IA.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <form className="flex flex-wrap items-end gap-2" onSubmit={(evento) => void aoDefinirData(evento)}>
-          <div className="flex flex-col gap-1">
-            <label htmlFor={`data-alvo-prova-${deckId}`} className="text-xs text-muted-foreground">
-              Data da prova
-            </label>
+      <CardContent className="space-y-5">
+        <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={(evento) => void aoDefinirData(evento)}>
+          <div className="space-y-1.5">
+            <Label htmlFor={`data-alvo-prova-${deckId}`}>Data da prova</Label>
             <Input
               id={`data-alvo-prova-${deckId}`}
               type="date"
               value={dataInput}
               onChange={(evento) => setDataInput(evento.target.value)}
-              className="w-44"
+              className="sm:w-48"
               disabled={processando}
             />
           </div>
-          <Button type="submit" disabled={processando || !dataInput}>
-            {processando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {dataAlvo !== null ? 'Atualizar data' : 'Definir data'}
-          </Button>
-          {dataAlvo !== null && (
-            <Button type="button" variant="outline" onClick={() => void aoRemoverData()} disabled={processando}>
-              Remover
+          <div className="flex gap-2">
+            <Button type="submit" variant="secondary" className="flex-1 sm:flex-none" loading={processando} disabled={!dataInput}>
+              {dataAlvo !== null ? 'Atualizar data' : 'Definir data'}
             </Button>
-          )}
+            {dataAlvo !== null && (
+              <Button type="button" variant="ghost" onClick={() => void aoRemoverData()} disabled={processando}>
+                Remover
+              </Button>
+            )}
+          </div>
         </form>
 
-        {dataAlvo === null && (
-          <p className="text-sm text-muted-foreground">
-            Defina a data da sua prova para ver uma estimativa de retenção por tópico e um plano de revisão
-            priorizado — calculado a partir do seu próprio histórico de revisões, sem uso de IA.
-          </p>
-        )}
+        {erroAcao && <Alerta variante="erro" onFechar={() => setErroAcao(null)}>{erroAcao}</Alerta>}
 
         {prontidao !== null && (
-          <div className="space-y-4 border-t pt-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted-foreground">
+          <div className="grid gap-6 border-t border-ink-100 pt-5 md:grid-cols-[auto_minmax(0,1fr)] md:items-start">
+            <div className="flex items-center gap-4 md:flex-col md:items-center md:text-center">
+              <AnelPontuacao pontuacao={prontidao.prontidaoGeral} tamanho={104} espessura={9} rotulo="prontidão" />
+              <p className="text-sm font-semibold text-ink-700">
                 {prontidao.diasRestantes >= 0
-                  ? `Faltam ${prontidao.diasRestantes} dia(s) para a prova`
+                  ? `Faltam ${prontidao.diasRestantes} dia${prontidao.diasRestantes === 1 ? '' : 's'}`
                   : 'A data da prova já passou'}
               </p>
-              <p className="font-heading text-2xl font-semibold text-verde-lousa">{prontidao.prontidaoGeral}%</p>
             </div>
 
-            <p className="text-sm">{prontidao.mensagem}</p>
+            <div className="space-y-4">
+              <Alerta variante="info">{prontidao.mensagem}</Alerta>
 
-            {prontidao.topicos.length > 0 && (
-              <ul className="space-y-2">
-                {prontidao.topicos.map((topico) => (
-                  <li key={topico.topico} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="flex items-center gap-1.5">
-                      {topico.flashcardsPrecisandoRevisao > 0 && (
-                        <AlertTriangle className="h-3.5 w-3.5 text-vermelho-correcao" />
-                      )}
-                      {topico.topico}
-                      <span className="text-muted-foreground">({topico.totalFlashcards})</span>
-                    </span>
-                    <span className="font-medium">{topico.retencaoMediaEstimada}%</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+              {prontidao.topicos.length > 0 && (
+                <ul className="space-y-3">
+                  {prontidao.topicos.map((topico) => {
+                    const cor = corRetencao(topico.retencaoMediaEstimada)
+                    return (
+                      <li key={topico.topico} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span className="flex min-w-0 items-center gap-1.5 font-medium text-foreground">
+                            {topico.flashcardsPrecisandoRevisao > 0 ? (
+                              <AlertTriangle className="h-4 w-4 shrink-0 text-danger-600" aria-label="Precisa de revisão" />
+                            ) : (
+                              <CheckCircle2 className="h-4 w-4 shrink-0 text-success-600" aria-label="Em dia" />
+                            )}
+                            <span className="truncate">{topico.topico}</span>
+                            <span className="shrink-0 font-normal text-ink-500">({topico.totalFlashcards})</span>
+                          </span>
+                          <span className={cn('font-semibold tabular-nums', cor.texto)}>{topico.retencaoMediaEstimada}%</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-ink-100" aria-hidden="true">
+                          <div className={cn('h-full rounded-full', cor.barra)} style={{ width: `${topico.retencaoMediaEstimada}%` }} />
+                        </div>
+                        {topico.flashcardsPrecisandoRevisao > 0 && (
+                          <p className="text-xs font-medium text-danger-700">
+                            {topico.flashcardsPrecisandoRevisao} card{topico.flashcardsPrecisandoRevisao === 1 ? '' : 's'} precisando de revisão
+                          </p>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

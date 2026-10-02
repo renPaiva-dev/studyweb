@@ -1,6 +1,8 @@
 package com.tcc.plataformaestudos.usuario;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,19 +20,28 @@ public class UsuarioService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final VerificacaoEmailService verificacaoEmailService;
+	private final EmailService emailService;
 	private final String termosVersaoAtual;
+	private final String hashSenhaDummy;
 
 	public UsuarioService(
 			UsuarioRepository usuarioRepository,
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
 			VerificacaoEmailService verificacaoEmailService,
+			EmailService emailService,
 			@Value("${app.termos.versao-atual}") String termosVersaoAtual) {
 		this.usuarioRepository = usuarioRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.verificacaoEmailService = verificacaoEmailService;
+		this.emailService = emailService;
 		this.termosVersaoAtual = termosVersaoAtual;
+		// C4 (Docs/auditoria-coerencia-seguranca-2026-09.md): hash BCrypt
+		// válido de uma senha aleatória descartada, gerado uma única vez na
+		// inicialização - usado em autenticar() só para gastar o mesmo tempo
+		// de CPU de passwordEncoder.matches quando o e-mail não existe.
+		this.hashSenhaDummy = passwordEncoder.encode(UUID.randomUUID().toString());
 	}
 
 	@Transactional
@@ -41,12 +52,23 @@ public class UsuarioService {
 		// este campo (invisivel, fora da ordem de tab).
 		if (request.telefoneConfirmacao() != null && !request.telefoneConfirmacao().isBlank()) {
 			log.warn("Tentativa de cadastro bloqueada por honeypot preenchido (e-mail informado: {})", request.email());
-			return respostaFalsaHoneypot(request);
+			return respostaSemPersistir(request);
 		}
 
-		usuarioRepository.findByEmail(request.email()).ifPresent(usuarioExistente -> {
-			throw new EmailJaCadastradoException(request.email());
-		});
+		// I1 (Docs/auditoria-coerencia-seguranca-2026-09.md): nao revela que o
+		// e-mail ja existe (mesmo raciocinio anti-enumeracao de RN24, aplicado
+		// aqui ao cadastro) - notifica o dono real da conta por e-mail e
+		// devolve a mesma resposta sintetica do honeypot, sem criar conta
+		// duplicada nem confirmar a existencia da conta a quem preencheu o
+		// formulario. nomeUsuario continua verificado normalmente logo abaixo:
+		// e um identificador PUBLICO (RN22), nao um dado sensivel - revelar
+		// que ja esta em uso nao e um problema de enumeracao.
+		Optional<Usuario> usuarioComEsteEmail = usuarioRepository.findByEmail(request.email());
+		if (usuarioComEsteEmail.isPresent()) {
+			notificarTentativaDeCadastroComEmailExistente(usuarioComEsteEmail.get());
+			return respostaSemPersistir(request);
+		}
+
 		// RN34: unicidade de nomeUsuario e case-insensitive.
 		usuarioRepository.findByNomeUsuarioIgnoreCase(request.nomeUsuario()).ifPresent(usuarioExistente -> {
 			throw new NomeUsuarioJaCadastradoException(request.nomeUsuario());
@@ -73,12 +95,22 @@ public class UsuarioService {
 
 	/**
 	 * Resposta sintetica para uma tentativa de cadastro bloqueada por honeypot
-	 * - mesmo formato/status (201) de um cadastro real, sem persistir nada nem
-	 * checar unicidade, para nao revelar a um bot que a tentativa falhou.
+	 * ou para um e-mail ja cadastrado (achado I1) - mesmo formato/status (201)
+	 * de um cadastro real, sem persistir nada nem revelar ao requisitante por
+	 * que a conta "criada" nao existe de verdade.
 	 */
-	private UsuarioResponseDTO respostaFalsaHoneypot(CadastroRequestDTO request) {
+	private UsuarioResponseDTO respostaSemPersistir(CadastroRequestDTO request) {
 		return new UsuarioResponseDTO(-1L, request.nome(), request.nomeUsuario(), request.email(),
 				PapelUsuario.ESTUDANTE, LocalDateTime.now());
+	}
+
+	private void notificarTentativaDeCadastroComEmailExistente(Usuario usuarioExistente) {
+		emailService.enviarEmail(
+				usuarioExistente.getEmail(),
+				"Tentativa de cadastro com seu e-mail",
+				"Alguém tentou criar uma nova conta na StudyWeb usando este e-mail, mas você já tem uma conta "
+						+ "por aqui. Se foi você, é só fazer login normalmente. Se não foi você, pode ignorar "
+						+ "esta mensagem com segurança.");
 	}
 
 	/** UC19 — retorna os dados do usuário autenticado (RN01 implícito: sempre o próprio). */
@@ -164,10 +196,17 @@ public class UsuarioService {
 
 	@Transactional(readOnly = true)
 	public LoginResponseDTO autenticar(LoginRequestDTO request) {
-		Usuario usuario = usuarioRepository.findByEmail(request.email())
-				.orElseThrow(CredenciaisInvalidasException::new);
+		Usuario usuario = usuarioRepository.findByEmail(request.email()).orElse(null);
 
-		if (!passwordEncoder.matches(request.senha(), usuario.getSenhaHash())) {
+		// C4: mesmo quando o e-mail não existe, roda passwordEncoder.matches
+		// contra o hash dummy - sem isso, "e-mail não existe" responde bem
+		// mais rápido que "senha errada" (que faz o BCrypt de verdade),
+		// reabrindo por timing o mesmo vazamento que CredenciaisInvalidasException
+		// (mensagem genérica, abaixo) foi desenhada para fechar.
+		String hashParaComparar = usuario != null ? usuario.getSenhaHash() : hashSenhaDummy;
+		boolean senhaConfere = passwordEncoder.matches(request.senha(), hashParaComparar);
+
+		if (usuario == null || !senhaConfere) {
 			throw new CredenciaisInvalidasException();
 		}
 

@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -180,6 +179,14 @@ public class MaterialOrigemService {
 			log.info("Texto extraído com sucesso: materialId={}", material.getId());
 		} catch (ExtracaoTextoException e) {
 			material.setStatusProcessamento(StatusProcessamento.ERRO);
+			// I4 (Docs/auditoria-coerencia-seguranca-2026-09.md): motivo curto e
+			// amigável para o usuário, gravado junto do status ERRO - antes o
+			// frontend só mostrava um badge "Erro" sem nenhuma explicação. O
+			// detalhe técnico de PdfTextExtractorService (ExtracaoTextoException)
+			// continua só no log abaixo, não é repassado ao usuário.
+			material.setMotivoErro(
+					"Não foi possível extrair texto deste PDF. Ele pode estar escaneado como imagem, "
+							+ "corrompido ou protegido — tente enviar outro arquivo.");
 			log.error("Falha ao extrair texto do PDF (RN07 — IA não será chamada): materialId={}", material.getId(), e);
 		}
 	}
@@ -204,18 +211,18 @@ public class MaterialOrigemService {
 	/**
 	 * Centraliza RN01 para MaterialOrigem. Público para reuso por outros
 	 * services que precisam do material já verificado (ex.:
-	 * FlashcardGenerationService, UC04).
+	 * FlashcardGenerationService, UC04). C1 (Docs/auditoria-coerencia-seguranca-2026-09.md):
+	 * sempre 404 — tanto quando o material não existe quanto quando existe mas
+	 * pertence a outro usuário — mesmo padrão de
+	 * {@link DeckService#buscarDeckDoUsuarioAutenticado(Long)} (B15), para não
+	 * permitir enumerar IDs de material de outros usuários pela diferença
+	 * entre 403 e 404.
 	 */
 	public MaterialOrigem buscarMaterialDoUsuarioAutenticado(Long materialId) {
 		Long usuarioId = SecurityUtils.obterUsuarioAutenticadoId();
 
 		return materialOrigemRepository.findByIdAndDeckUsuarioId(materialId, usuarioId)
-				.orElseGet(() -> {
-					if (materialOrigemRepository.existsById(materialId)) {
-						throw new AcessoNegadoException("Você não tem permissão para acessar este material");
-					}
-					throw new RecursoNaoEncontradoException("Material não encontrado");
-				});
+				.orElseThrow(() -> new RecursoNaoEncontradoException("Material não encontrado"));
 	}
 
 }

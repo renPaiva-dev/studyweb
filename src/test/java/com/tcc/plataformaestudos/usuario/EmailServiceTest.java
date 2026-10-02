@@ -16,7 +16,7 @@ class EmailServiceTest {
 	@SuppressWarnings("unchecked")
 	void naoDeveTentarEnviarQuandoMailHostNaoEstaConfigurado() {
 		ObjectProvider<JavaMailSender> provider = mock(ObjectProvider.class);
-		EmailService emailService = new EmailService(provider, "", "no-reply@teste.com");
+		EmailService emailService = new EmailService(provider, "", "no-reply@teste.com", false);
 
 		emailService.enviarEmail("ana@email.com", "Assunto", "Corpo");
 
@@ -30,10 +30,21 @@ class EmailServiceTest {
 		JavaMailSender javaMailSender = mock(JavaMailSender.class);
 		when(provider.getObject()).thenReturn(javaMailSender);
 
-		EmailService emailService = new EmailService(provider, "smtp.exemplo.com", "no-reply@teste.com");
+		EmailService emailService = new EmailService(provider, "smtp.exemplo.com", "no-reply@teste.com", false);
 		emailService.enviarEmail("ana@email.com", "Assunto", "Corpo");
 
 		verify(javaMailSender).send(any(org.springframework.mail.SimpleMailMessage.class));
+	}
+
+	@Test
+	@SuppressWarnings("unchecked")
+	void naoDeveTentarEnviarSemSmtpMesmoComRegistroDoCorpoLigado() {
+		ObjectProvider<JavaMailSender> provider = mock(ObjectProvider.class);
+		EmailService emailService = new EmailService(provider, "", "no-reply@teste.com", true);
+
+		emailService.enviarEmail("ana@email.com", "Assunto", "Corpo com link");
+
+		verify(provider, never()).getObject();
 	}
 
 }

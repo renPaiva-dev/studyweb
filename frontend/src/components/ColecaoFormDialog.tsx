@@ -3,9 +3,12 @@ import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { atualizarColecao, criarColecao, type Colecao } from '@/api/colecaoApi'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
+import { Campo } from '@/components/ui/campo'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -13,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useValidacao } from '@/hooks/useValidacao'
 
 interface ColecaoFormDialogProps {
   open: boolean
@@ -27,8 +30,12 @@ interface ColecaoFormDialogProps {
 export function ColecaoFormDialog({ open, onOpenChange, colecaoParaEditar, onSalvo }: ColecaoFormDialogProps) {
   const [nome, setNome] = useState('')
   const [descricao, setDescricao] = useState('')
-  const [erroNome, setErroNome] = useState<string | undefined>()
   const [enviando, setEnviando] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+
+  const validacao = useValidacao({
+    nome: () => (!nome.trim() ? 'O nome é obrigatório.' : undefined),
+  })
 
   const editando = colecaoParaEditar !== null
 
@@ -41,15 +48,21 @@ export function ColecaoFormDialog({ open, onOpenChange, colecaoParaEditar, onSal
     if (open) {
       setNome(colecaoParaEditar?.nome ?? '')
       setDescricao(colecaoParaEditar?.descricao ?? '')
-      setErroNome(undefined)
+      setErroEnvio(null)
+      validacao.resetar()
     }
   }
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!nome.trim()) {
-      setErroNome('O nome é obrigatório.')
+    if (enviando) {
+      return
+    }
+
+    setErroEnvio(null)
+
+    if (!validacao.validarTudo()) {
       return
     }
 
@@ -63,55 +76,56 @@ export function ColecaoFormDialog({ open, onOpenChange, colecaoParaEditar, onSal
         toast.success('Coleção atualizada.')
       } else {
         await criarColecao(dados)
-        toast.success('Coleção criada.')
+        toast.success(`Coleção "${dados.nome}" criada.`, { description: 'Edite um deck para colocá-lo nesta coleção.' })
       }
 
       onOpenChange(false)
       onSalvo()
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível salvar a coleção. Tente novamente.'))
+      setErroEnvio(extrairMensagemErro(erro, 'Não foi possível salvar a coleção. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(aberto) => !enviando && onOpenChange(aberto)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editando ? 'Editar coleção' : 'Nova coleção'}</DialogTitle>
           <DialogDescription>
             {editando
               ? 'Atualize o nome e a descrição da coleção.'
-              : 'Agrupe decks relacionados sob um mesmo rótulo (ex.: "Medicina").'}
+              : 'Agrupe decks relacionados sob um mesmo rótulo (ex.: “Medicina”).'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={aoSubmeter} noValidate>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input
-                id="nome"
-                placeholder="Ex.: Medicina"
-                value={nome}
-                onChange={(evento) => setNome(evento.target.value)}
-                aria-invalid={Boolean(erroNome)}
-                autoFocus
-              />
-              {erroNome && <p className="text-sm text-destructive">{erroNome}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
-              <Input
-                id="descricao"
-                placeholder="Opcional"
-                value={descricao}
-                onChange={(evento) => setDescricao(evento.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter className="mt-6">
-            <Button type="submit" disabled={enviando}>
+        <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+          <Campo id="nome" rotulo="Nome" erro={validacao.erro('nome')}>
+            <Input
+              placeholder="Ex.: Medicina"
+              value={nome}
+              onChange={(evento) => setNome(evento.target.value)}
+              autoFocus
+              {...validacao.propsCampo('nome')}
+            />
+          </Campo>
+          <Campo id="descricao" rotulo="Descrição" opcional>
+            <Input
+              placeholder="O que esta coleção reúne?"
+              value={descricao}
+              onChange={(evento) => setDescricao(evento.target.value)}
+            />
+          </Campo>
+
+          {erroEnvio && <Alerta variante="erro">{erroEnvio}</Alerta>}
+
+          <DialogFooter className="pt-1">
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={enviando}>
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" loading={enviando}>
               {enviando ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>

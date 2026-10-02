@@ -1,12 +1,16 @@
-import { HelpCircle, Loader2, Sparkles } from 'lucide-react'
+import { HelpCircle, Send, Sparkles } from 'lucide-react'
 import { useState } from 'react'
-import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { gerarQuiz, responderTentativa, type Quiz, type ResultadoTentativa } from '@/api/quizApi'
-import { Button } from '@/components/ui/button'
+import { NotaMargem } from '@/components/NotaMargem'
 import { QuestaoQuizItem } from '@/components/QuestaoQuizItem'
 import { ResultadoQuiz } from '@/components/ResultadoQuiz'
+import { RevisaoProvaQuestao } from '@/components/RevisaoProvaQuestao'
+import { Alerta } from '@/components/ui/alerta'
+import { Button } from '@/components/ui/button'
+import { EstadoVazio } from '@/components/ui/estados'
+import { Progress } from '@/components/ui/progress'
 import { useDefinirMargem } from '@/context/MargemContext'
 
 interface QuizTabProps {
@@ -24,17 +28,20 @@ export function QuizTab({ deckId }: QuizTabProps) {
   const [respostas, setRespostas] = useState<Record<number, string>>({})
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState<ResultadoTentativa | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
 
   async function aoGerarQuiz() {
+    if (gerando) return
     setGerando(true)
+    setErro(null)
 
     try {
       const novoQuiz = await gerarQuiz(deckId)
       setQuiz(novoQuiz)
       setRespostas({})
       setResultado(null)
-    } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível gerar o quiz. Tente novamente.'))
+    } catch (erroCapturado) {
+      setErro(extrairMensagemErro(erroCapturado, 'Não foi possível gerar o quiz. Tente novamente.'))
     } finally {
       setGerando(false)
     }
@@ -45,11 +52,12 @@ export function QuizTab({ deckId }: QuizTabProps) {
   }
 
   async function aoEnviarRespostas() {
-    if (quiz === null) {
+    if (quiz === null || enviando) {
       return
     }
 
     setEnviando(true)
+    setErro(null)
 
     try {
       const payload = quiz.questoes.map((questao) => ({
@@ -57,8 +65,9 @@ export function QuizTab({ deckId }: QuizTabProps) {
         alternativaEscolhida: respostas[questao.id],
       }))
       setResultado(await responderTentativa(quiz.id, payload))
-    } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível enviar suas respostas. Tente novamente.'))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch (erroCapturado) {
+      setErro(extrairMensagemErro(erroCapturado, 'Não foi possível enviar suas respostas. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
@@ -68,51 +77,76 @@ export function QuizTab({ deckId }: QuizTabProps) {
 
   useDefinirMargem(
     quiz && resultado === null ? (
-      <div className="space-y-1 text-sm">
-        <p className="font-heading text-2xl font-semibold">
-          {totalRespondidasParaMargem}/{quiz.questoes.length}
-        </p>
-        <p className="text-muted-foreground">questões respondidas</p>
-      </div>
+      <NotaMargem
+        valor={
+          <>
+            {totalRespondidasParaMargem}
+            <span className="text-ink-400">/{quiz.questoes.length}</span>
+          </>
+        }
+        rotulo="questões respondidas"
+      >
+        <Progress value={(totalRespondidasParaMargem / quiz.questoes.length) * 100} aria-label="Questões respondidas" />
+      </NotaMargem>
     ) : null,
     quiz && resultado === null ? (
-      <p className="text-center text-sm font-medium">
-        {totalRespondidasParaMargem}/{quiz.questoes.length} respondidas
-      </p>
+      <div className="flex items-center gap-3">
+        <Progress value={(totalRespondidasParaMargem / quiz.questoes.length) * 100} className="h-1.5" aria-label="Questões respondidas" />
+        <p className="shrink-0 text-sm font-semibold tabular-nums">
+          {totalRespondidasParaMargem}/{quiz.questoes.length}
+        </p>
+      </div>
     ) : null,
     [quiz, resultado, totalRespondidasParaMargem],
   )
 
   if (resultado !== null) {
-    return <ResultadoQuiz resultado={resultado} onNovoQuiz={() => void aoGerarQuiz()} />
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <ResultadoQuiz resultado={resultado} onNovoQuiz={() => void aoGerarQuiz()} carregandoNovo={gerando} />
+        {erro && <Alerta variante="erro">{erro}</Alerta>}
+        {resultado.questoes.length > 0 && (
+          <>
+            <h3 className="pt-4 font-heading text-h3 text-foreground">Correção questão a questão</h3>
+            <div className="space-y-3">
+              {resultado.questoes.map((questao, indice) => (
+                <RevisaoProvaQuestao key={questao.questaoId} questao={questao} numero={indice + 1} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
 
   if (quiz === null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-none border border-dashed py-16 text-center">
-        <div className="rounded-full bg-primary/10 p-3">
-          <HelpCircle className="h-6 w-6 text-primary" />
-        </div>
-        <p className="font-medium">Teste seus conhecimentos</p>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Gere um quiz de múltipla escolha com base nos flashcards deste deck (mínimo de 4 flashcards).
-        </p>
-        <Button onClick={() => void aoGerarQuiz()} disabled={gerando}>
-          {gerando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-          {gerando ? 'Gerando quiz...' : 'Gerar quiz'}
-        </Button>
+      <div className="space-y-4">
+        <EstadoVazio
+          icone={HelpCircle}
+          titulo="Teste seus conhecimentos"
+          descricao="Gere um quiz de múltipla escolha com base nos flashcards deste deck. É preciso ter pelo menos 4 flashcards."
+          acao={
+            <Button onClick={() => void aoGerarQuiz()} loading={gerando}>
+              <Sparkles />
+              {gerando ? 'Gerando quiz...' : 'Gerar quiz'}
+            </Button>
+          }
+        />
+        {erro && <Alerta variante="erro">{erro}</Alerta>}
       </div>
     )
   }
 
   const totalRespondidas = quiz.questoes.filter((questao) => respostas[questao.id] !== undefined).length
   const todasRespondidas = totalRespondidas === quiz.questoes.length
+  const faltam = quiz.questoes.length - totalRespondidas
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-medium">{quiz.titulo}</h2>
-        <span className="text-sm text-muted-foreground">
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-heading text-h3 text-foreground">{quiz.titulo}</h2>
+        <span className="text-sm font-medium text-ink-600" aria-live="polite">
           {totalRespondidas} de {quiz.questoes.length} respondidas
         </span>
       </div>
@@ -130,8 +164,16 @@ export function QuizTab({ deckId }: QuizTabProps) {
         ))}
       </div>
 
-      <div className="flex justify-end border-t pt-4">
-        <Button onClick={() => void aoEnviarRespostas()} disabled={!todasRespondidas || enviando}>
+      {erro && <Alerta variante="erro">{erro}</Alerta>}
+
+      <div className="flex flex-col-reverse items-stretch gap-3 border-t border-ink-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
+        {!todasRespondidas && (
+          <p className="text-center text-sm text-ink-600 sm:text-right">
+            Falta{faltam === 1 ? '' : 'm'} {faltam} questão{faltam === 1 ? '' : 'ões'} para enviar.
+          </p>
+        )}
+        <Button onClick={() => void aoEnviarRespostas()} disabled={!todasRespondidas} loading={enviando}>
+          <Send />
           {enviando ? 'Enviando...' : 'Enviar respostas'}
         </Button>
       </div>

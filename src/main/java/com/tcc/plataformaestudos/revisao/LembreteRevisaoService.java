@@ -37,9 +37,10 @@ public class LembreteRevisaoService {
 	 * UC30 — job diário: um e-mail por usuário com pendências, nenhum para
 	 * quem está em dia. Cada envio é isolado em try/catch: um endereço
 	 * inválido ou timeout de SMTP para um usuário não pode abortar o envio
-	 * para os demais usuários dessa mesma execução do cron.
+	 * para os demais usuários dessa mesma execução do cron. A zona é fixa
+	 * em Brasília para o "8h" não virar 5h num servidor em UTC.
 	 */
-	@Scheduled(cron = "${app.lembrete-revisao.cron:0 0 8 * * *}")
+	@Scheduled(cron = "${app.lembrete-revisao.cron:0 0 8 * * *}", zone = "${app.lembrete-revisao.zona:America/Sao_Paulo}")
 	public void enviarLembretesDiarios() {
 		List<LembreteRevisaoDTO> lembretes = lembreteRevisaoDadosService.montarLembretesDeTodosOsUsuarios();
 		lembretes.forEach(this::enviarEmailComTratamentoDeErro);
@@ -68,12 +69,12 @@ public class LembreteRevisaoService {
 
 	private String montarCorpo(LembreteRevisaoDTO lembrete) {
 		if (lembrete.totalPendentes() == 0) {
-			return "Olá, " + lembrete.nomeUsuario() + "! Você está em dia com suas revisões — nenhum flashcard "
+			return "Olá, " + lembrete.nome() + "! Você está em dia com suas revisões — nenhum flashcard "
 					+ "pendente hoje.";
 		}
 
 		StringBuilder corpo = new StringBuilder();
-		corpo.append("Olá, ").append(lembrete.nomeUsuario()).append("!\n\n");
+		corpo.append("Olá, ").append(lembrete.nome()).append("!\n\n");
 		corpo.append("Você tem ").append(lembrete.totalPendentes())
 				.append(lembrete.totalPendentes() == 1 ? " flashcard pendente" : " flashcards pendentes")
 				.append(" de revisão hoje:\n\n");

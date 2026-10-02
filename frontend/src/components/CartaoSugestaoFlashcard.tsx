@@ -3,8 +3,7 @@ import { useState } from 'react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Campo } from '@/components/ui/campo'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
@@ -19,81 +18,79 @@ export interface SugestaoEditavel {
 
 interface CartaoSugestaoFlashcardProps {
   sugestao: SugestaoEditavel
+  /** Aceita mas com pergunta/resposta vazia - destaca os campos. */
+  invalida?: boolean
   onAtualizar: (dados: Partial<Pick<SugestaoEditavel, 'pergunta' | 'resposta' | 'aceita'>>) => void
   onDescartar: () => void
 }
 
 // UC05 - um card de sugestao de flashcard vinda da IA, ainda nao salva
 // (RN05: precisa passar por revisao/edicao antes de confirmar). Borda
-// tracejada + badge deixam isso visualmente claro enquanto pendente.
-export function CartaoSugestaoFlashcard({ sugestao, onAtualizar, onDescartar }: CartaoSugestaoFlashcardProps) {
+// tracejada + badge deixam isso visualmente claro enquanto pendente; aceita
+// vira borda solida verde-lousa.
+export function CartaoSugestaoFlashcard({ sugestao, invalida, onAtualizar, onDescartar }: CartaoSugestaoFlashcardProps) {
   const [editando, setEditando] = useState(false)
+  const emEdicao = editando || Boolean(invalida)
 
   return (
-    <div
+    <article
       className={cn(
-        'space-y-3 rounded-none border-2 border-dashed border-manilha p-4 transition-colors',
-        sugestao.aceita && 'border-solid border-verde-lousa bg-verde-lousa/5',
+        'space-y-4 rounded-xl border-2 bg-card p-4 transition-[border-color,background-color,box-shadow] duration-base sm:p-5',
+        sugestao.aceita ? 'border-success-500 bg-success-50/40 shadow-sm' : 'border-dashed border-ink-300',
+        invalida && 'border-danger-500',
       )}
     >
-      <Badge
-        variant="outline"
-        className={cn('gap-1', sugestao.aceita ? 'border-verde-lousa text-verde-lousa' : 'border-manilha text-muted-foreground')}
-      >
-        <Sparkles className="h-3 w-3" />
-        {sugestao.aceita ? 'Aceita' : 'Sugestão pendente'}
-      </Badge>
-
-      {sugestao.topico && (
-        <Badge variant="secondary" className="ml-2">
-          {sugestao.topico}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant={sugestao.aceita ? 'positivo' : 'pendente'}>
+          {sugestao.aceita ? <Check /> : <Sparkles />}
+          {sugestao.aceita ? 'Aceita' : 'Sugestão pendente'}
         </Badge>
-      )}
+        {sugestao.topico && <Badge variant="secondary">{sugestao.topico}</Badge>}
+      </div>
 
-      {editando ? (
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor={`pergunta-${sugestao.id}`}>Pergunta</Label>
-            <Input
-              id={`pergunta-${sugestao.id}`}
-              value={sugestao.pergunta}
-              onChange={(evento) => onAtualizar({ pergunta: evento.target.value })}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor={`resposta-${sugestao.id}`}>Resposta</Label>
-            <Textarea
-              id={`resposta-${sugestao.id}`}
-              value={sugestao.resposta}
-              onChange={(evento) => onAtualizar({ resposta: evento.target.value })}
-            />
-          </div>
+      {emEdicao ? (
+        <div className="space-y-4">
+          <Campo
+            id={`pergunta-${sugestao.id}`}
+            rotulo="Pergunta"
+            erro={invalida && !sugestao.pergunta.trim() ? 'A pergunta não pode ficar vazia.' : undefined}
+          >
+            <Textarea rows={2} value={sugestao.pergunta} onChange={(evento) => onAtualizar({ pergunta: evento.target.value })} />
+          </Campo>
+          <Campo
+            id={`resposta-${sugestao.id}`}
+            rotulo="Resposta"
+            erro={invalida && !sugestao.resposta.trim() ? 'A resposta não pode ficar vazia.' : undefined}
+          >
+            <Textarea rows={3} value={sugestao.resposta} onChange={(evento) => onAtualizar({ resposta: evento.target.value })} />
+          </Campo>
         </div>
       ) : (
-        <div className="space-y-1">
-          <p className="font-medium">{sugestao.pergunta}</p>
-          <p className="text-sm text-muted-foreground">{sugestao.resposta}</p>
+        <div className="space-y-2">
+          <p className="font-semibold leading-snug text-foreground">{sugestao.pergunta}</p>
+          <p className="border-l-2 border-ink-200 pl-3 text-sm leading-relaxed text-ink-700">{sugestao.resposta}</p>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 border-t border-ink-100 pt-4">
         <Button
           size="sm"
-          variant={sugestao.aceita ? 'secondary' : 'default'}
+          variant={sugestao.aceita ? 'positivo' : 'default'}
+          aria-pressed={sugestao.aceita}
           onClick={() => onAtualizar({ aceita: !sugestao.aceita })}
         >
-          <Check className="mr-1 h-4 w-4" />
+          <Check />
           {sugestao.aceita ? 'Aceita' : 'Aceitar'}
         </Button>
-        <Button size="sm" variant="outline" onClick={() => setEditando((atual) => !atual)}>
-          <Pencil className="mr-1 h-4 w-4" />
+        <Button size="sm" variant="outline" onClick={() => setEditando((atual) => !atual)} aria-pressed={editando}>
+          <Pencil />
           {editando ? 'Concluir edição' : 'Editar'}
         </Button>
-        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={onDescartar}>
-          <Trash2 className="mr-1 h-4 w-4" />
+        <Button size="sm" variant="destructive-ghost" className="ml-auto" onClick={onDescartar}>
+          <Trash2 />
           Descartar
         </Button>
       </div>
-    </div>
+    </article>
   )
 }

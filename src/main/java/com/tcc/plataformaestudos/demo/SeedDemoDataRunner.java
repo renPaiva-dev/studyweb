@@ -15,6 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.tcc.plataformaestudos.colecao.Colecao;
+import com.tcc.plataformaestudos.colecao.ColecaoRepository;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckRepository;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
@@ -63,21 +65,28 @@ public class SeedDemoDataRunner {
 
 	private final UsuarioRepository usuarioRepository;
 	private final DeckRepository deckRepository;
+	private final ColecaoRepository colecaoRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final boolean habilitado;
 	private final String termosVersaoAtual;
 
 	private LocalDateTime agora;
 	private Usuario usuario;
+	private Colecao colecaoConcurso;
+	private Colecao colecaoVestibular;
+	/** Espalha a última revisão dos cards DOMINADO pelos últimos dias — streak de vários dias seguidos (RN25). */
+	private int contadorDominados;
 
 	public SeedDemoDataRunner(
 			UsuarioRepository usuarioRepository,
 			DeckRepository deckRepository,
+			ColecaoRepository colecaoRepository,
 			PasswordEncoder passwordEncoder,
 			@Value("${app.seed-demo.enabled:false}") boolean habilitado,
 			@Value("${app.termos.versao-atual}") String termosVersaoAtual) {
 		this.usuarioRepository = usuarioRepository;
 		this.deckRepository = deckRepository;
+		this.colecaoRepository = colecaoRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.habilitado = habilitado;
 		this.termosVersaoAtual = termosVersaoAtual;
@@ -97,12 +106,17 @@ public class SeedDemoDataRunner {
 
 		this.agora = LocalDateTime.now();
 		this.usuario = criarUsuarioDemo();
+		this.contadorDominados = 0;
+		this.colecaoConcurso = criarColecao("Concurso — Analista Judiciário",
+				"Matérias do edital do TRF: constitucional, administrativo e português.");
+		this.colecaoVestibular = criarColecao("Vestibular de Medicina",
+				"Biologia e exatas para as provas de segunda fase.");
 
 		criarDeckDireitoConstitucional();
 		criarDeckAnatomia();
 		criarDeckCalculo();
 
-		log.info("Dados de demonstração criados — email={}, senha={} (3 decks, dashboard/evolução/prontidão já com histórico)",
+		log.info("Dados de demonstração criados — email={}, senha={} (3 decks, 2 coleções, dashboard/evolução/prontidão já com histórico)",
 				EMAIL, SENHA);
 	}
 
@@ -116,6 +130,14 @@ public class SeedDemoDataRunner {
 		u.setTermosAceitosEm(agora);
 		u.setTermosVersao(termosVersaoAtual);
 		return usuarioRepository.save(u);
+	}
+
+	private Colecao criarColecao(String nome, String descricao) {
+		Colecao colecao = new Colecao();
+		colecao.setUsuario(usuario);
+		colecao.setNome(nome);
+		colecao.setDescricao(descricao);
+		return colecaoRepository.save(colecao);
 	}
 
 	// --- Perfis de histórico de revisão (RN09/RN14) ------------------------
@@ -174,8 +196,13 @@ public class SeedDemoDataRunner {
 			flashcard.setOrigem(OrigemFlashcard.MANUAL);
 			deck.getFlashcards().add(flashcard);
 
+			// DOMINADO: a última revisão cai num dia diferente (0..11 dias atrás)
+			// para cada card, cobrindo todos os dias recentes - streak e
+			// atividade por dia da semana ficam com cara de uso real.
+			int deslocamento = item.perfil() == Perfil.DOMINADO ? (contadorDominados++ % 12) - 2 : 0;
+
 			for (PontoRevisao ponto : item.perfil().historico) {
-				LocalDateTime dataRevisao = agora.minusDays(ponto.diasAtras());
+				LocalDateTime dataRevisao = agora.minusDays(ponto.diasAtras() + deslocamento);
 				RevisaoFlashcard revisao = new RevisaoFlashcard();
 				revisao.setFlashcard(flashcard);
 				revisao.setUsuario(usuario);
@@ -254,6 +281,7 @@ public class SeedDemoDataRunner {
 				"Direito Constitucional",
 				"Direitos fundamentais, organização do Estado e controle de constitucionalidade.",
 				agora.toLocalDate().plusDays(10));
+		deck.setColecao(colecaoConcurso);
 
 		adicionarFlashcards(deck, List.of(
 				new ItemFlashcard("O que são cláusulas pétreas?",
@@ -274,13 +302,13 @@ public class SeedDemoDataRunner {
 						"Organização do Estado", Perfil.DOMINADO),
 				new ItemFlashcard("O que é competência privativa da União?",
 						"Matérias que só a União pode legislar (art. 22), como direito civil, penal e trabalho — delegáveis a Estados por lei complementar em questões específicas (art. 22, parágrafo único).",
-						"Organização do Estado", Perfil.NUNCA_REVISADO),
+						"Organização do Estado", Perfil.DOMINADO),
 				new ItemFlashcard("Quais são os Poderes da República e o princípio que os rege?",
 						"Executivo, Legislativo e Judiciário (art. 2º), independentes e harmônicos entre si — o princípio da separação dos poderes, com freios e contrapesos mútuos.",
 						"Organização do Estado", Perfil.DOMINADO),
 				new ItemFlashcard("O que é intervenção federal?",
 						"Medida excepcional (art. 34) em que a União afasta temporariamente a autonomia de um Estado/DF, em hipóteses taxativas como grave comprometimento da ordem pública.",
-						"Organização do Estado", Perfil.EM_RISCO_RESPOSTA),
+						"Organização do Estado", Perfil.DOMINADO),
 
 				new ItemFlashcard("O que é controle de constitucionalidade difuso?",
 						"Controle exercido por qualquer juiz ou tribunal, incidentalmente, ao julgar um caso concreto — efeitos, em regra, inter partes (salvo resolução do Senado, art. 52, X).",
@@ -313,7 +341,7 @@ public class SeedDemoDataRunner {
 								new AlternativaSeed("De competência dos Estados", false), new AlternativaSeed("Permanente", false)),
 						"É excepcional, cabível apenas nas hipóteses taxativas do art. 34 da CF/88.", true),
 				new QuestaoSeed("A pena de morte no Brasil é:",
-						List.of(new AlternativaSeed("Proibida em qualquer hipótese", true), new AlternativaSeed("Permitida em caso de guerra declarada", false),
+						List.of(new AlternativaSeed("Proibida em qualquer hipótese", false), new AlternativaSeed("Permitida em caso de guerra declarada", true),
 								new AlternativaSeed("Permitida para crimes hediondos", false), new AlternativaSeed("Decidida por plebiscito", false)),
 						"É admitida em caso de guerra declarada (art. 5º, XLVII, 'a') — única exceção expressa.", false)));
 
@@ -327,6 +355,7 @@ public class SeedDemoDataRunner {
 				"Anatomia — Sistema Nervoso",
 				"Neurônios, sistema nervoso central e periférico.",
 				agora.toLocalDate().plusDays(5));
+		deck.setColecao(colecaoVestibular);
 
 		adicionarFlashcards(deck, List.of(
 				new ItemFlashcard("O que é um neurônio e quais suas partes principais?",
@@ -400,6 +429,7 @@ public class SeedDemoDataRunner {
 				"Cálculo I — Limites e Derivadas",
 				"Limites, derivadas e regras de derivação.",
 				null);
+		deck.setColecao(colecaoVestibular);
 
 		adicionarFlashcards(deck, List.of(
 				new ItemFlashcard("O que significa intuitivamente o limite de uma função em um ponto?",
@@ -413,7 +443,7 @@ public class SeedDemoDataRunner {
 						"Limites", Perfil.NUNCA_REVISADO),
 				new ItemFlashcard("O que é continuidade de uma função em um ponto?",
 						"f é contínua em a quando: f(a) existe, o limite de f em a existe, e esse limite é igual a f(a).",
-						"Limites", Perfil.DOMINADO),
+						"Limites", Perfil.EM_RISCO_RESPOSTA),
 
 				new ItemFlashcard("O que é a derivada de uma função em um ponto?",
 						"A taxa de variação instantânea de f em relação a x naquele ponto — geometricamente, o coeficiente angular da reta tangente ao gráfico de f nesse ponto.",
@@ -423,7 +453,7 @@ public class SeedDemoDataRunner {
 						"Derivadas", Perfil.NUNCA_REVISADO),
 				new ItemFlashcard("Toda função contínua é derivável?",
 						"Não. Continuidade é condição necessária, mas não suficiente — ex.: f(x) = |x| é contínua em x=0, mas não é derivável ali (bico no gráfico).",
-						"Derivadas", Perfil.DOMINADO),
+						"Derivadas", Perfil.EM_RISCO_ATRASO),
 				new ItemFlashcard("O que a derivada segunda indica sobre o gráfico de uma função?",
 						"A concavidade: f''(x) > 0 indica concavidade para cima; f''(x) < 0, para baixo. Pontos onde f'' muda de sinal são pontos de inflexão.",
 						"Derivadas", Perfil.EM_RISCO_RESPOSTA),
@@ -440,6 +470,28 @@ public class SeedDemoDataRunner {
 				new ItemFlashcard("Qual a derivada de sen(x) e de cos(x)?",
 						"d/dx[sen(x)] = cos(x); d/dx[cos(x)] = −sen(x).",
 						"Regras de Derivação", Perfil.EM_RISCO_ATRASO)));
+
+		adicionarQuizComTentativa(deck, "Quiz — Limites e Derivadas", OrigemQuiz.DETERMINISTICO, null, 6, List.of(
+				new QuestaoSeed("A derivada de f(x) = x³ é:",
+						List.of(new AlternativaSeed("3x²", true), new AlternativaSeed("x²", false),
+								new AlternativaSeed("3x³", false), new AlternativaSeed("x⁴/4", false)),
+						"Regra da potência: d/dx[xⁿ] = n·xⁿ⁻¹, logo 3x².", true),
+				new QuestaoSeed("f(x) = |x| em x = 0 é:",
+						List.of(new AlternativaSeed("Contínua e derivável", false), new AlternativaSeed("Contínua, mas não derivável", true),
+								new AlternativaSeed("Descontínua e derivável", false), new AlternativaSeed("Descontínua e não derivável", false)),
+						"O gráfico tem um bico em x = 0: os limites laterais da derivada são −1 e 1.", true),
+				new QuestaoSeed("Pela regra da cadeia, a derivada de sen(2x) é:",
+						List.of(new AlternativaSeed("cos(2x)", false), new AlternativaSeed("2cos(2x)", true),
+								new AlternativaSeed("−2cos(2x)", false), new AlternativaSeed("2sen(2x)", false)),
+						"Deriva-se a função de fora (cos(2x)) e multiplica-se pela derivada da de dentro (2).", false),
+				new QuestaoSeed("Um limite com indeterminação 0/0:",
+						List.of(new AlternativaSeed("Nunca existe", false), new AlternativaSeed("Pode existir após simplificar a expressão", true),
+								new AlternativaSeed("É sempre igual a zero", false), new AlternativaSeed("É sempre infinito", false)),
+						"0/0 só indica que é preciso manipular a expressão (fatorar, racionalizar) antes de calcular.", true),
+				new QuestaoSeed("f''(x) < 0 em um intervalo indica que o gráfico de f é:",
+						List.of(new AlternativaSeed("Côncavo para cima", false), new AlternativaSeed("Côncavo para baixo", true),
+								new AlternativaSeed("Crescente", false), new AlternativaSeed("Constante", false)),
+						"A segunda derivada negativa indica concavidade para baixo.", false)));
 
 		deckRepository.save(deck);
 	}

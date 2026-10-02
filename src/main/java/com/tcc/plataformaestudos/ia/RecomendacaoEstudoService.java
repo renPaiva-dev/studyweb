@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.tcc.plataformaestudos.dashboard.CriterioDesempenhoFlashcard;
 import com.tcc.plataformaestudos.dashboard.DashboardRepository;
@@ -64,27 +64,39 @@ public class RecomendacaoEstudoService {
 	private final FlashcardRepository flashcardRepository;
 	private final GeminiClient geminiClient;
 	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
-	@Transactional(readOnly = true)
+	// Leitura numa transação curta; a chamada à IA fica fora dela (ver
+	// FlashcardGenerationService#gerarSugestoes).
 	public RecomendacaoEstudoResponseDTO gerarRecomendacao(Long deckId) {
-		deckService.buscarDeckDoUsuarioAutenticado(deckId);
+		Optional<PromptRecomendacao> preparado = transactionTemplate.execute(status -> {
+			deckService.buscarDeckDoUsuarioAutenticado(deckId);
 
-		List<UltimaRevisaoComTopicoProjecao> estados = dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(deckId);
-		Optional<TopicoEmRisco> vencedor = escolherTopicoVencedor(estados);
+			List<UltimaRevisaoComTopicoProjecao> estados = dashboardRepository.buscarUltimaRevisaoComTopicoPorFlashcard(deckId);
+			Optional<TopicoEmRisco> vencedor = escolherTopicoVencedor(estados);
 
-		if (vencedor.isEmpty() || vencedor.get().idsEmRisco().size() < LIMIAR_MINIMO_FLASHCARDS_EM_RISCO) {
+			if (vencedor.isEmpty() || vencedor.get().idsEmRisco().size() < LIMIAR_MINIMO_FLASHCARDS_EM_RISCO) {
+				return Optional.<PromptRecomendacao>empty();
+			}
+
+			TopicoEmRisco topicoVencedor = vencedor.get();
+			List<Flashcard> flashcardsEmRisco = flashcardRepository.findAllById(topicoVencedor.idsEmRisco());
+			return Optional.of(new PromptRecomendacao(montarPrompt(topicoVencedor, flashcardsEmRisco), topicoVencedor.topico()));
+		});
+
+		if (preparado.isEmpty()) {
 			log.info("Recomendação de foco de estudo: deckId={}, baseadoEmDados=false (dados insuficientes)", deckId);
 			return new RecomendacaoEstudoResponseDTO(MENSAGEM_PADRAO, null, false);
 		}
 
-		TopicoEmRisco topicoVencedor = vencedor.get();
-		List<Flashcard> flashcardsEmRisco = flashcardRepository.findAllById(topicoVencedor.idsEmRisco());
-		String prompt = montarPrompt(topicoVencedor, flashcardsEmRisco);
-		String recomendacao = gerarComRetry(deckId, prompt);
+		String topicoFoco = preparado.get().topicoFoco();
+		String recomendacao = gerarComRetry(deckId, preparado.get().prompt());
 
-		log.info("Recomendação de foco de estudo: deckId={}, baseadoEmDados=true, topicoFoco={}",
-				deckId, topicoVencedor.topico());
-		return new RecomendacaoEstudoResponseDTO(recomendacao, topicoVencedor.topico(), true);
+		log.info("Recomendação de foco de estudo: deckId={}, baseadoEmDados=true, topicoFoco={}", deckId, topicoFoco);
+		return new RecomendacaoEstudoResponseDTO(recomendacao, topicoFoco, true);
+	}
+
+	private record PromptRecomendacao(String prompt, String topicoFoco) {
 	}
 
 	/**

@@ -13,7 +13,7 @@ interface NotaAnalogiaProps {
 // margem. "Outra analogia" envia a atual como `evitar`.
 export function NotaAnalogia({ analogia, gerando, onOutra }: NotaAnalogiaProps) {
   return (
-    <div className="animate-caderno-entrada-margem space-y-2" aria-live="polite">
+    <div className="animate-entrada-atrasada space-y-2" aria-live="polite">
       <p className="flex items-center gap-1.5 text-eyebrow text-muted-foreground">
         <Shapes className="h-3.5 w-3.5" />
         {analogia.tipo === 'EXEMPLO' ? 'Exemplo concreto' : 'Analogia'}

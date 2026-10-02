@@ -1,24 +1,28 @@
-import { Layers, Plus } from 'lucide-react'
+import { FileText, Layers, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { listarFlashcards, type Flashcard } from '@/api/flashcardApi'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ExcluirFlashcardDialog } from '@/components/ExcluirFlashcardDialog'
 import { FlashcardFormDialog } from '@/components/FlashcardFormDialog'
 import { FlashcardItem } from '@/components/FlashcardItem'
+import { NotaMargem } from '@/components/NotaMargem'
+import { Button } from '@/components/ui/button'
+import { EstadoErro, EstadoVazio } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { useDefinirMargem } from '@/context/MargemContext'
 
 interface FlashcardsTabProps {
   deckId: number
+  /** Atalho do estado vazio para a aba de Materiais (gerar via IA). */
+  onIrParaMateriais?: () => void
 }
 
 // UC05/UC06 - aba "Flashcards" da visao geral do deck: lista os
 // flashcards do deck (GET /api/decks/{id}/flashcards), permite criar
 // manualmente (POST) e editar/excluir cada um (PUT/DELETE
 // /api/flashcards/{id}) - docs/contrato-api.md.
-export function FlashcardsTab({ deckId }: FlashcardsTabProps) {
+export function FlashcardsTab({ deckId, onIrParaMateriais }: FlashcardsTabProps) {
   const [flashcards, setFlashcards] = useState<Flashcard[] | null>(null)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
@@ -55,59 +59,71 @@ export function FlashcardsTab({ deckId }: FlashcardsTabProps) {
 
   useDefinirMargem(
     flashcards && flashcards.length > 0 ? (
-      <div className="space-y-1 text-sm">
-        <p className="font-heading text-2xl font-semibold">{flashcards.length}</p>
-        <p className="text-muted-foreground">
-          {totalIA} da IA, {totalManual} manual{totalManual === 1 ? '' : 'is'}
-        </p>
-      </div>
+      <NotaMargem
+        valor={flashcards.length}
+        rotulo={`flashcard${flashcards.length === 1 ? '' : 's'} neste deck`}
+        detalhes={[
+          { rotulo: 'Gerados pela IA', valor: totalIA },
+          { rotulo: 'Criados por você', valor: totalManual },
+        ]}
+      />
     ) : null,
     null,
     [flashcards?.length, totalIA, totalManual],
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {flashcards === null ? 'Carregando flashcards...' : `${flashcards.length} flashcard${flashcards.length === 1 ? '' : 's'}`}
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm font-medium text-ink-700" aria-live="polite">
+          {flashcards === null
+            ? 'Carregando flashcards...'
+            : `${flashcards.length} flashcard${flashcards.length === 1 ? '' : 's'}`}
         </p>
-        <Button size="sm" onClick={abrirNovoFlashcard}>
-          <Plus className="mr-2 h-4 w-4" />
-          Criar flashcard manual
+        <Button onClick={abrirNovoFlashcard}>
+          <Plus />
+          Novo flashcard
         </Button>
       </div>
 
       {flashcards === null && erroCarregamento === null && (
-        <div className="space-y-3">
-          <Skeleton className="h-24 w-full rounded-none" />
-          <Skeleton className="h-24 w-full rounded-none" />
-        </div>
+        <Carregando className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }, (_, indice) => (
+            <div key={indice} className="space-y-3 rounded-xl border border-ink-200/80 bg-card p-5 shadow-sm">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3.5 w-2/3" />
+            </div>
+          ))}
+        </Carregando>
       )}
 
-      {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-3 rounded-none border py-10 text-center">
-          <p className="text-muted-foreground">{erroCarregamento}</p>
-          <Button variant="outline" size="sm" onClick={() => void carregarFlashcards()}>
-            Tentar novamente
-          </Button>
-        </div>
-      )}
+      {erroCarregamento !== null && <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregarFlashcards()} />}
 
       {flashcards !== null && flashcards.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-none border border-dashed py-16 text-center">
-          <div className="rounded-full bg-primary/10 p-3">
-            <Layers className="h-6 w-6 text-primary" />
-          </div>
-          <p className="font-medium">Nenhum flashcard ainda</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            Crie um flashcard manualmente ou envie um PDF na aba "Materiais" para gerar sugestões via IA.
-          </p>
-        </div>
+        <EstadoVazio
+          icone={Layers}
+          titulo="Nenhum flashcard ainda"
+          descricao="Crie um flashcard manualmente ou envie um PDF na aba Materiais para a IA sugerir vários de uma vez."
+          acao={
+            <>
+              <Button onClick={abrirNovoFlashcard}>
+                <Plus />
+                Criar flashcard
+              </Button>
+              {onIrParaMateriais && (
+                <Button variant="outline" onClick={onIrParaMateriais}>
+                  <FileText />
+                  Enviar um PDF
+                </Button>
+              )}
+            </>
+          }
+        />
       )}
 
       {flashcards !== null && flashcards.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {flashcards.map((flashcard) => (
             <FlashcardItem
               key={flashcard.id}

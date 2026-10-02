@@ -77,6 +77,7 @@
 | caminho_arquivo | VARCHAR(500) | NOT NULL |
 | texto_extraido | TEXT | NULL |
 | status_processamento | VARCHAR(20) | NOT NULL, DEFAULT 'PENDENTE' (PENDENTE, PROCESSADO, ERRO) |
+| motivo_erro | VARCHAR(300) | NULL (RN07 — causa da falha de extração quando status = ERRO; adicionada em V12) |
 | criado_em | TIMESTAMP | NOT NULL, DEFAULT now() |
 
 ### FLASHCARD
@@ -119,9 +120,9 @@
 |---|---|---|
 | id | BIGINT | PK, auto_increment |
 | quiz_id | BIGINT | NOT NULL, FK → QUIZ(id) ON DELETE CASCADE |
-| enunciado | VARCHAR(1000) | NOT NULL |
+| enunciado | TEXT | NOT NULL (era VARCHAR(1000) até V13) |
 | alternativas | TEXT | NOT NULL — JSON serializado (array de {texto, correta}) via `AttributeConverter` (Jackson); **não é uma coluna `jsonb` no banco** |
-| resposta_correta | VARCHAR(500) | NOT NULL |
+| resposta_correta | TEXT | NOT NULL (era VARCHAR(500) até V13 — menor que a resposta do flashcard, de até 1000) |
 | explicacao | TEXT | NULL (RN35/UC27 — explicação da resposta correta, revelada só após responder; não usada em quiz determinístico) |
 
 ### TENTATIVA_QUIZ
@@ -139,7 +140,7 @@
 | id | BIGINT | PK, auto_increment |
 | tentativa_quiz_id | BIGINT | NOT NULL, FK → TENTATIVA_QUIZ(id) ON DELETE CASCADE |
 | questao_quiz_id | BIGINT | NOT NULL, FK → QUESTAO_QUIZ(id) ON DELETE CASCADE |
-| alternativa_escolhida | VARCHAR(500) | NOT NULL |
+| alternativa_escolhida | TEXT | NOT NULL (era VARCHAR(500) até V13) |
 | correta | BOOLEAN | NOT NULL |
 
 RN36/UC27 — registro por questão de cada tentativa, usado para reconstruir a
@@ -246,6 +247,7 @@ CREATE TABLE material_origem (
     texto_extraido TEXT,
     status_processamento VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
         CHECK (status_processamento IN ('PENDENTE','PROCESSADO','ERRO')),
+    motivo_erro VARCHAR(300), -- V12
     criado_em TIMESTAMP NOT NULL DEFAULT now()
 );
 
@@ -287,9 +289,9 @@ CREATE TABLE quiz (
 CREATE TABLE questao_quiz (
     id BIGSERIAL PRIMARY KEY,
     quiz_id BIGINT NOT NULL REFERENCES quiz(id) ON DELETE CASCADE,
-    enunciado VARCHAR(1000) NOT NULL,
+    enunciado TEXT NOT NULL, -- V13
     alternativas TEXT NOT NULL,
-    resposta_correta VARCHAR(500) NOT NULL,
+    resposta_correta TEXT NOT NULL -- V13,
     explicacao TEXT
 );
 
@@ -305,12 +307,12 @@ CREATE TABLE resposta_tentativa_quiz (
     id BIGSERIAL PRIMARY KEY,
     tentativa_quiz_id BIGINT NOT NULL REFERENCES tentativa_quiz(id) ON DELETE CASCADE,
     questao_quiz_id BIGINT NOT NULL REFERENCES questao_quiz(id) ON DELETE CASCADE,
-    alternativa_escolhida VARCHAR(500) NOT NULL,
+    alternativa_escolhida TEXT NOT NULL, -- V13
     correta BOOLEAN NOT NULL
 );
 ```
 
-Este DDL reflete o schema real (ver `src/main/resources/db/migration/V1`–`V10`),
+Este DDL reflete o schema real (ver `src/main/resources/db/migration/V1`–`V13`),
 não a saída literal do `ddl-auto` do Hibernate — os nomes de PK/sequence e
 tipos exatos de timestamp podem variar ligeiramente da migration física sem
 impacto no modelo lógico acima.

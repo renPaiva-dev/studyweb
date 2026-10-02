@@ -136,7 +136,7 @@
 
   <section class="diagram" id="uc">
     <h2>3.2 Diagrama de Casos de Uso <span class="tag">notação UML clássica</span></h2>
-    <p class="caption">29 UCs — dividido em 7 diagramas por módulo pra ficar legível (um diagrama só com todos ficaria ilegível). Todas as relações «include»/«extend» do sistema ocorrem dentro do mesmo módulo, então nenhuma foi perdida na divisão. Ator primário: Estudante. Atores secundários: Sistema (interno) e Serviço de IA (Gemini).</p>
+    <p class="caption">32 UCs (UC01–UC33, sem o UC16) — dividido em 7 diagramas por módulo pra ficar legível (um diagrama só com todos ficaria ilegível). Todas as relações «include»/«extend» do sistema ocorrem dentro do mesmo módulo, então nenhuma foi perdida na divisão. Ator primário: Estudante. Atores secundários: Sistema (interno) e Serviço de IA (Gemini).</p>
 
     <div id="uc-grid" style="display:grid; grid-template-columns:1fr; gap:1.5rem;"></div>
 
@@ -147,8 +147,8 @@
   </section>
 
   <section class="diagram" id="classe">
-    <h2>3.3 Diagrama de Classes <span class="tag">UML — 12 entidades + 5 enums</span></h2>
-    <p class="caption">Reflete as entidades JPA reais em <code>src/main/java/.../{usuario,deck,material,flashcard,revisao,quiz,compartilhamento}</code>. Composição (◆) nas relações com <code>cascade = ALL, orphanRemoval = true</code> no lado "um".<br><strong>Por que não em brModelo:</strong> brModelo é uma ferramenta/notação especificamente de Entidade-Relacionamento (Chen) — não existe uma variante brModelo para diagrama de classes UML, são notações de propósitos diferentes. O DER equivalente (seção 3.5 abaixo) é que está em Chen/brModelo.</p>
+    <h2>3.3 Diagrama de Classes <span class="tag">UML — 13 entidades + 5 enums</span></h2>
+    <p class="caption">Reflete as entidades JPA reais em <code>src/main/java/.../{usuario,deck,colecao,material,flashcard,revisao,quiz,compartilhamento}</code>. Composição (◆) nas relações com <code>cascade = ALL, orphanRemoval = true</code> no lado "um".<br><strong>Por que não em brModelo:</strong> brModelo é uma ferramenta/notação especificamente de Entidade-Relacionamento (Chen) — não existe uma variante brModelo para diagrama de classes UML, são notações de propósitos diferentes. O DER equivalente (seção 3.5 abaixo) é que está em Chen/brModelo.</p>
     <div class="mermaid-wrap">
       <pre class="mermaid">
 classDiagram
@@ -178,10 +178,18 @@ classDiagram
         +boolean usado
         +LocalDateTime criadoEm
     }
+    class Colecao {
+        +Long id
+        +String nome
+        +String descricao
+        +LocalDateTime criadoEm
+        +LocalDateTime atualizadoEm
+    }
     class Deck {
         +Long id
         +String titulo
         +String descricao
+        +LocalDate dataAlvoProva
         +LocalDateTime criadoEm
         +LocalDateTime atualizadoEm
     }
@@ -198,6 +206,7 @@ classDiagram
         +String caminhoArquivo
         +String textoExtraido
         +StatusProcessamento statusProcessamento
+        +String motivoErro
         +LocalDateTime criadoEm
     }
     class Flashcard {
@@ -277,6 +286,8 @@ classDiagram
     }
 
     Usuario "1" *-- "0..*" Deck : possui
+    Usuario "1" *-- "0..*" Colecao : organiza
+    Colecao "0..1" o-- "0..*" Deck : agrupa
     Usuario "1" *-- "0..*" TokenRedefinicaoSenha : solicita
     Usuario "1" *-- "0..*" TokenVerificacaoEmail : solicita
     Usuario "1" *-- "0..*" RevisaoFlashcard : realiza
@@ -343,10 +354,10 @@ flowchart TB
   </section>
 
   <section class="diagram" id="der">
-    <h2>3.5 Diagrama de Entidade-Relacionamento <span class="tag">Chen / brModelo — 12 entidades</span></h2>
+    <h2>3.5 Diagrama de Entidade-Relacionamento <span class="tag">Chen / brModelo — 13 entidades</span></h2>
     <p class="caption">Notação clássica: entidades = retângulo, relacionamentos = losango, atributos = elipse (PK sublinhado, FK marcado), cardinalidade mín-máx em cada ponta. Por legibilidade, cada entidade mostra a chave primária + FKs + os atributos de negócio mais relevantes — o dicionário de dados completo (todos os campos, tipos e regras) está em <code>Docs/modelo-de-dados.md</code>.</p>
     <div class="tech-svg-wrap">
-      <svg id="der-svg" viewBox="0 0 2500 1560" width="2500" height="1560" xmlns="http://www.w3.org/2000/svg"></svg>
+      <svg id="der-svg" viewBox="0 0 2800 1560" width="2800" height="1560" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </section>
 
@@ -486,8 +497,13 @@ flowchart TB
         { id: 'UC03', label: 'Enviar PDF de estudo' },
         { id: 'UC22', label: 'Excluir material de origem' },
         { id: 'UC29', label: 'Compartilhar deck via link' },
+        { id: 'UC32', label: 'Perguntar sobre o material do deck' },
+        { id: 'UC33', label: 'Organizar decks em coleções' },
       ],
-      actors: [{ label: 'Estudante', side: 'left', targets: ['UC02', 'UC03', 'UC22', 'UC29'] }],
+      actors: [
+        { label: 'Estudante', side: 'left', targets: ['UC02', 'UC03', 'UC22', 'UC29', 'UC32', 'UC33'] },
+        { label: 'Serviço de IA (Gemini)', side: 'right', targets: ['UC32'] },
+      ],
     },
     {
       id: 'uc-mod-4', boxLabel: 'Flashcards',
@@ -538,9 +554,10 @@ flowchart TB
         { id: 'UC13', label: 'Obter recomendação de foco' },
         { id: 'UC15', label: 'Visualizar evolução detalhada' },
         { id: 'UC20', label: 'Dashboard geral consolidado' },
+        { id: 'UC31', label: 'Data-alvo de prova e prontidão' },
       ],
       actors: [
-        { label: 'Estudante', side: 'left', targets: ['UC11', 'UC13', 'UC15', 'UC20'] },
+        { label: 'Estudante', side: 'left', targets: ['UC11', 'UC13', 'UC15', 'UC20', 'UC31'] },
         { label: 'Serviço de IA (Gemini)', side: 'right', targets: ['UC13'] },
       ],
       extendsList: [['UC15', 'UC11']],
@@ -646,7 +663,12 @@ flowchart TB
   ]);
   ent('DECK', 1550, 440, 'DECK', [
     { name: 'id', pk: true }, { name: 'usuario_id', fk: true },
-    { name: 'titulo' }, { name: 'criado_em' },
+    { name: 'titulo' }, { name: 'colecao_id', fk: true },
+    { name: 'data_alvo_prova' }, { name: 'criado_em' },
+  ]);
+  ent('COL', 2400, 440, 'COLECAO', [
+    { name: 'id', pk: true }, { name: 'usuario_id', fk: true },
+    { name: 'nome' }, { name: 'descricao' },
   ]);
   ent('CD', 350, 760, 'COMPARTILHAMENTO_DECK', [
     { name: 'id', pk: true }, { name: 'deck_id', fk: true, uk: true },
@@ -682,6 +704,8 @@ flowchart TB
   ]);
 
   drawRelationship(derSvg, E.USUARIO, E.DECK, 'possui', '(0,N)', '(1,1)');
+  drawRelationship(derSvg, E.USUARIO, E.COL, 'organiza', '(0,N)', '(1,1)', { x: 2400, y: 130 });
+  drawRelationship(derSvg, E.COL, E.DECK, 'agrupa', '(0,N)', '(0,1)', { x: 1975, y: 300 });
   drawRelationship(derSvg, E.USUARIO, E.TRS, 'solicita', '(0,N)', '(1,1)');
   drawRelationship(derSvg, E.USUARIO, E.TVE, 'solicita', '(0,N)', '(1,1)');
   drawRelationship(derSvg, E.USUARIO, E.RF, 'realiza', '(0,N)', '(1,1)', { x: 900, y: 300 });

@@ -3,16 +3,17 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recha
 
 import { buscarAtividade, type DiaSemana, type FlashcardMaisRevisado, type RevisaoPorDiaSemana } from '@/api/dashboardApi'
 import { extrairMensagemErro } from '@/api/apiError'
-import { Button } from '@/components/ui/button'
+import { EstadoErro } from '@/components/ui/estados'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
+import { CORES_GRAFICO } from '@/utils/coresDesempenho'
 
 interface DashboardAtividadeProps {
   deckId: number
 }
 
-const COR_REVISOES = 'hsl(var(--primary))'
+const COR_REVISOES = CORES_GRAFICO.barra
 
 const ORDEM_DIAS: DiaSemana[] = ['SEGUNDA', 'TERCA', 'QUARTA', 'QUINTA', 'SEXTA', 'SABADO', 'DOMINGO']
 
@@ -71,33 +72,28 @@ export function DashboardAtividade({ deckId }: DashboardAtividadeProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-semibold">Atividade</CardTitle>
+        <CardTitle>Atividade</CardTitle>
       </CardHeader>
       <CardContent>
         {erroCarregamento !== null ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-muted-foreground">{erroCarregamento}</p>
-            <Button variant="outline" size="sm" onClick={() => void carregar()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <EstadoErro compacto mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
         ) : flashcardsMaisRevisados === null ? (
-          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full rounded-lg" />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Mais revisados</h3>
+              <h3 className="mb-3 text-sm font-semibold text-ink-700">Mais revisados</h3>
               {flashcardsMaisRevisados.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma revisão registrada ainda.</p>
+                <p className="text-sm text-ink-600">Nenhuma revisão registrada ainda.</p>
               ) : (
                 <ol className="space-y-2">
                   {flashcardsMaisRevisados.map((flashcard, indice) => (
                     <li key={flashcard.flashcardId} className="flex items-start gap-2 text-sm">
-                      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink-900 text-xs font-bold text-white">
                         {indice + 1}
                       </span>
                       <span className="line-clamp-2 flex-1">{flashcard.pergunta}</span>
-                      <span className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-ink-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-700">
                         {flashcard.totalRevisoes}x
                       </span>
                     </li>
@@ -107,14 +103,14 @@ export function DashboardAtividade({ deckId }: DashboardAtividadeProps) {
             </div>
 
             <div>
-              <h3 className="mb-3 text-sm font-medium text-muted-foreground">Revisões por dia da semana</h3>
+              <h3 className="mb-3 text-sm font-semibold text-ink-700">Revisões por dia da semana</h3>
               <div className="h-40 w-full">
                 <ResponsiveContainer>
                   <BarChart data={dadosPorDia} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                    <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={24} />
+                    <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} width={24} />
                     <Tooltip
-                      cursor={{ fill: 'hsl(var(--muted))' }}
+                      cursor={{ fill: '#EEF0F6' }}
                       content={({ active, payload }) => {
                         if (!active || !payload?.length) return null
                         const dia = payload[0].payload as (typeof dadosPorDia)[number]

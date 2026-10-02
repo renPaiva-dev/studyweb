@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.material.MaterialOrigemService;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
@@ -36,7 +37,7 @@ class FlashcardGenerationServiceTest {
 
 	@BeforeEach
 	void configurar() {
-		flashcardGenerationService = new FlashcardGenerationService(materialOrigemService, geminiClient, new ObjectMapper());
+		flashcardGenerationService = new FlashcardGenerationService(materialOrigemService, geminiClient, new ObjectMapper(), TransacaoDeTeste.template());
 	}
 
 	private MaterialOrigem materialProcessado() {

@@ -6,11 +6,10 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardService;
-import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.material.MaterialOrigemRepository;
 import com.tcc.plataformaestudos.material.StatusProcessamento;
 
@@ -49,13 +48,19 @@ public class ElaboracaoService {
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final GeminiClient geminiClient;
 	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
-	@Transactional(readOnly = true)
+	// Leitura numa transação curta; a chamada à IA fica fora dela (ver
+	// FlashcardGenerationService#gerarSugestoes).
 	public AutoexplicacaoResponseDTO gerarFeedbackAutoexplicacao(Long flashcardId, String texto) {
-		Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
-		Optional<String> referencia = buscarTextoDeReferencia(flashcard);
-		boolean ancorada = referencia.isPresent();
-		String prompt = montarPromptAutoexplicacao(flashcard, referencia.orElse(null), texto);
+		PromptElaboracao preparado = transactionTemplate.execute(status -> {
+			Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
+			Optional<String> referencia = buscarTextoDeReferencia(flashcard);
+			return new PromptElaboracao(
+					montarPromptAutoexplicacao(flashcard, referencia.orElse(null), texto), referencia.isPresent());
+		});
+		boolean ancorada = preparado.ancorada();
+		String prompt = preparado.prompt();
 
 		AutoexplicacaoResponseDTO resposta = gerarComRetry(flashcardId, "AUTOEXPLICACAO", ancorada, prompt,
 				raiz -> SanitizadorFeedbackAutoexplicacao.sanitizar(raiz, texto, ancorada));
@@ -65,22 +70,27 @@ public class ElaboracaoService {
 		return resposta;
 	}
 
-	@Transactional(readOnly = true)
 	public AnalogiaResponseDTO gerarAnalogia(Long flashcardId, String evitar) {
-		Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
-		Optional<String> referencia = buscarTextoDeReferencia(flashcard);
-		boolean ancorada = referencia.isPresent();
 		String evitarNormalizado = evitar == null || evitar.isBlank() ? null : evitar.trim();
-		String prompt = montarPromptAnalogia(flashcard, referencia.orElse(null), evitarNormalizado);
+		PromptElaboracao preparado = transactionTemplate.execute(status -> {
+			Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
+			Optional<String> referencia = buscarTextoDeReferencia(flashcard);
+			return new PromptElaboracao(
+					montarPromptAnalogia(flashcard, referencia.orElse(null), evitarNormalizado), referencia.isPresent());
+		});
+		boolean ancorada = preparado.ancorada();
 
-		return gerarComRetry(flashcardId, "ANALOGIA", ancorada, prompt, raiz -> interpretarAnalogia(raiz, ancorada));
+		return gerarComRetry(flashcardId, "ANALOGIA", ancorada, preparado.prompt(), raiz -> interpretarAnalogia(raiz, ancorada));
+	}
+
+	private record PromptElaboracao(String prompt, boolean ancorada) {
 	}
 
 	private Optional<String> buscarTextoDeReferencia(Flashcard flashcard) {
 		return materialOrigemRepository
 				.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
 						flashcard.getDeck().getId(), StatusProcessamento.PROCESSADO)
-				.map(MaterialOrigem::getTextoExtraido);
+				.map(material -> TextoMaterialPrompt.limitar(material.getTextoExtraido()));
 	}
 
 	/**

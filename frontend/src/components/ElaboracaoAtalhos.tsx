@@ -14,7 +14,7 @@ interface ElaboracaoAtalhosProps {
 // fica reservado ao CTA) e nada abre sozinho.
 export function ElaboracaoAtalhos({ escrevendo, gerandoAnalogia, onExplicar, onAnalogia, onOcultar }: ElaboracaoAtalhosProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1 border-t border-manilha pt-3">
+    <div className="flex flex-wrap items-center gap-1 border-t border-ink-200 pt-3">
       <span className="mr-1 text-eyebrow text-muted-foreground">Aprofundar (opcional)</span>
       <Button type="button" variant="ghost" size="sm" onClick={onExplicar} disabled={escrevendo}>
         <PenLine />

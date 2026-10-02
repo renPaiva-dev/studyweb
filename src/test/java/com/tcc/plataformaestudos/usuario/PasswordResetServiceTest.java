@@ -67,7 +67,7 @@ class PasswordResetServiceTest {
 
 		MensagemResponseDTO resposta = passwordResetService.solicitarRedefinicao("ana@email.com");
 
-		assertThat(resposta.mensagem()).isEqualTo(MENSAGEM_GENERICA);
+		assertThat(resposta.message()).isEqualTo(MENSAGEM_GENERICA);
 
 		ArgumentCaptor<TokenRedefinicaoSenha> tokenCaptor = ArgumentCaptor.forClass(TokenRedefinicaoSenha.class);
 		verify(tokenRepository).save(tokenCaptor.capture());
@@ -79,14 +79,19 @@ class PasswordResetServiceTest {
 	}
 
 	@Test
-	void naoDeveGerarTokenNemEnviarEmailQuandoEmailNaoExisteMasRespostaEIgual() {
+	void naoDeveGerarTokenMasDeveSimularEnvioDeEmailQuandoEmailNaoExisteMasRespostaEIgual() {
 		when(usuarioRepository.findByEmail("desconhecido@email.com")).thenReturn(Optional.empty());
 
 		MensagemResponseDTO resposta = passwordResetService.solicitarRedefinicao("desconhecido@email.com");
 
-		assertThat(resposta.mensagem()).isEqualTo(MENSAGEM_GENERICA);
+		assertThat(resposta.message()).isEqualTo(MENSAGEM_GENERICA);
 		verify(tokenRepository, never()).save(any());
-		verify(emailService, never()).enviarEmail(any(), any(), any());
+		// C4 (Docs/auditoria-coerencia-seguranca-2026-09.md): mesmo sem
+		// cadastro, um e-mail é "enviado" - para um destinatário descartado,
+		// nunca para o e-mail informado - só para gastar o mesmo tempo de
+		// rede do caminho em que o e-mail existe de verdade.
+		verify(emailService).enviarEmail(eq("timing-dummy@plataformaestudos.local"), anyString(), anyString());
+		verify(emailService, never()).enviarEmail(eq("desconhecido@email.com"), any(), any());
 	}
 
 	@Test
@@ -99,7 +104,7 @@ class PasswordResetServiceTest {
 
 		MensagemResponseDTO resposta = passwordResetService.redefinirSenha("token-fake", "nova-senha-123");
 
-		assertThat(resposta.mensagem()).isEqualTo("Senha redefinida com sucesso.");
+		assertThat(resposta.message()).isEqualTo("Senha redefinida com sucesso.");
 		assertThat(usuario.getSenhaHash()).isEqualTo("hash-novo");
 		assertThat(token.isUsado()).isTrue();
 		verify(usuarioRepository).save(usuario);

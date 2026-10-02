@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.flashcard.Flashcard;
@@ -61,7 +62,7 @@ class ExplicacaoServiceTest {
 
 	@org.junit.jupiter.api.BeforeEach
 	void configurar() {
-		explicacaoService = new ExplicacaoService(flashcardService, materialOrigemRepository, geminiClient, new ObjectMapper());
+		explicacaoService = new ExplicacaoService(flashcardService, materialOrigemRepository, geminiClient, new ObjectMapper(), TransacaoDeTeste.template());
 	}
 
 	@Test

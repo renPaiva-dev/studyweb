@@ -1,20 +1,30 @@
 import { cn } from "@/lib/utils"
 
-// Shimmer (varredura sutil) sobre um bloco Manilha claro - indicador de
-// carregamento, nao decoracao ambiente (desativado em prefers-reduced-motion,
-// ver index.css).
+// Bloco de carregamento com varredura sutil (shimmer). Sempre desenhado no
+// formato do conteudo real que vai substituir, para a tela nao "pular".
 function Skeleton({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("relative overflow-hidden rounded-none bg-manilha/20", className)}
+      aria-hidden="true"
+      className={cn("relative overflow-hidden rounded-md bg-ink-200/70", className)}
       {...props}
     >
-      <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-papel/60 to-transparent" />
+      <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/70 to-transparent" />
     </div>
   )
 }
 
-export { Skeleton }
+// Wrapper acessivel: anuncia "Carregando..." uma vez, os blocos ficam ocultos.
+function Carregando({ rotulo = "Carregando...", className, children }: { rotulo?: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div role="status" aria-live="polite" className={className}>
+      <span className="sr-only">{rotulo}</span>
+      {children}
+    </div>
+  )
+}
+
+export { Skeleton, Carregando }

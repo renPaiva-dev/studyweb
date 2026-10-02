@@ -16,10 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
@@ -55,6 +58,9 @@ class QuizServiceTest {
 
 	@Mock
 	private ProvaGenerationService provaGenerationService;
+
+	@Spy
+	private TransactionTemplate transactionTemplate = TransacaoDeTeste.template();
 
 	@InjectMocks
 	private QuizService quizService;
@@ -168,20 +174,18 @@ class QuizServiceTest {
 	@Test
 	void deveAplicarRn01AoBuscarQuizDeOutroUsuario() {
 		when(quizRepository.findByIdAndDeckUsuarioId(QUIZ_ID, USUARIO_ID)).thenReturn(Optional.empty());
-		when(quizRepository.existsById(QUIZ_ID)).thenReturn(true);
 
-		assertThatThrownBy(() -> quizService.buscarPorId(QUIZ_ID)).isInstanceOf(AcessoNegadoException.class);
+		assertThatThrownBy(() -> quizService.buscarPorId(QUIZ_ID)).isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 	@Test
 	void deveAplicarRn01AoResponderTentativaDeQuizDeOutroUsuario() {
 		when(quizRepository.findByIdAndDeckUsuarioId(QUIZ_ID, USUARIO_ID)).thenReturn(Optional.empty());
-		when(quizRepository.existsById(QUIZ_ID)).thenReturn(true);
 
 		TentativaRequestDTO request = new TentativaRequestDTO(List.of(new RespostaDTO(1L, "Resposta 1")));
 
 		assertThatThrownBy(() -> quizService.responderTentativa(QUIZ_ID, request))
-				.isInstanceOf(AcessoNegadoException.class);
+				.isInstanceOf(RecursoNaoEncontradoException.class);
 
 		verify(tentativaQuizRepository, never()).save(any());
 	}
@@ -314,15 +318,13 @@ class QuizServiceTest {
 	@Test
 	void deveAplicarRn01AoBuscarDetalheDeTentativaDeOutroUsuario() {
 		when(tentativaQuizRepository.buscarDetalheDoUsuario(100L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(tentativaQuizRepository.existsById(100L)).thenReturn(true);
 
-		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(100L)).isInstanceOf(AcessoNegadoException.class);
+		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(100L)).isInstanceOf(RecursoNaoEncontradoException.class);
 	}
 
 	@Test
 	void deveLancarRecursoNaoEncontradoAoBuscarDetalheDeTentativaInexistente() {
 		when(tentativaQuizRepository.buscarDetalheDoUsuario(999L, USUARIO_ID)).thenReturn(Optional.empty());
-		when(tentativaQuizRepository.existsById(999L)).thenReturn(false);
 
 		assertThatThrownBy(() -> quizService.buscarDetalheTentativa(999L)).isInstanceOf(RecursoNaoEncontradoException.class);
 	}

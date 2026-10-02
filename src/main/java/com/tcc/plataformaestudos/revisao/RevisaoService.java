@@ -44,7 +44,10 @@ public class RevisaoService {
 	 * primeiro. Por padrão, só os flashcards pendentes de revisão (RN10).
 	 * Flashcards sem histórico de revisão (nunca estudados) são tratados
 	 * como os mais urgentes. Se {@code incluirTodos} for true, RN10 é
-	 * ignorada e o deck inteiro é retornado — "Revisar mesmo assim" (RN22);
+	 * ignorada e o deck inteiro é retornado — "Revisar mesmo assim"
+	 * (documentada em {@code Docs/contrato-api.md}, sem RN numerada — achado
+	 * N2 da auditoria: o comentário original citava RN22 por engano, que na
+	 * verdade é sobre unicidade de {@code nomeUsuario});
 	 * as revisões geradas a partir dessa fila são reais, avaliadas pelo
 	 * mesmo {@link #avaliarResposta(Long, AvaliarRespostaRequestDTO)}.
 	 */

@@ -3,11 +3,12 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Too
 
 import { buscarEvolucao, type PeriodoEvolucao, type PontoEvolucao } from '@/api/dashboardApi'
 import { extrairMensagemErro } from '@/api/apiError'
-import { Button } from '@/components/ui/button'
+import { EstadoErro } from '@/components/ui/estados'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
 import { cn } from '@/lib/utils'
+import { CORES_GRAFICO } from '@/utils/coresDesempenho'
 
 interface DashboardEvolucaoProps {
   deckId: number
@@ -19,8 +20,8 @@ const PERIODOS: { valor: PeriodoEvolucao; rotulo: string }[] = [
   { valor: 90, rotulo: '90 dias' },
 ]
 
-const COR_QUALIDADE = 'hsl(var(--primary))'
-const COR_REVISOES = 'hsl(var(--primary) / 0.35)'
+const COR_QUALIDADE = CORES_GRAFICO.principal
+const COR_REVISOES = CORES_GRAFICO.barra
 
 function dataResumida(dataIso: string): string {
   const [, mes, dia] = dataIso.split('-')
@@ -73,36 +74,33 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base font-semibold">Evolução do desempenho</CardTitle>
-        <div className="flex gap-1 bg-muted p-1">
+      <CardHeader className="flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle>Evolução do desempenho</CardTitle>
+        <div role="group" aria-label="Período" className="inline-flex w-full rounded-lg bg-ink-100 p-1 sm:w-auto">
           {PERIODOS.map((opcao) => (
-            <Button
+            <button
               key={opcao.valor}
               type="button"
-              size="sm"
-              variant="ghost"
-              className={cn('h-7 px-2 text-xs', periodo === opcao.valor && 'bg-background')}
+              aria-pressed={periodo === opcao.valor}
+              className={cn(
+                'h-8 flex-1 rounded-md px-3 text-sm font-semibold text-ink-600 transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring coarse:min-h-11 sm:flex-none',
+                periodo === opcao.valor && 'bg-card text-foreground shadow-sm',
+              )}
               onClick={() => setPeriodo(opcao.valor)}
             >
               {opcao.rotulo}
-            </Button>
+            </button>
           ))}
         </div>
       </CardHeader>
       <CardContent>
         {erroCarregamento !== null ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-muted-foreground">{erroCarregamento}</p>
-            <Button variant="outline" size="sm" onClick={() => void carregar()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <EstadoErro compacto mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
         ) : pontos === null ? (
-          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-56 w-full rounded-lg" />
         ) : dados.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            Nenhuma revisão registrada neste período.
+          <p className="rounded-lg border border-dashed border-ink-300 py-10 text-center text-sm text-ink-600">
+            Nenhuma revisão registrada neste período. Estude alguns cards e volte aqui.
           </p>
         ) : (
           <div className="space-y-4">
@@ -114,11 +112,11 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
             <div className="h-40 w-full">
               <ResponsiveContainer>
                 <LineChart data={dados} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="dataResumida" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 5]} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={24} />
+                  <CartesianGrid vertical={false} stroke={CORES_GRAFICO.grade} />
+                  <XAxis dataKey="dataResumida" tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 5]} tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} width={24} />
                   <Tooltip
-                    cursor={{ stroke: 'hsl(var(--border))' }}
+                    cursor={{ stroke: CORES_GRAFICO.barraSuave }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null
                       const ponto = payload[0].payload as PontoEvolucao & { dataResumida: string }
@@ -134,9 +132,9 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
                     type="monotone"
                     dataKey="mediaQualidade"
                     stroke={COR_QUALIDADE}
-                    strokeWidth={2}
-                    dot={{ r: 3, strokeWidth: 2, stroke: 'hsl(var(--background))', fill: COR_QUALIDADE }}
-                    activeDot={{ r: 5, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                    strokeWidth={2.5}
+                    dot={{ r: 3, strokeWidth: 2, stroke: '#FFFFFF', fill: CORES_GRAFICO.destaque }}
+                    activeDot={{ r: 6, strokeWidth: 2, stroke: '#FFFFFF', fill: CORES_GRAFICO.destaque }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -145,10 +143,10 @@ export function DashboardEvolucao({ deckId }: DashboardEvolucaoProps) {
             <div className="h-24 w-full">
               <ResponsiveContainer>
                 <BarChart data={dados} margin={{ top: 4, right: 8, left: -20, bottom: 0 }} barCategoryGap="20%">
-                  <XAxis dataKey="dataResumida" tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={24} />
+                  <XAxis dataKey="dataResumida" tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} width={24} />
                   <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))' }}
+                    cursor={{ fill: '#EEF0F6' }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null
                       const ponto = payload[0].payload as PontoEvolucao & { dataResumida: string }

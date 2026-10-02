@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.tcc.plataformaestudos.flashcard.Flashcard;
 import com.tcc.plataformaestudos.flashcard.FlashcardService;
@@ -44,23 +44,29 @@ public class ExplicacaoService {
 	private final MaterialOrigemRepository materialOrigemRepository;
 	private final GeminiClient geminiClient;
 	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
-	@Transactional(readOnly = true)
+	// Leitura numa transação curta; a chamada à IA fica fora dela (ver
+	// FlashcardGenerationService#gerarSugestoes).
 	public ExplicacaoResponseDTO gerarExplicacao(Long flashcardId) {
-		Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
+		PromptExplicacao preparado = transactionTemplate.execute(status -> {
+			Flashcard flashcard = flashcardService.buscarFlashcardDoUsuarioAutenticado(flashcardId);
 
-		Optional<MaterialOrigem> material = materialOrigemRepository
-				.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
-						flashcard.getDeck().getId(), StatusProcessamento.PROCESSADO);
+			Optional<MaterialOrigem> material = materialOrigemRepository
+					.findFirstByDeckIdAndStatusProcessamentoAndTextoExtraidoIsNotNullOrderByCriadoEmDesc(
+							flashcard.getDeck().getId(), StatusProcessamento.PROCESSADO);
 
-		boolean ancoradaNoMaterial = material.isPresent();
-		String prompt = ancoradaNoMaterial
-				? montarPromptAncorado(flashcard, material.get().getTextoExtraido())
-				: montarPromptSemAncoragem(flashcard);
+			return material
+					.map(m -> new PromptExplicacao(montarPromptAncorado(flashcard, TextoMaterialPrompt.limitar(m.getTextoExtraido())), true))
+					.orElseGet(() -> new PromptExplicacao(montarPromptSemAncoragem(flashcard), false));
+		});
 
-		String explicacao = gerarComRetry(flashcardId, ancoradaNoMaterial, prompt);
+		String explicacao = gerarComRetry(flashcardId, preparado.ancoradaNoMaterial(), preparado.prompt());
 
-		return new ExplicacaoResponseDTO(explicacao, ancoradaNoMaterial);
+		return new ExplicacaoResponseDTO(explicacao, preparado.ancoradaNoMaterial());
+	}
+
+	private record PromptExplicacao(String prompt, boolean ancoradaNoMaterial) {
 	}
 
 	private String gerarComRetry(Long flashcardId, boolean ancoradaNoMaterial, String prompt) {

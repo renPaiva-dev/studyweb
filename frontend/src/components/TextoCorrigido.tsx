@@ -22,7 +22,7 @@ export function TextoCorrigido({ texto, feedback, numeros, idBaseNotas, onReescr
   const segmentos = segmentarTextoCorrigido(texto, feedback.anotacoes)
 
   return (
-    <div className="animate-caderno-entrada space-y-2">
+    <div className="animate-entrada space-y-2">
       <p className="text-eyebrow text-muted-foreground">Sua explicação, corrigida</p>
 
       {/* Em telas sem a coluna de margem ao lado, o veredito aparece também
@@ -36,8 +36,8 @@ export function TextoCorrigido({ texto, feedback, numeros, idBaseNotas, onReescr
         {textoVeredito(feedback.veredito, feedback.ancoradaNoMaterial)}
       </p>
 
-      <div className="relative border-y border-manilha bg-card">
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-8 w-px bg-tinta/20" />
+      <div className="relative border-y border-ink-200 bg-card">
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-8 w-px bg-ink-900/20" />
         <p
           style={ESTILO_PAUTA}
           className="whitespace-pre-wrap break-words py-[0.875rem] pl-12 pr-4 text-base text-foreground"

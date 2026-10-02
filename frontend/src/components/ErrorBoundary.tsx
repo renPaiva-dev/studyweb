@@ -33,17 +33,22 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-        <div className="rounded-full bg-destructive/10 p-4">
-          <AlertTriangle className="h-8 w-8 text-destructive" />
+      <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-5 bg-background p-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger-100 text-danger-600 ring-8 ring-danger-50">
+          <AlertTriangle className="h-8 w-8" />
         </div>
-        <div className="space-y-1">
-          <p className="text-lg font-medium">Algo deu errado</p>
-          <p className="text-sm text-muted-foreground">
-            Um erro inesperado interrompeu esta página. Recarregar costuma resolver.
+        <div className="space-y-1.5">
+          <p className="font-heading text-h2 text-foreground">Algo deu errado</p>
+          <p className="max-w-sm text-base text-muted-foreground">
+            Um erro inesperado interrompeu esta página. Seus dados estão salvos. Recarregar costuma resolver.
           </p>
         </div>
-        <Button onClick={() => window.location.reload()}>Recarregar página</Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button onClick={() => window.location.reload()}>Recarregar página</Button>
+          <Button variant="outline" onClick={() => window.location.assign('/inicio')}>
+            Ir para o início
+          </Button>
+        </div>
       </div>
     )
   }

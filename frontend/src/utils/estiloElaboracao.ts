@@ -10,18 +10,18 @@ import type { TipoAnotacao, VereditoAutoexplicacao } from '@/api/elaboracaoApi'
 export const ESTILO_ANOTACAO: Record<TipoAnotacao, { rotulo: string; sublinhado: string; texto: string }> = {
   ERRO: {
     rotulo: 'Erro',
-    sublinhado: 'decoration-wavy decoration-vermelho-correcao',
-    texto: 'text-vermelho-correcao',
+    sublinhado: 'decoration-wavy decoration-danger-600',
+    texto: 'text-danger-700',
   },
   IMPRECISAO: {
     rotulo: 'Impreciso',
-    sublinhado: 'decoration-dotted decoration-grafite',
-    texto: 'text-grafite',
+    sublinhado: 'decoration-dotted decoration-ink-500',
+    texto: 'text-ink-600',
   },
   ACERTO: {
     rotulo: 'Certo',
-    sublinhado: 'decoration-verde-lousa',
-    texto: 'text-verde-lousa',
+    sublinhado: 'decoration-success-600',
+    texto: 'text-success-700',
   },
 }
 
@@ -37,11 +37,11 @@ export function textoVeredito(veredito: VereditoAutoexplicacao, ancoradaNoMateri
 }
 
 export const CLASSE_VEREDITO: Record<VereditoAutoexplicacao, string> = {
-  CONSISTENTE: 'border-verde-lousa text-verde-lousa',
+  CONSISTENTE: 'border-success-600 text-success-700',
   // Grafite, não Manilha: sobre o fundo da margem (papel-margem) a borda em
   // Manilha praticamente some.
-  PARCIAL: 'border-grafite text-foreground',
-  EQUIVOCADA: 'border-vermelho-correcao text-vermelho-correcao',
+  PARCIAL: 'border-ink-500 text-foreground',
+  EQUIVOCADA: 'border-danger-600 text-danger-700',
 }
 
 // Papel pautado: uma linha de Manilha a cada 1.75rem, igual ao line-height do

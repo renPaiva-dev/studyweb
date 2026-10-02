@@ -130,7 +130,7 @@ export function ElaboracaoPainel({ flashcardId, onNotasChange, onOcultar }: Elab
       correcao || notaAnalogia ? (
         <div className="space-y-5">
           {correcao}
-          {correcao && notaAnalogia && <div className="border-t border-manilha" />}
+          {correcao && notaAnalogia && <div className="border-t border-ink-200" />}
           {notaAnalogia}
         </div>
       ) : null,

@@ -5,7 +5,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.tcc.plataformaestudos.material.MaterialOrigem;
 import com.tcc.plataformaestudos.material.MaterialOrigemService;
@@ -38,13 +38,18 @@ public class FlashcardGenerationService {
 	private final MaterialOrigemService materialOrigemService;
 	private final GeminiClient geminiClient;
 	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
-	@Transactional(readOnly = true)
+	// Sem @Transactional no método: a leitura do material roda numa transação
+	// curta e a chamada à IA (até 2 x 120s) fica fora dela, para não prender
+	// uma conexão do pool durante a espera.
 	public SugestoesFlashcardsResponseDTO gerarSugestoes(Long materialId) {
-		MaterialOrigem material = materialOrigemService.buscarMaterialDoUsuarioAutenticado(materialId);
-		validarMaterialProntoParaIA(material);
+		String prompt = transactionTemplate.execute(status -> {
+			MaterialOrigem material = materialOrigemService.buscarMaterialDoUsuarioAutenticado(materialId);
+			validarMaterialProntoParaIA(material);
+			return montarPrompt(TextoMaterialPrompt.limitar(material.getTextoExtraido()));
+		});
 
-		String prompt = montarPrompt(material.getTextoExtraido());
 		List<FlashcardSugestaoDTO> sugestoes = gerarComRetry(materialId, prompt);
 
 		return new SugestoesFlashcardsResponseDTO(sugestoes);
