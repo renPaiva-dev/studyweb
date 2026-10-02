@@ -1,12 +1,10 @@
-import { Share2, Sparkles } from 'lucide-react'
+import { BarChart3, BookOpenCheck, FileText, HelpCircle, Layers, Library, MessageCircleQuestion, Share2, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { buscarDeck, type DeckDetalhe } from '@/api/deckApi'
 import { extrairMensagemErro } from '@/api/apiError'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { CabecalhoPagina } from '@/components/CabecalhoPagina'
 import { CompartilharDeckDialog } from '@/components/CompartilharDeckDialog'
 import { DashboardTab } from '@/components/DashboardTab'
 import { EstudarTab } from '@/components/EstudarTab'
@@ -14,6 +12,19 @@ import { FlashcardsTab } from '@/components/FlashcardsTab'
 import { MateriaisTab } from '@/components/MateriaisTab'
 import { PerguntarTab } from '@/components/PerguntarTab'
 import { QuizTab } from '@/components/QuizTab'
+import { Button } from '@/components/ui/button'
+import { EstadoErro } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const ABAS = [
+  { valor: 'materiais', rotulo: 'Materiais', icone: FileText },
+  { valor: 'flashcards', rotulo: 'Flashcards', icone: Layers },
+  { valor: 'perguntar', rotulo: 'Perguntar', icone: MessageCircleQuestion },
+  { valor: 'estudar', rotulo: 'Estudar', icone: BookOpenCheck },
+  { valor: 'quiz', rotulo: 'Quiz', icone: HelpCircle },
+  { valor: 'dashboard', rotulo: 'Dashboard', icone: BarChart3 },
+] as const
 
 // UC02 - visao geral de um deck. GET /api/decks/{id} (docs/contrato-api.md).
 // Abas na ordem do fluxo real: Materiais (UC03/UC04) -> Flashcards (UC05/UC06)
@@ -47,43 +58,53 @@ export function DeckDetalhePage() {
 
   if (erroCarregamento !== null) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
-        <p className="text-muted-foreground">{erroCarregamento}</p>
-        <Button variant="outline" onClick={() => void carregarDeck()}>
-          Tentar novamente
-        </Button>
+      <div className="space-y-8">
+        <CabecalhoPagina voltar={{ para: '/decks', rotulo: 'Meus decks' }} titulo="Deck" />
+        <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregarDeck()} />
       </div>
     )
   }
 
   if (deck === null) {
     return (
-      <div className="space-y-3">
-        <Skeleton className="h-8 w-1/3" />
-        <Skeleton className="h-4 w-2/3" />
-        <Skeleton className="mt-4 h-9 w-80" />
-      </div>
+      <Carregando rotulo="Carregando deck..." className="space-y-6">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-10 w-2/3 max-w-md" />
+        <Skeleton className="h-5 w-1/2 max-w-sm" />
+        <Skeleton className="h-11 w-full" />
+      </Carregando>
     )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">{deck.titulo}</h1>
-          {deck.descricao && <p className="text-muted-foreground">{deck.descricao}</p>}
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="outline" onClick={() => navigate(`/provas/nova?deckId=${deckId}`)}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Gerar prova
-          </Button>
-          <Button variant="outline" onClick={() => setCompartilhando(true)}>
-            <Share2 className="mr-2 h-4 w-4" />
-            Compartilhar
-          </Button>
-        </div>
-      </div>
+      <CabecalhoPagina
+        voltar={{ para: '/decks', rotulo: 'Meus decks' }}
+        sobretitulo={
+          deck.colecaoNome ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Library className="h-3.5 w-3.5" />
+              {deck.colecaoNome}
+            </span>
+          ) : (
+            'Deck'
+          )
+        }
+        titulo={deck.titulo}
+        descricao={deck.descricao || undefined}
+        acoes={
+          <>
+            <Button variant="outline" onClick={() => setCompartilhando(true)}>
+              <Share2 />
+              Compartilhar
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(`/provas/nova?deckId=${deckId}`)}>
+              <Sparkles />
+              Gerar prova
+            </Button>
+          </>
+        }
+      />
 
       <CompartilharDeckDialog
         deck={compartilhando ? { id: deckId, titulo: deck.titulo } : null}
@@ -96,13 +117,13 @@ export function DeckDetalhePage() {
           em voo de um deck anterior ao navegar rapido entre decks (achados
           F0/F5/F6/F7 da auditoria). */}
       <Tabs key={deckId} value={abaAtiva} onValueChange={setAbaAtiva}>
-        <TabsList>
-          <TabsTrigger value="materiais">Materiais</TabsTrigger>
-          <TabsTrigger value="flashcards">Flashcards</TabsTrigger>
-          <TabsTrigger value="perguntar">Perguntar</TabsTrigger>
-          <TabsTrigger value="estudar">Estudar</TabsTrigger>
-          <TabsTrigger value="quiz">Quiz</TabsTrigger>
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+        <TabsList aria-label="Seções do deck">
+          {ABAS.map(({ valor, rotulo, icone: Icone }) => (
+            <TabsTrigger key={valor} value={valor}>
+              <Icone aria-hidden="true" />
+              {rotulo}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="materiais">
@@ -110,7 +131,7 @@ export function DeckDetalhePage() {
         </TabsContent>
 
         <TabsContent value="flashcards">
-          <FlashcardsTab deckId={deckId} />
+          <FlashcardsTab deckId={deckId} onIrParaMateriais={() => setAbaAtiva('materiais')} />
         </TabsContent>
 
         <TabsContent value="perguntar">

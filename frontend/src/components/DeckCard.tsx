@@ -1,15 +1,16 @@
-import { Layers, Library, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { Layers, Library, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 
 import type { Deck } from '@/api/deckApi'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { aoAtivarComTeclado, Monograma } from '@/components/Monograma'
 
 interface DeckCardProps {
   deck: Deck
@@ -18,64 +19,70 @@ interface DeckCardProps {
   onExcluir: () => void
 }
 
-// UC02 - card de um deck na grid de /decks. Clicar no card navega para
-// /decks/:id; o menu de opcoes (editar/excluir) fica num DropdownMenu
-// que nao deve propagar o clique para o card.
+// UC02 - card de um deck na grid de /decks. Clicar no card (ou Enter/Espaco
+// com foco nele) navega para /decks/:id; o menu de opcoes (editar/excluir)
+// fica num DropdownMenu que nao propaga o clique para o card.
 export function DeckCard({ deck, onAbrir, onEditar, onExcluir }: DeckCardProps) {
   return (
     <Card
       interactive
-      role="button"
+      role="link"
       tabIndex={0}
+      aria-label={`Abrir deck ${deck.titulo}`}
       onClick={onAbrir}
-      onKeyDown={(evento) => {
-        if (evento.key === 'Enter' || evento.key === ' ') {
-          onAbrir()
-        }
-      }}
+      onKeyDown={aoAtivarComTeclado(onAbrir)}
+      className="group flex flex-col p-5"
     >
-      <CardHeader className="flex-row items-start justify-between space-y-0">
-        <div className="min-w-0">
-          <CardTitle className="truncate">{deck.titulo}</CardTitle>
-          {deck.descricao && <CardDescription className="mt-1 line-clamp-2">{deck.descricao}</CardDescription>}
+      <div className="flex items-start gap-3.5">
+        <Monograma texto={deck.titulo} />
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h3 className="line-clamp-2 font-semibold leading-snug text-foreground">{deck.titulo}</h3>
+          {deck.descricao ? (
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{deck.descricao}</p>
+          ) : (
+            <p className="mt-1 text-sm italic text-ink-500">Sem descrição</p>
+          )}
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="-mr-2 -mt-1 shrink-0"
+              size="icon-sm"
+              className="-mr-2 -mt-1 shrink-0 text-ink-500"
               onClick={(evento) => evento.stopPropagation()}
-              aria-label="Opções do deck"
+              aria-label={`Opções do deck ${deck.titulo}`}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreHorizontal />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(evento) => evento.stopPropagation()}>
             <DropdownMenuItem onClick={onEditar}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
+              <Pencil />
+              Editar deck
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExcluir} className="text-destructive focus:text-destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
-              Excluir
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onExcluir} className="text-danger-700 focus:bg-danger-50 focus:text-danger-800 [&>svg]:text-danger-600">
+              <Trash2 />
+              Excluir deck
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        <Badge variant="secondary" className="gap-1">
-          <Layers className="h-3 w-3" />
-          {deck.totalFlashcards} flashcard{deck.totalFlashcards === 1 ? '' : 's'}
-        </Badge>
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-ink-100 pt-4 text-sm text-ink-600">
+        <span className="inline-flex items-center gap-1.5 font-medium">
+          <Layers className="h-4 w-4 text-ink-500" />
+          <span className="font-semibold tabular-nums text-foreground">{deck.totalFlashcards}</span>
+          flashcard{deck.totalFlashcards === 1 ? '' : 's'}
+        </span>
         {deck.colecaoNome && (
-          <Badge variant="outline" className="gap-1">
-            <Library className="h-3 w-3" />
-            {deck.colecaoNome}
-          </Badge>
+          <span className="inline-flex min-w-0 items-center gap-1.5">
+            <Library className="h-4 w-4 shrink-0 text-ink-500" />
+            <span className="truncate">{deck.colecaoNome}</span>
+          </span>
         )}
-      </CardContent>
+      </div>
     </Card>
   )
 }

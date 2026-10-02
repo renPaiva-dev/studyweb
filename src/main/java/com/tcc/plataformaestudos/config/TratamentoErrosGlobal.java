@@ -1,5 +1,6 @@
 package com.tcc.plataformaestudos.config;
 
+import java.sql.SQLException;
 import java.time.Instant;
 
 import org.slf4j.Logger;
@@ -19,6 +20,8 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 public class TratamentoErrosGlobal {
 
 	private static final Logger log = LoggerFactory.getLogger(TratamentoErrosGlobal.class);
+
+	private static final String SQL_STATE_TEXTO_LONGO_DEMAIS = "22001";
 
 	@ExceptionHandler(NegocioException.class)
 	public ResponseEntity<ErrorResponseDTO> tratarNegocioException(NegocioException ex, WebRequest request) {
@@ -66,7 +69,24 @@ public class TratamentoErrosGlobal {
 	 */
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ResponseEntity<ErrorResponseDTO> tratarViolacaoDeIntegridade(DataIntegrityViolationException ex, WebRequest request) {
+		// SQLState 22001 (string_data_right_truncation): texto maior que a
+		// coluna. Não é conflito — responder 409 "já existe" confundia o
+		// usuário (ex.: quiz com resposta longa antes da V13).
+		if (SQL_STATE_TEXTO_LONGO_DEMAIS.equals(extrairSqlState(ex))) {
+			log.warn("Texto excede o tamanho da coluna: {}", ex.getMostSpecificCause().getMessage());
+			return construirResposta(HttpStatus.BAD_REQUEST, "Um dos textos enviados excede o tamanho máximo permitido", request);
+		}
+
 		return construirResposta(HttpStatus.CONFLICT, "Este recurso já existe ou conflita com um dado já cadastrado", request);
+	}
+
+	private static String extrairSqlState(Throwable ex) {
+		for (Throwable causa = ex; causa != null; causa = causa.getCause()) {
+			if (causa instanceof SQLException sqlException && sqlException.getSQLState() != null) {
+				return sqlException.getSQLState();
+			}
+		}
+		return null;
 	}
 
 	/**

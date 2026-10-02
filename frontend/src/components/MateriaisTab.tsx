@@ -1,12 +1,15 @@
-import { FileWarning } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { buscarMaterial, enviarMaterial, listarMateriais, type Material, type SugestaoFlashcard } from '@/api/materialApi'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { EstadoErro, EstadoVazio } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { MaterialItem } from '@/components/MaterialItem'
+import { NotaMargem } from '@/components/NotaMargem'
 import { RevisaoSugestoesFlashcards } from '@/components/RevisaoSugestoesFlashcards'
 import { UploadMaterialArea } from '@/components/UploadMaterialArea'
 import { useDefinirMargem } from '@/context/MargemContext'
@@ -26,6 +29,9 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   const [materiais, setMateriais] = useState<Material[] | null>(null)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  // Erro do ultimo arquivo escolhido (tipo/tamanho/falha no envio) - inline,
+  // logo abaixo da area de upload, nunca so num toast que some.
+  const [erroUpload, setErroUpload] = useState<string | null>(null)
   const [sugestoesEmRevisao, setSugestoesEmRevisao] = useState<SugestaoFlashcard[] | null>(null)
 
   // B5 - a listagem agora e paginada; guarda a pagina atual/total para o
@@ -111,13 +117,16 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
   }
 
   async function aoSelecionarArquivo(arquivo: File) {
+    setErroUpload(null)
+
     if (!arquivo.type.includes('pdf')) {
-      toast.error('Apenas arquivos PDF são aceitos.')
+      setErroUpload(`"${arquivo.name}" não é um PDF. Envie um arquivo com extensão .pdf.`)
       return
     }
 
     if (arquivo.size > TAMANHO_MAXIMO_BYTES) {
-      toast.error('O arquivo excede o tamanho máximo de 15MB.')
+      const tamanhoMb = (arquivo.size / 1024 / 1024).toFixed(1).replace('.', ',')
+      setErroUpload(`"${arquivo.name}" tem ${tamanhoMb} MB, acima do limite de 15 MB. Tente dividir o PDF em partes menores.`)
       return
     }
 
@@ -134,12 +143,12 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
       if (material.statusProcessamento === 'PENDENTE') {
         acompanharProcessamento(material.id)
       } else if (material.statusProcessamento === 'PROCESSADO') {
-        toast.success('PDF enviado e processado com sucesso.')
+        toast.success('PDF enviado e processado!', { description: 'Agora é só gerar os flashcards com IA.' })
       } else {
-        toast.error('Não foi possível extrair o texto deste PDF.')
+        setErroUpload('O PDF foi enviado, mas não conseguimos extrair o texto dele. Veja o motivo na lista abaixo.')
       }
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível enviar o material. Tente novamente.'))
+      setErroUpload(extrairMensagemErro(erro, 'Não foi possível enviar o material. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
@@ -151,15 +160,15 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
 
   useDefinirMargem(
     materiais && materiais.length > 0 ? (
-      <div className="space-y-1 text-sm">
-        <p className="font-heading text-2xl font-semibold">{totalItens}</p>
-        <p className="text-muted-foreground">
-          {totalItens === 1 ? 'material enviado' : 'materiais enviados'}
-          {totalPendentes > 0 && `, ${totalPendentes} em processamento`}
-          {totalComErro > 0 && `, ${totalComErro} com erro`}
-        </p>
-        {totalProcessados > 0 && <p className="text-verde-lousa">{totalProcessados} pronto{totalProcessados === 1 ? '' : 's'} para gerar flashcards</p>}
-      </div>
+      <NotaMargem
+        valor={totalItens}
+        rotulo={totalItens === 1 ? 'material enviado' : 'materiais enviados'}
+        detalhes={[
+          { rotulo: 'Prontos para gerar', valor: totalProcessados, tom: totalProcessados > 0 ? 'positivo' : 'neutro' },
+          ...(totalPendentes > 0 ? [{ rotulo: 'Processando', valor: totalPendentes }] : []),
+          ...(totalComErro > 0 ? [{ rotulo: 'Com erro', valor: totalComErro, tom: 'atencao' as const }] : []),
+        ]}
+      />
     ) : null,
     null,
     [materiais?.length, totalItens, totalProcessados, totalPendentes, totalComErro],
@@ -181,27 +190,35 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
 
   return (
     <div className="space-y-6">
-      <UploadMaterialArea enviando={enviando} onArquivoSelecionado={(arquivo) => void aoSelecionarArquivo(arquivo)} />
+      <div className="space-y-3">
+        <UploadMaterialArea
+          enviando={enviando}
+          invalido={erroUpload !== null}
+          onArquivoSelecionado={(arquivo) => void aoSelecionarArquivo(arquivo)}
+        />
+        {erroUpload && (
+          <Alerta id="erro-upload" variante="erro" titulo="Arquivo não enviado" onFechar={() => setErroUpload(null)}>
+            {erroUpload}
+          </Alerta>
+        )}
+      </div>
 
       {materiais === null && erroCarregamento === null && (
-        <div className="space-y-3">
-          <Skeleton className="h-16 w-full rounded-none" />
-          <Skeleton className="h-16 w-full rounded-none" />
-        </div>
+        <Carregando rotulo="Carregando materiais..." className="space-y-3">
+          <Skeleton className="h-[76px] w-full rounded-xl" />
+          <Skeleton className="h-[76px] w-full rounded-xl" />
+        </Carregando>
       )}
 
-      {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-3 rounded-none border py-10 text-center">
-          <FileWarning className="h-6 w-6 text-muted-foreground" />
-          <p className="text-muted-foreground">{erroCarregamento}</p>
-          <Button variant="outline" size="sm" onClick={() => void carregarMateriais()}>
-            Tentar novamente
-          </Button>
-        </div>
-      )}
+      {erroCarregamento !== null && <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregarMateriais()} />}
 
       {materiais !== null && materiais.length === 0 && (
-        <p className="py-6 text-center text-sm text-muted-foreground">Nenhum material enviado ainda.</p>
+        <EstadoVazio
+          compacto
+          icone={FileText}
+          titulo="Nenhum material enviado ainda"
+          descricao="Envie a apostila, os slides ou o resumo da matéria em PDF. A IA lê o conteúdo e sugere flashcards para você revisar."
+        />
       )}
 
       {materiais !== null && materiais.length > 0 && (
@@ -225,7 +242,7 @@ export function MateriaisTab({ deckId, onFlashcardsConfirmados }: MateriaisTabPr
           caso comum de um TCC). */}
       {materiais !== null && paginaAtual + 1 < totalPaginas && (
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={() => void carregarMaisMateriais()} disabled={carregandoMais}>
+          <Button variant="outline" onClick={() => void carregarMaisMateriais()} loading={carregandoMais}>
             {carregandoMais ? 'Carregando...' : 'Carregar mais materiais'}
           </Button>
         </div>

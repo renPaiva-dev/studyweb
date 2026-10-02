@@ -37,9 +37,10 @@ public class LembreteRevisaoService {
 	 * UC30 — job diário: um e-mail por usuário com pendências, nenhum para
 	 * quem está em dia. Cada envio é isolado em try/catch: um endereço
 	 * inválido ou timeout de SMTP para um usuário não pode abortar o envio
-	 * para os demais usuários dessa mesma execução do cron.
+	 * para os demais usuários dessa mesma execução do cron. A zona é fixa
+	 * em Brasília para o "8h" não virar 5h num servidor em UTC.
 	 */
-	@Scheduled(cron = "${app.lembrete-revisao.cron:0 0 8 * * *}")
+	@Scheduled(cron = "${app.lembrete-revisao.cron:0 0 8 * * *}", zone = "${app.lembrete-revisao.zona:America/Sao_Paulo}")
 	public void enviarLembretesDiarios() {
 		List<LembreteRevisaoDTO> lembretes = lembreteRevisaoDadosService.montarLembretesDeTodosOsUsuarios();
 		lembretes.forEach(this::enviarEmailComTratamentoDeErro);

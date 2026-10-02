@@ -4,7 +4,9 @@ Extensão da especificação já fechada. Reaproveita 100% da infraestrutura
 de IA já existente (`GeminiClient`) — sem vector store, sem embeddings,
 sem dependência nova. A ancoragem no material real vem de injetar o
 `texto_extraido` (já salvo desde UC03) diretamente no prompt, já que os
-PDFs deste domínio cabem na janela de contexto do modelo.
+PDFs deste domínio cabem na janela de contexto do modelo. Para PDFs
+grandes, o texto é cortado em 60.000 caracteres antes do prompt (ver
+`Docs/integracao-ia.md`, "Transações e tamanho do prompt").
 
 ## 1. Nova Regra de Negócio
 

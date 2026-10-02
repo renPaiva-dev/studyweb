@@ -1,4 +1,4 @@
-import { KeyRound } from 'lucide-react'
+import { ArrowLeft, KeyRound } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -6,16 +6,13 @@ import { toast } from 'sonner'
 import { redefinirSenha } from '@/api/authApi'
 import { extrairMensagemErro } from '@/api/apiError'
 import { AuthSplitLayout } from '@/components/AuthSplitLayout'
+import { RequisitosSenha } from '@/components/RequisitosSenha'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Campo } from '@/components/ui/campo'
+import { Input, PasswordInput } from '@/components/ui/input'
+import { useValidacao } from '@/hooks/useValidacao'
 import { MENSAGEM_SENHA_FORTE, senhaEhForte } from '@/utils/senhaForte'
-
-interface Erros {
-  token?: string
-  novaSenha?: string
-}
 
 // UC18 - Redefinir senha. POST /api/auth/redefinir-senha
 // (docs/contrato-api.md). O fluxo normal e o usuario clicar no link do
@@ -34,28 +31,26 @@ export function RedefinirSenhaPage() {
 
   const [token, setToken] = useState(tokenDaUrl ?? '')
   const [novaSenha, setNovaSenha] = useState('')
-  const [erros, setErros] = useState<Erros>({})
   const [enviando, setEnviando] = useState(false)
+  const [tentouEnviar, setTentouEnviar] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
 
-  function validar(): boolean {
-    const novosErros: Erros = {}
-
-    if (!token.trim()) {
-      novosErros.token = 'Informe o token recebido.'
-    }
-
-    if (!senhaEhForte(novaSenha)) {
-      novosErros.novaSenha = MENSAGEM_SENHA_FORTE
-    }
-
-    setErros(novosErros)
-    return Object.keys(novosErros).length === 0
-  }
+  const validacao = useValidacao({
+    token: () => (!token.trim() ? 'Cole o token recebido por e-mail.' : undefined),
+    novaSenha: () => (!senhaEhForte(novaSenha) ? MENSAGEM_SENHA_FORTE : undefined),
+  })
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!validar()) {
+    if (enviando) {
+      return
+    }
+
+    setTentouEnviar(true)
+    setErroEnvio(null)
+
+    if (!validacao.validarTudo()) {
       return
     }
 
@@ -63,68 +58,64 @@ export function RedefinirSenhaPage() {
 
     try {
       await redefinirSenha(token.trim(), novaSenha)
-      toast.success('Senha redefinida com sucesso. Faça login com a nova senha.')
+      toast.success('Senha redefinida!', { description: 'Agora é só entrar com a nova senha.' })
       navigate('/login')
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível redefinir sua senha. Verifique o token e tente novamente.'))
+      setErroEnvio(extrairMensagemErro(erro, 'Não foi possível redefinir sua senha. O link pode ter expirado. Peça um novo e tente outra vez.'))
     } finally {
       setEnviando(false)
     }
   }
 
+  const erroSenha = validacao.erro('novaSenha')
+
   return (
-    <AuthSplitLayout>
-      <Card className="w-full max-w-sm border-t-4 border-t-primary">
-        <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-manilha/40">
-            <KeyRound className="h-8 w-8" />
-          </span>
-          <CardTitle className="font-heading text-3xl">Redefinir senha</CardTitle>
-          <CardDescription>
-            {tokenVeioDoLink ? 'Escolha sua nova senha' : 'Informe o token recebido e a nova senha'}
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={aoSubmeter} noValidate>
-          <CardContent className="space-y-4">
-            {!tokenVeioDoLink && (
-              <div className="space-y-2">
-                <Label htmlFor="token">Token</Label>
-                <Input
-                  id="token"
-                  className="h-10"
-                  placeholder="Cole aqui o token recebido"
-                  value={token}
-                  onChange={(evento) => setToken(evento.target.value)}
-                  aria-invalid={Boolean(erros.token)}
-                />
-                {erros.token && <p className="text-sm text-destructive">{erros.token}</p>}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="novaSenha">Nova senha</Label>
-              <Input
-                id="novaSenha"
-                type="password"
-                className="h-10"
-                placeholder="••••••••"
-                autoComplete="new-password"
-                value={novaSenha}
-                onChange={(evento) => setNovaSenha(evento.target.value)}
-                aria-invalid={Boolean(erros.novaSenha)}
-              />
-              {erros.novaSenha && <p className="text-sm text-destructive">{erros.novaSenha}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={enviando}>
-              {enviando ? 'Redefinindo...' : 'Redefinir senha'}
-            </Button>
-          </CardContent>
-        </form>
-        <CardFooter className="justify-center text-sm text-muted-foreground">
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Voltar para o login
-          </Link>
-        </CardFooter>
-      </Card>
+    <AuthSplitLayout
+      icone={KeyRound}
+      titulo="Criar nova senha"
+      descricao={tokenVeioDoLink ? 'Escolha uma senha forte que você ainda não usou aqui.' : 'Informe o token recebido e escolha a nova senha.'}
+      rodape={
+        <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-ink-700 hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para o login
+        </Link>
+      }
+    >
+      <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+        {!tokenVeioDoLink && (
+          <Campo id="token" rotulo="Token" erro={validacao.erro('token')}>
+            <Input
+              placeholder="Cole aqui o token recebido"
+              spellCheck={false}
+              value={token}
+              onChange={(evento) => setToken(evento.target.value)}
+              {...validacao.propsCampo('token')}
+            />
+          </Campo>
+        )}
+
+        <div className="space-y-2">
+          <Campo id="novaSenha" rotulo="Nova senha" erro={erroSenha && !novaSenha ? 'Crie uma nova senha.' : undefined}>
+            <PasswordInput
+              placeholder="Crie uma senha forte"
+              autoComplete="new-password"
+              autoFocus={tokenVeioDoLink}
+              value={novaSenha}
+              onChange={(evento) => setNovaSenha(evento.target.value)}
+              aria-describedby="novaSenha-requisitos"
+              {...validacao.propsCampo('novaSenha')}
+              {...(erroSenha ? { 'aria-invalid': true } : {})}
+            />
+          </Campo>
+          <RequisitosSenha id="novaSenha-requisitos" senha={novaSenha} destacarPendentes={Boolean(erroSenha) && tentouEnviar} />
+        </div>
+
+        {erroEnvio && <Alerta variante="erro">{erroEnvio}</Alerta>}
+
+        <Button type="submit" size="lg" className="w-full" loading={enviando}>
+          {enviando ? 'Redefinindo...' : 'Redefinir senha'}
+        </Button>
+      </form>
     </AuthSplitLayout>
   )
 }

@@ -3,9 +3,11 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { buscarDashboardGeral, type DashboardGeral } from '@/api/usuarioApi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CabecalhoPagina } from '@/components/CabecalhoPagina'
+import { CartaoMetrica } from '@/components/CartaoMetrica'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { EstadoErro } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { IndicadorPercentual } from '@/components/IndicadorPercentual'
 import { RankingDecksChart } from '@/components/RankingDecksChart'
 
@@ -32,100 +34,74 @@ export function DashboardGeralPage() {
   }, [carregar])
 
   if (erroCarregamento !== null) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
-        <p className="text-muted-foreground">{erroCarregamento}</p>
-        <Button variant="outline" onClick={() => void carregar()}>
-          Tentar novamente
-        </Button>
-      </div>
-    )
+    return <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
   }
 
   if (dashboard === null) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-1/3" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Skeleton className="h-32 w-full rounded-none" />
-          <Skeleton className="h-32 w-full rounded-none" />
-          <Skeleton className="h-32 w-full rounded-none" />
+      <Carregando rotulo="Carregando visão geral..." className="space-y-8">
+        <Skeleton className="h-10 w-1/3" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {Array.from({ length: 5 }, (_, indice) => (
+            <Skeleton key={indice} className="h-[140px] w-full rounded-xl" />
+          ))}
         </div>
-      </div>
+        <Skeleton className="h-64 w-full rounded-xl" />
+      </Carregando>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">Visão geral</h1>
-        <p className="text-muted-foreground">Seu progresso consolidado em todos os decks</p>
-      </div>
+    <div className="space-y-8">
+      <CabecalhoPagina titulo="Visão geral" descricao="Seu progresso consolidado em todos os decks." />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Decks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-heading text-2xl font-semibold">{dashboard.totalDecks}</p>
-            <p className="text-xs text-muted-foreground">
-              {dashboard.totalFlashcards} flashcard{dashboard.totalFlashcards === 1 ? '' : 's'} no total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-            <Flame className="h-4 w-4 text-verde-lousa" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Sequência de estudo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-heading text-2xl font-semibold">
-              {dashboard.streakDias} dia{dashboard.streakDias === 1 ? '' : 's'}
-            </p>
-            <p className="text-xs text-muted-foreground">consecutivos com revisão</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center gap-2 space-y-0 pb-2">
-            <ListChecks className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium text-muted-foreground">Quizzes/provas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-heading text-2xl font-semibold">{dashboard.totalTentativasQuiz}</p>
-            <p className="text-xs text-muted-foreground">
-              {dashboard.totalTentativasQuiz > 0
-                ? `pontuação média de ${dashboard.pontuacaoMediaQuiz}%`
-                : 'nenhuma tentativa ainda'}
-            </p>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5 [&>*:first-child]:col-span-2 lg:[&>*:first-child]:col-span-1">
+        <CartaoMetrica
+          destaque
+          icone={Flame}
+          titulo="Sequência"
+          valor={
+            <>
+              {dashboard.streakDias}
+              <span className="ml-1 text-h3 text-white/75">dia{dashboard.streakDias === 1 ? '' : 's'}</span>
+            </>
+          }
+          detalhe="consecutivos com revisão"
+        />
+        <CartaoMetrica
+          icone={Layers}
+          titulo="Decks"
+          valor={dashboard.totalDecks}
+          detalhe={`${dashboard.totalFlashcards} flashcard${dashboard.totalFlashcards === 1 ? '' : 's'} no total`}
+        />
+        <CartaoMetrica
+          icone={ListChecks}
+          titulo="Quizzes e provas"
+          valor={dashboard.totalTentativasQuiz}
+          detalhe={dashboard.totalTentativasQuiz > 0 ? `média de ${dashboard.pontuacaoMediaQuiz}% de acerto` : 'nenhuma tentativa ainda'}
+        />
         <IndicadorPercentual
           icone={TrendingUp}
-          titulo="Dominado (geral)"
+          titulo="Dominado"
           percentual={dashboard.percentualDominadoGeral}
-          corBarra="bg-verde-lousa"
-          corTrilha="bg-verde-lousa/10"
-          corIcone="text-verde-lousa"
+          corBarra="bg-success-600"
+          corTrilha="bg-success-50"
+          corIcone="text-success-700"
         />
-
         <IndicadorPercentual
           icone={AlertTriangle}
-          titulo="Em risco (geral)"
+          titulo="Em risco"
           percentual={dashboard.percentualEmRiscoGeral}
-          corBarra="bg-vermelho-correcao"
-          corTrilha="bg-vermelho-correcao/10"
-          corIcone="text-vermelho-correcao"
+          corBarra="bg-danger-600"
+          corTrilha="bg-danger-50"
+          corIcone="text-danger-700"
         />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-semibold">Ranking de decks por desempenho</CardTitle>
+          <CardTitle>Ranking de decks por desempenho</CardTitle>
+          <CardDescription>Ordenados pelo percentual dominado. Passe o mouse para ver os números.</CardDescription>
         </CardHeader>
         <CardContent>
           <RankingDecksChart decks={dashboard.decks} />

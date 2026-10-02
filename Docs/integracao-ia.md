@@ -12,6 +12,8 @@ Claude Code para recriá-los seguindo este padrão).
   com `GET /v1beta/models?key=...` se voltar a dar 404 no futuro)
 - Chamada HTTP pura via `java.net.http.HttpClient` (sem SDK), para minimizar dependências.
 - Chave configurada via variável de ambiente `GEMINI_API_KEY`, nunca hardcoded.
+  Enviada no header `x-goog-api-key`, não na query string (`?key=`), para não
+  aparecer em logs de proxy nem em mensagens de erro de E/S (ajuste de 2026-10).
 
 ## Fluxo (ver docs/casos-de-uso.md — UC04)
 
@@ -23,6 +25,18 @@ Claude Code para recriá-los seguindo este padrão).
 6. Limita o resultado a 15 itens (RN08), mesmo que a IA tenha retornado mais.
 7. Controller devolve as sugestões (não persistidas) — ver `docs/contrato-api.md`, seção de geração via IA.
 8. Persistência só ocorre no endpoint `/confirmar-sugestoes`, após o usuário revisar (RN05).
+
+### Transações e tamanho do prompt (ajuste de 2026-10)
+
+- Nenhum método que chama `GeminiClient` é `@Transactional`. Os dados são
+  lidos numa transação curta (`TransactionTemplate`), a IA é chamada fora de
+  qualquer transação (até 2 x 120s) e, quando há o que gravar (prova
+  personalizada, UC27), uma segunda transação curta persiste o resultado.
+  Assim uma chamada lenta não prende uma conexão do pool do banco.
+- O `texto_extraido` injetado no prompt (UC04, UC14, UC32) é limitado a
+  60.000 caracteres (`TextoMaterialPrompt`); na pergunta sobre o material
+  (UC32) esse total é dividido entre os materiais do deck. O corte fica
+  registrado em log.
 
 ## Classes envolvidas
 

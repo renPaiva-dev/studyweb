@@ -7,18 +7,22 @@ import { cn } from "@/lib/utils"
 
 const Tabs = TabsPrimitive.Root
 
+// Abas sublinhadas (indicador ambar), que rolam na horizontal no mobile em
+// vez de estourar a largura da tela.
 const TabsList = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={cn(
-      "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
+  <div className="scroll-sem-barra -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    <TabsPrimitive.List
+      ref={ref}
+      className={cn(
+        "inline-flex min-w-full items-stretch gap-1 border-b border-ink-200 sm:min-w-0 sm:w-full",
+        className
+      )}
+      {...props}
+    />
+  </div>
 ))
 TabsList.displayName = TabsPrimitive.List.displayName
 
@@ -29,7 +33,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow",
+      "relative -mb-px inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-t-md border-b-2 border-transparent px-3 text-sm font-semibold text-ink-600 transition-colors duration-fast hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-brand-500 data-[state=active]:text-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ink-500 data-[state=active]:[&_svg]:text-brand-700",
       className
     )}
     {...props}
@@ -44,7 +48,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-6 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background data-[state=active]:animate-entrada",
       className
     )}
     {...props}

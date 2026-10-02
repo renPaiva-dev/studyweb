@@ -16,10 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
@@ -55,6 +58,9 @@ class QuizServiceTest {
 
 	@Mock
 	private ProvaGenerationService provaGenerationService;
+
+	@Spy
+	private TransactionTemplate transactionTemplate = TransacaoDeTeste.template();
 
 	@InjectMocks
 	private QuizService quizService;

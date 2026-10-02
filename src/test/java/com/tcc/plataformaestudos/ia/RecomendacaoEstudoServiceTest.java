@@ -19,7 +19,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.AcessoNegadoException;
 import com.tcc.plataformaestudos.dashboard.DashboardRepository;
 import com.tcc.plataformaestudos.dashboard.UltimaRevisaoComTopicoProjecao;
@@ -56,6 +58,9 @@ class RecomendacaoEstudoServiceTest {
 	// RecomendacaoEstudoService.interpretarResposta), não apenas registrar chamadas.
 	@Spy
 	private ObjectMapper objectMapper = new ObjectMapper();
+
+	@Spy
+	private TransactionTemplate transactionTemplate = TransacaoDeTeste.template();
 
 	@InjectMocks
 	private RecomendacaoEstudoService recomendacaoEstudoService;

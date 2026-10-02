@@ -317,7 +317,7 @@
 - **Fluxo principal:**
   1. Estudante acessa o dashboard geral.
   2. Sistema agrega dados de todos os decks do usuário.
-  3. Sistema calcula o streak de dias consecutivos de estudo.
+  3. Sistema calcula o streak de dias consecutivos de estudo (hoje ainda sem revisão não zera a sequência; a contagem parte de ontem).
   4. Sistema exibe ranking de decks por desempenho.
 - **Regras relacionadas:** RN25
 

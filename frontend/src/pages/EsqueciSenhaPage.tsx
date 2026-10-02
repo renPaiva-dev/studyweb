@@ -1,13 +1,14 @@
-import { KeyRound } from 'lucide-react'
+import { ArrowLeft, KeyRound } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 
 import { esqueciSenha } from '@/api/authApi'
 import { AuthSplitLayout } from '@/components/AuthSplitLayout'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Campo } from '@/components/ui/campo'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useValidacao } from '@/hooks/useValidacao'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -17,19 +18,20 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // essa mensagem apos o envio, nunca um erro de "e-mail nao encontrado".
 export function EsqueciSenhaPage() {
   const [email, setEmail] = useState('')
-  const [erroEmail, setErroEmail] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [mensagem, setMensagem] = useState<string | null>(null)
+
+  const validacao = useValidacao({
+    email: () => (!email.trim() ? 'Informe seu e-mail.' : !EMAIL_REGEX.test(email) ? 'Informe um e-mail válido, como nome@email.com.' : undefined),
+  })
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!EMAIL_REGEX.test(email)) {
-      setErroEmail('Informe um e-mail válido.')
+    if (enviando || !validacao.validarTudo()) {
       return
     }
 
-    setErroEmail(null)
     setEnviando(true)
 
     try {
@@ -46,50 +48,45 @@ export function EsqueciSenhaPage() {
   }
 
   return (
-    <AuthSplitLayout>
-      <Card className="w-full max-w-sm border-t-4 border-t-primary">
-        <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-manilha/40">
-            <KeyRound className="h-8 w-8" />
-          </span>
-          <CardTitle className="font-heading text-3xl">Esqueci minha senha</CardTitle>
-          <CardDescription>Informe seu e-mail para receber instruções de redefinição</CardDescription>
-        </CardHeader>
-
-        {mensagem !== null ? (
-          <CardContent className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">{mensagem}</p>
-          </CardContent>
-        ) : (
-          <form onSubmit={aoSubmeter} noValidate>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  className="h-10"
-                  placeholder="voce@email.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(evento) => setEmail(evento.target.value)}
-                  aria-invalid={Boolean(erroEmail)}
-                />
-                {erroEmail && <p className="text-sm text-destructive">{erroEmail}</p>}
-              </div>
-              <Button type="submit" className="w-full" disabled={enviando}>
-                {enviando ? 'Enviando...' : 'Enviar instruções'}
-              </Button>
-            </CardContent>
-          </form>
-        )}
-
-        <CardFooter className="justify-center text-sm text-muted-foreground">
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Voltar para o login
-          </Link>
-        </CardFooter>
-      </Card>
+    <AuthSplitLayout
+      icone={KeyRound}
+      titulo="Esqueceu a senha?"
+      descricao="Sem problema. Informe o e-mail da sua conta e enviaremos um link para criar uma nova."
+      rodape={
+        <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-ink-700 hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para o login
+        </Link>
+      }
+    >
+      {mensagem !== null ? (
+        <div className="space-y-4">
+          <Alerta variante="sucesso" titulo="Verifique sua caixa de entrada">
+            {mensagem} O link vale por tempo limitado. Confira também a pasta de spam.
+          </Alerta>
+          <Button variant="outline" className="w-full" onClick={() => setMensagem(null)}>
+            Usar outro e-mail
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+          <Campo id="email" rotulo="E-mail" erro={validacao.erro('email')}>
+            <Input
+              type="email"
+              inputMode="email"
+              placeholder="voce@email.com"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+              {...validacao.propsCampo('email')}
+            />
+          </Campo>
+          <Button type="submit" size="lg" className="w-full" loading={enviando}>
+            {enviando ? 'Enviando...' : 'Enviar link de redefinição'}
+          </Button>
+        </form>
+      )}
     </AuthSplitLayout>
   )
 }

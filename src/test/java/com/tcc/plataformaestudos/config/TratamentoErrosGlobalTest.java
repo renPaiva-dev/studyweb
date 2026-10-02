@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.sql.SQLException;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,20 @@ class TratamentoErrosGlobalTest {
 		assertThat(resposta.getBody()).isNotNull();
 		assertThat(resposta.getBody().status()).isEqualTo(409);
 		assertThat(resposta.getBody().path()).isEqualTo("/api/auth/cadastro");
+	}
+
+	@Test
+	void deveMapearTextoLongoDemaisPara400EmVezDe409() {
+		WebRequest request = mock(WebRequest.class);
+		when(request.getDescription(false)).thenReturn("uri=/api/quizzes/1/tentativas");
+		SQLException causa = new SQLException("value too long for type character varying(500)", "22001");
+
+		ResponseEntity<ErrorResponseDTO> resposta = tratamentoErrosGlobal.tratarViolacaoDeIntegridade(
+				new DataIntegrityViolationException("could not execute statement", causa), request);
+
+		assertThat(resposta.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertThat(resposta.getBody()).isNotNull();
+		assertThat(resposta.getBody().message()).contains("tamanho máximo");
 	}
 
 }

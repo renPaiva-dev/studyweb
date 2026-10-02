@@ -1,7 +1,6 @@
-import { ChevronLeft, Loader2, Sparkles } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, History, Layers, RotateCcw, Send, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { listarDecks, type Deck } from '@/api/deckApi'
@@ -9,14 +8,17 @@ import { listarFlashcards, type Flashcard } from '@/api/flashcardApi'
 import { ESTILOS_PROVA, gerarProva, type EstiloProva } from '@/api/provaApi'
 import type { Quiz, ResultadoTentativa } from '@/api/quizApi'
 import { responderTentativa } from '@/api/quizApi'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CabecalhoPagina } from '@/components/CabecalhoPagina'
 import { QuestaoQuizItem } from '@/components/QuestaoQuizItem'
+import { ResultadoQuiz } from '@/components/ResultadoQuiz'
 import { RevisaoProvaQuestao } from '@/components/RevisaoProvaQuestao'
-import { classificarPontuacao } from '@/utils/classificarPontuacao'
+import { Alerta } from '@/components/ui/alerta'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { EstadoErro, EstadoVazio } from '@/components/ui/estados'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
 type Fase = 'configurar' | 'fazendo' | 'resultado'
@@ -42,6 +44,7 @@ export function NovaProvaPage() {
   const [estilo, setEstilo] = useState<EstiloProva | null>(null)
   const [gerando, setGerando] = useState(false)
   const [gerandoDemorando, setGerandoDemorando] = useState(false)
+  const [erroAcao, setErroAcao] = useState<string | null>(null)
 
   const [quiz, setQuiz] = useState<Quiz | null>(null)
   const [respostas, setRespostas] = useState<Record<number, string>>({})
@@ -138,14 +141,16 @@ export function NovaProvaPage() {
     }
 
     setGerando(true)
+    setErroAcao(null)
 
     try {
       const novoQuiz = await gerarProva(deckId, { flashcardIds: flashcardIdsSelecionados, estilo })
       setQuiz(novoQuiz)
       setRespostas({})
       setFase('fazendo')
+      window.scrollTo({ top: 0 })
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível gerar a prova. Tente novamente.'))
+      setErroAcao(extrairMensagemErro(erro, 'Não foi possível gerar a prova. Tente novamente.'))
     } finally {
       setGerando(false)
     }
@@ -161,6 +166,7 @@ export function NovaProvaPage() {
     }
 
     setEnviando(true)
+    setErroAcao(null)
 
     try {
       const payload = quiz.questoes.map((questao) => ({
@@ -169,8 +175,9 @@ export function NovaProvaPage() {
       }))
       setResultado(await responderTentativa(quiz.id, payload))
       setFase('resultado')
+      window.scrollTo({ top: 0 })
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível enviar suas respostas. Tente novamente.'))
+      setErroAcao(extrairMensagemErro(erro, 'Não foi possível enviar suas respostas. Tente novamente.'))
     } finally {
       setEnviando(false)
     }
@@ -183,33 +190,30 @@ export function NovaProvaPage() {
     setRespostas({})
     setFlashcardIdsSelecionados([])
     setEstilo(null)
+    setErroAcao(null)
   }
 
   if (fase === 'resultado' && resultado !== null) {
-    const { icone: Icone, cores } = classificarPontuacao(resultado.pontuacao)
-
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <div className={cn('flex flex-col items-center gap-3 rounded-none border py-10 text-center', cores.borda, cores.fundo)}>
-          <div className={cn('rounded-full p-4', cores.iconeFundo)}>
-            <Icone className={cn('h-8 w-8', cores.icone)} />
-          </div>
-          <div className="space-y-1">
-            <p className={cn('text-3xl font-bold', cores.texto)}>{resultado.pontuacao}%</p>
-            <p className={cn('text-sm', cores.textoSecundario)}>
-              Você acertou {resultado.acertos} de {resultado.total} questões
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={comecarNovaProva}>
-              Nova prova
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/provas')}>
-              Ver histórico
-            </Button>
-          </div>
-        </div>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <CabecalhoPagina voltar={{ para: '/provas', rotulo: 'Provas' }} sobretitulo="Resultado" titulo={quiz?.titulo ?? 'Sua prova'} />
+        <ResultadoQuiz
+          resultado={resultado}
+          acoes={
+            <>
+              <Button variant="secondary" onClick={comecarNovaProva}>
+                <RotateCcw />
+                Nova prova
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/provas')}>
+                <History />
+                Ver histórico
+              </Button>
+            </>
+          }
+        />
 
+        <h2 className="pt-2 font-heading text-h3 text-foreground">Correção questão a questão</h2>
         <div className="space-y-3">
           {resultado.questoes.map((questao, indice) => (
             <RevisaoProvaQuestao key={questao.questaoId} questao={questao} numero={indice + 1} />
@@ -222,15 +226,15 @@ export function NovaProvaPage() {
   if (fase === 'fazendo' && quiz !== null) {
     const totalRespondidas = quiz.questoes.filter((questao) => respostas[questao.id] !== undefined).length
     const todasRespondidas = totalRespondidas === quiz.questoes.length
+    const faltam = quiz.questoes.length - totalRespondidas
 
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="font-heading text-xl font-semibold">{quiz.titulo}</h1>
-          <span className="text-sm text-muted-foreground">
-            {totalRespondidas} de {quiz.questoes.length} respondidas
-          </span>
-        </div>
+      <div className="mx-auto max-w-3xl space-y-6">
+        <CabecalhoPagina
+          sobretitulo="Prova em andamento"
+          titulo={quiz.titulo}
+          descricao={`${totalRespondidas} de ${quiz.questoes.length} respondidas`}
+        />
 
         <div className="space-y-3">
           {quiz.questoes.map((questao, indice) => (
@@ -245,8 +249,16 @@ export function NovaProvaPage() {
           ))}
         </div>
 
-        <div className="flex justify-end border-t pt-4">
-          <Button onClick={() => void aoEnviarRespostas()} disabled={!todasRespondidas || enviando}>
+        {erroAcao && <Alerta variante="erro">{erroAcao}</Alerta>}
+
+        <div className="flex flex-col-reverse items-stretch gap-3 border-t border-ink-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
+          {!todasRespondidas && (
+            <p className="text-center text-sm text-ink-600 sm:text-right">
+              Falta{faltam === 1 ? '' : 'm'} {faltam} questão{faltam === 1 ? '' : 'ões'} para enviar.
+            </p>
+          )}
+          <Button onClick={() => void aoEnviarRespostas()} disabled={!todasRespondidas} loading={enviando}>
+            <Send />
             {enviando ? 'Enviando...' : 'Enviar respostas'}
           </Button>
         </div>
@@ -254,137 +266,212 @@ export function NovaProvaPage() {
     )
   }
 
+  const todosSelecionados = flashcards !== null && flashcards.length > 0 && flashcardIdsSelecionados.length === flashcards.length
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <Link to="/provas" className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-primary">
-          <ChevronLeft className="h-4 w-4" />
-          Voltar para provas
-        </Link>
-        <h1 className="mt-2 font-heading text-2xl font-semibold">Nova prova</h1>
-        <p className="text-muted-foreground">Escolha os flashcards e o estilo. A IA cria questões inéditas sobre o tema.</p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-8">
+      <CabecalhoPagina
+        voltar={{ para: '/provas', rotulo: 'Provas' }}
+        titulo="Nova prova"
+        descricao="Escolha os flashcards e o estilo. A IA cria questões inéditas sobre o tema."
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">1. Escolha o deck</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ol className="space-y-4">
+        <Passo numero={1} titulo="Escolha o deck" concluido={deckId !== null} ativo>
           {decks === null && erroCarregamento === null ? (
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-11 w-full" />
           ) : erroCarregamento !== null ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <p className="text-sm text-muted-foreground">{erroCarregamento}</p>
-              <Button variant="outline" size="sm" onClick={() => void carregarDecks()}>
-                Tentar novamente
-              </Button>
-            </div>
-          ) : (
-            <Select value={deckId !== null ? String(deckId) : undefined} onValueChange={aoEscolherDeck}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um deck" />
-              </SelectTrigger>
-              <SelectContent>
-                {(decks ?? []).map((deck) => (
-                  <SelectItem key={deck.id} value={String(deck.id)}>
-                    {deck.titulo}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </CardContent>
-      </Card>
-
-      {deckId !== null && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">2. Escolha os flashcards</CardTitle>
-            <CardDescription>As questões serão sobre o tema deles, inéditas, sem repetir pergunta/resposta</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {carregandoFlashcards && (
-              <>
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-                <Skeleton className="h-9 w-full" />
-              </>
-            )}
-
-            {!carregandoFlashcards && erroFlashcards !== null && (
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <p className="text-sm text-muted-foreground">{erroFlashcards}</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => deckId !== null && void carregarFlashcards(deckId)}
-                >
-                  Tentar novamente
+            <EstadoErro compacto mensagem={erroCarregamento} onTentarNovamente={() => void carregarDecks()} />
+          ) : decks !== null && decks.length === 0 ? (
+            <EstadoVazio
+              compacto
+              icone={Layers}
+              titulo="Você ainda não tem decks"
+              descricao="Crie um deck com alguns flashcards para gerar uma prova."
+              acao={
+                <Button asChild variant="outline">
+                  <Link to="/decks">Ir para Meus decks</Link>
                 </Button>
-              </div>
-            )}
+              }
+            />
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="deck-prova" className="sr-only">
+                Deck
+              </Label>
+              <Select value={deckId !== null ? String(deckId) : undefined} onValueChange={aoEscolherDeck}>
+                <SelectTrigger id="deck-prova">
+                  <SelectValue placeholder="Selecione um deck" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(decks ?? []).map((deck) => (
+                    <SelectItem key={deck.id} value={String(deck.id)}>
+                      {deck.titulo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </Passo>
 
-            {!carregandoFlashcards && erroFlashcards === null && flashcards !== null && flashcards.length === 0 && (
-              <p className="text-sm text-muted-foreground">Este deck ainda não tem flashcards.</p>
-            )}
+        <Passo
+          numero={2}
+          titulo="Escolha os flashcards"
+          descricao="As questões serão sobre o tema deles, inéditas, sem repetir pergunta e resposta."
+          concluido={flashcardIdsSelecionados.length > 0}
+          ativo={deckId !== null}
+        >
+          {deckId !== null && (
+            <div className="space-y-2">
+              {carregandoFlashcards && (
+                <Carregando className="space-y-2">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </Carregando>
+              )}
 
-            {!carregandoFlashcards &&
-              erroFlashcards === null &&
-              flashcards !== null &&
-              flashcards.map((flashcard) => (
-                <label
-                  key={flashcard.id}
-                  className="flex items-start gap-2 rounded-none border px-3 py-2 text-sm hover:bg-accent"
-                >
-                  <Checkbox
-                    className="mt-0.5"
-                    checked={flashcardIdsSelecionados.includes(flashcard.id)}
-                    onCheckedChange={() => alternarFlashcard(flashcard.id)}
-                  />
-                  {flashcard.pergunta}
-                </label>
-              ))}
-          </CardContent>
-        </Card>
-      )}
+              {!carregandoFlashcards && erroFlashcards !== null && (
+                <EstadoErro compacto mensagem={erroFlashcards} onTentarNovamente={() => deckId !== null && void carregarFlashcards(deckId)} />
+              )}
 
-      {deckId !== null && flashcardIdsSelecionados.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">3. Escolha o estilo da prova</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            {ESTILOS_PROVA.map((opcao) => (
-              <button
-                key={opcao.valor}
-                type="button"
-                onClick={() => setEstilo(opcao.valor)}
-                className={cn(
-                  'rounded-none border p-3 text-left transition-colors',
-                  estilo === opcao.valor ? 'border-primary bg-primary/5' : 'hover:bg-accent',
-                )}
-              >
-                <p className="font-medium">{opcao.rotulo}</p>
-                <p className="text-xs text-muted-foreground">{opcao.descricao}</p>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+              {!carregandoFlashcards && erroFlashcards === null && flashcards !== null && flashcards.length === 0 && (
+                <Alerta variante="aviso">Este deck ainda não tem flashcards. Escolha outro deck ou crie flashcards primeiro.</Alerta>
+              )}
 
-      {estilo !== null && (
-        <div className="space-y-1">
-          <Button size="lg" className="gap-2" onClick={() => void aoGerarProva()} disabled={gerando}>
-            {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {!carregandoFlashcards && erroFlashcards === null && flashcards !== null && flashcards.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between gap-2 pb-1">
+                    <p className="text-sm text-ink-600" aria-live="polite">
+                      <span className="font-semibold tabular-nums text-foreground">{flashcardIdsSelecionados.length}</span> de{' '}
+                      {flashcards.length} selecionados
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFlashcardIdsSelecionados(todosSelecionados ? [] : flashcards.map((flashcard) => flashcard.id))}
+                    >
+                      {todosSelecionados ? 'Limpar seleção' : 'Selecionar todos'}
+                    </Button>
+                  </div>
+                  <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+                    {flashcards.map((flashcard) => {
+                      const marcado = flashcardIdsSelecionados.includes(flashcard.id)
+                      return (
+                        <label
+                          key={flashcard.id}
+                          className={cn(
+                            'flex min-h-12 cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 text-sm transition-colors duration-fast sm:text-base',
+                            marcado ? 'border-ink-900 bg-ink-50' : 'border-ink-200 hover:border-ink-400 hover:bg-ink-50',
+                          )}
+                        >
+                          <Checkbox className="mt-0.5" checked={marcado} onCheckedChange={() => alternarFlashcard(flashcard.id)} />
+                          <span className="text-foreground">{flashcard.pergunta}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </Passo>
+
+        <Passo numero={3} titulo="Escolha o estilo da prova" concluido={estilo !== null} ativo={flashcardIdsSelecionados.length > 0}>
+          {deckId !== null && flashcardIdsSelecionados.length > 0 && (
+            <div role="radiogroup" aria-label="Estilo da prova" className="grid gap-3 sm:grid-cols-3">
+              {ESTILOS_PROVA.map((opcao) => {
+                const selecionado = estilo === opcao.valor
+                return (
+                  <button
+                    key={opcao.valor}
+                    type="button"
+                    role="radio"
+                    aria-checked={selecionado}
+                    onClick={() => setEstilo(opcao.valor)}
+                    className={cn(
+                      'relative rounded-lg border p-4 text-left transition-[border-color,background-color,box-shadow] duration-fast ease-suave focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      selecionado
+                        ? 'border-ink-900 bg-ink-50 shadow-[inset_0_0_0_1px_hsl(var(--foreground))]'
+                        : 'border-ink-200 hover:border-ink-400 hover:bg-ink-50',
+                    )}
+                  >
+                    {selecionado && (
+                      <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-400 text-ink-950">
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                      </span>
+                    )}
+                    <p className="pr-6 font-semibold text-foreground">{opcao.rotulo}</p>
+                    <p className="mt-1 text-sm text-ink-600">{opcao.descricao}</p>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </Passo>
+      </ol>
+
+      <div className="space-y-3 rounded-xl border border-ink-200/80 bg-card p-4 shadow-sm sm:p-5">
+        {erroAcao && <Alerta variante="erro">{erroAcao}</Alerta>}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-ink-600" role="status">
+            {gerando
+              ? gerandoDemorando
+                ? 'Ainda gerando a prova, pode levar um pouco mais que o normal...'
+                : 'A IA está escrevendo questões inéditas para você...'
+              : estilo === null
+                ? 'Complete os 3 passos para gerar a prova.'
+                : 'Tudo pronto. Limitado a 10 gerações por minuto.'}
+          </p>
+          <Button size="lg" onClick={() => void aoGerarProva()} disabled={estilo === null || flashcardIdsSelecionados.length === 0} loading={gerando}>
+            <Sparkles />
             {gerando ? 'Gerando prova...' : 'Gerar prova'}
           </Button>
-          {gerandoDemorando ? (
-            <p className="text-xs text-muted-foreground">Ainda gerando a prova, pode levar um pouco mais que o normal...</p>
-          ) : (
-            !gerando && <p className="text-xs text-muted-foreground">Limitado a 10 gerações por minuto.</p>
-          )}
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+function Passo({
+  numero,
+  titulo,
+  descricao,
+  concluido,
+  ativo,
+  children,
+}: {
+  numero: number
+  titulo: string
+  descricao?: string
+  concluido: boolean
+  ativo: boolean
+  children?: ReactNode
+}) {
+  return (
+    <li
+      className={cn(
+        'rounded-xl border bg-card p-5 shadow-sm transition-opacity duration-base sm:p-6',
+        ativo ? 'border-ink-200/80' : 'border-dashed border-ink-200 opacity-60 shadow-none',
+      )}
+      aria-current={ativo && !concluido ? 'step' : undefined}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={cn(
+            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors',
+            concluido ? 'bg-success-600 text-white' : ativo ? 'bg-ink-900 text-white' : 'bg-ink-100 text-ink-600',
+          )}
+        >
+          {concluido ? <Check className="h-4 w-4" strokeWidth={3} aria-label="Concluído" /> : numero}
+        </span>
+        <div className="min-w-0 flex-1 space-y-1 pt-1">
+          <h2 className="font-semibold text-foreground">{titulo}</h2>
+          {descricao && ativo && <p className="text-sm text-muted-foreground">{descricao}</p>}
+        </div>
+      </div>
+      {ativo && children && <div className="mt-4 sm:pl-11">{children}</div>}
+    </li>
   )
 }

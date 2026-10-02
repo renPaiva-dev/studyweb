@@ -2,7 +2,8 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import type { RankingDeck } from '@/api/usuarioApi'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
-import { CORES_DESEMPENHO } from '@/utils/coresDesempenho'
+import { useTelaEstreita } from '@/hooks/useTelaEstreita'
+import { CORES_DESEMPENHO, CORES_GRAFICO } from '@/utils/coresDesempenho'
 
 interface RankingDecksChartProps {
   decks: RankingDeck[]
@@ -16,21 +17,24 @@ const ALTURA_POR_DECK = 40
 // de DashboardTopicos.tsx (UC15/RN20) - barras horizontais, mesmas cores de
 // status reservadas para dominado/em risco.
 export function RankingDecksChart({ decks }: RankingDecksChartProps) {
+  const estreito = useTelaEstreita()
+
   if (decks.length === 0) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Você ainda não tem nenhum deck.</p>
+    return <p className="rounded-lg border border-dashed border-ink-300 py-10 text-center text-sm text-ink-600">Você ainda não tem nenhum deck.</p>
   }
 
-  const dados = decks.map((deck) => ({ ...deck, rotulo: deck.titulo }))
+  const limite = estreito ? 14 : 22
+  const dados = decks.map((deck) => ({ ...deck, rotulo: deck.titulo.length > limite ? `${deck.titulo.slice(0, limite - 1)}…` : deck.titulo }))
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-4 text-sm font-medium text-ink-700">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COR_DOMINADO }} />
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: COR_DOMINADO }} />
           Dominado
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COR_EM_RISCO }} />
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: COR_EM_RISCO }} />
           Em risco
         </span>
       </div>
@@ -38,18 +42,18 @@ export function RankingDecksChart({ decks }: RankingDecksChartProps) {
       <div style={{ height: decks.length * ALTURA_POR_DECK + 24 }}>
         <ResponsiveContainer>
           <BarChart data={dados} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }} barCategoryGap="30%">
-            <CartesianGrid horizontal={false} stroke="hsl(var(--border))" />
-            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+            <CartesianGrid horizontal={false} stroke={CORES_GRAFICO.grade} />
+            <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} />
             <YAxis
               type="category"
               dataKey="rotulo"
-              width={130}
-              tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+              width={estreito ? 104 : 170}
+              tick={{ fontSize: 12, fill: '#1A1C30' }}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
+              cursor={{ fill: '#EEF0F6' }}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null
                 const deck = payload[0].payload as RankingDeck

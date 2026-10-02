@@ -6,80 +6,116 @@
 
 @layer base {
   :root {
-    /* Identidade Sinapse - paleta fixa, tema unico (ver o artifact de
-       identidade de marca para a construcao do simbolo e a logica de cor
-       completa: tinta/papel/ambar sao a materia-prima, o suporte e o
-       conhecimento retido). */
+    /* Superficies e texto (padrao shadcn) - ver tailwind.config.js para as
+       escalas completas e as razoes de contraste. Tema unico (claro). */
+    --background: 228 38% 97%; /* ink-50 */
+    --foreground: 235 30% 15%; /* ink-900 */
 
-    /* Papel */
-    --background: 230 38% 97%;
-    --foreground: 235 35% 13%; /* Tinta */
+    /* Cards em branco puro sobre o fundo ink-50: a elevacao vem do contraste
+       de superficie + sombra em camadas, nao de bordas pesadas. */
+    --card: 0 0% 100%;
+    --card-foreground: 235 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 235 30% 15%;
 
-    /* Superficies de conteudo ficam na mesma cor do fundo (Papel) - sem
-       elevacao, sem sombra: o Card e a propria folha, nao um painel
-       flutuante por cima dela. */
-    --card: 230 38% 97%;
-    --card-foreground: 235 35% 13%;
+    /* Acao primaria = ambar spark (brand-400) com texto ink-950 (10.2:1). */
+    --primary: 38 92% 60%;
+    --primary-foreground: 236 36% 9%;
 
-    --popover: 230 40% 99%;
-    --popover-foreground: 235 35% 13%;
+    --secondary: 225 31% 95%; /* ink-100 */
+    --secondary-foreground: 235 30% 15%;
 
-    /* Ambar como cor de acao primaria - o unico acento de marca, reservado
-       a CTA ("Entrar", "Salvar", "Criar conta"). Texto do botao em Tinta,
-       nao em branco - contraste melhor sobre um tom claro/vivo. */
-    --primary: 35 87% 59%;
-    --primary-foreground: 235 35% 13%;
+    --muted: 225 31% 95%;
+    --muted-foreground: 230 15% 40%; /* ink-600, 6.6:1 sobre branco */
 
-    --secondary: 230 28% 92%;
-    --secondary-foreground: 235 35% 13%;
+    --accent: 225 31% 95%;
+    --accent-foreground: 235 30% 15%;
 
-    --muted: 233 26% 93%;
-    --muted-foreground: 233 12% 44%; /* Grafite */
+    --destructive: 9 61% 44%; /* danger-600 */
+    --destructive-foreground: 0 0% 100%;
 
-    /* Hover neutro com leve tingimento de Manilha - nunca a cor de acao. */
-    --accent: 231 32% 91%;
-    --accent-foreground: 235 35% 13%;
+    --border: 226 28% 91%; /* ink-200 - divisores decorativos */
+    --input: 230 14% 58%; /* ink-400 - borda de campo, 3.4:1 (WCAG 1.4.11) */
+    --ring: 30 88% 36%; /* brand-700 - anel de foco, 4.8:1 */
 
-    /* Vermelho-correcao - reservado a erro/atencao real (RN da spec de
-       identidade visual: nunca decorativo). */
-    --destructive: 9 61% 44%;
-    --destructive-foreground: 230 38% 97%;
+    /* Movimento */
+    --duracao-rapida: 150ms;
+    --duracao-base: 200ms;
+    --duracao-lenta: 250ms;
+    --easing-suave: cubic-bezier(0.2, 0.8, 0.2, 1);
 
-    /* Verde-lousa - reservado a confirmacao/progresso real. */
-    --positivo: 167 62% 30%;
-    --positivo-foreground: 230 38% 97%;
-
-    /* Manilha - toda borda/divisor do app, fina (1px). */
-    --border: 231 25% 90%;
-    --input: 231 25% 90%;
-    --ring: 235 35% 13%; /* Tinta - foco de teclado visivel sobre Papel */
-
-    /* Fundo da coluna de margem (anotacao) - Papel um pouco mais escuro que
-       o fundo principal, para parecer uma folha fixa ao lado da leitura. */
-    --papel-margem: 230 33% 93%;
-
-    /* Raio unico, pequeno, usado com moderacao (ver tailwind.config.js:
-       so em controles interativos - botao/input/badge/dialogo). */
-    --radius: 0.25rem;
+    /* Altura da barra de navegacao inferior no mobile (Layout.tsx). */
+    --altura-nav-mobile: 4rem;
   }
 
   * {
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
+  html {
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* Sequencia de entrada orquestrada (motion, secao 4 da spec): so acontece
-     uma vez por navegacao de modulo, nunca em hover/scroll. Desativada por
-     completo para quem pede menos movimento. */
+  body {
+    @apply bg-background font-sans text-base text-foreground antialiased;
+    font-feature-settings: 'ss01', 'cv11';
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    @apply bg-brand-200 text-ink-950;
+  }
+
+  /* Foco visivel padrao para qualquer elemento focavel que nao defina o
+     proprio estilo (links soltos, summary, etc). */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Usuario que pede menos movimento: sem animacao de entrada, shimmer ou
+     flip 3D - so a troca de estado. */
   @media (prefers-reduced-motion: reduce) {
-    .animate-caderno-entrada,
-    .animate-caderno-entrada-margem,
-    .animate-shimmer {
-      animation: none !important;
-      transform: none !important;
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
+  }
+}
+
+@layer components {
+  /* Link de texto inline - ambar escuro legivel (brand-800, 6.9:1). */
+  .link {
+    @apply rounded-sm font-medium text-brand-800 underline decoration-brand-300 decoration-2 underline-offset-[3px] transition-colors duration-fast hover:text-brand-900 hover:decoration-brand-600;
+  }
+
+  /* Tecla de atalho (ex.: "Espaco" para virar o card). */
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-ink-300 bg-card px-1 font-mono text-[11px] font-medium leading-none text-ink-600 shadow-xs;
+  }
+}
+
+@layer utilities {
+  /* Rolagem horizontal sem barra visivel (abas no mobile). */
+  .scroll-sem-barra {
+    scrollbar-width: none;
+  }
+  .scroll-sem-barra::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Espaco reservado para a barra de navegacao inferior fixa no mobile. */
+  .pb-nav-mobile {
+    padding-bottom: calc(var(--altura-nav-mobile) + env(safe-area-inset-bottom) + 1.5rem);
   }
 }

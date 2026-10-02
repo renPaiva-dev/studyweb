@@ -1,4 +1,4 @@
-import { Check, Copy, Link2, Loader2 } from 'lucide-react'
+import { Check, Copy, Globe, Link2, Lock } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -8,6 +8,7 @@ import {
   buscarStatusCompartilhamento,
   revogarCompartilhamento,
 } from '@/api/compartilhamentoApi'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -37,6 +38,7 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
   const [carregando, setCarregando] = useState(false)
   const [processando, setProcessando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   const deckId = deck?.id
 
@@ -51,7 +53,7 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
       const status = await buscarStatusCompartilhamento(deckId)
       setToken(status.token)
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível carregar o status de compartilhamento.'))
+      setErro(extrairMensagemErro(erro, 'Não foi possível carregar o status de compartilhamento.'))
     } finally {
       setCarregando(false)
     }
@@ -63,6 +65,7 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
   useEffect(() => {
     setToken(null)
     setCopiado(false)
+    setErro(null)
     void carregarStatus()
   }, [carregarStatus])
 
@@ -72,12 +75,14 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
     }
 
     setProcessando(true)
+    setErro(null)
 
     try {
       const status = await ativarCompartilhamento(deck.id)
       setToken(status.token)
+      toast.success('Link público criado.', { description: 'Copie e envie para quem quiser estudar com você.' })
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível gerar o link de compartilhamento.'))
+      setErro(extrairMensagemErro(erro, 'Não foi possível gerar o link de compartilhamento.'))
     } finally {
       setProcessando(false)
     }
@@ -89,13 +94,14 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
     }
 
     setProcessando(true)
+    setErro(null)
 
     try {
       await revogarCompartilhamento(deck.id)
       setToken(null)
       toast.success('Compartilhamento desativado.')
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível desativar o compartilhamento.'))
+      setErro(extrairMensagemErro(erro, 'Não foi possível desativar o compartilhamento.'))
     } finally {
       setProcessando(false)
     }
@@ -106,9 +112,13 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
       return
     }
 
-    await navigator.clipboard.writeText(linkCompleto(token))
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 2000)
+    try {
+      await navigator.clipboard.writeText(linkCompleto(token))
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2500)
+    } catch {
+      setErro('Não foi possível copiar automaticamente. Selecione o link e copie manualmente.')
+    }
   }
 
   return (
@@ -122,36 +132,65 @@ export function CompartilharDeckDialog({ deck, onOpenChange }: CompartilharDeckD
           </DialogDescription>
         </DialogHeader>
 
-        {carregando && <Skeleton className="h-10 w-full" />}
+        {carregando && <Skeleton className="h-[88px] w-full rounded-lg" />}
 
         {!carregando && token !== null && (
-          <div className="flex items-center gap-2">
-            <Input readOnly value={linkCompleto(token)} className="font-mono text-xs" />
-            <Button type="button" variant="outline" size="icon" onClick={() => void aoCopiarLink()} aria-label="Copiar link">
-              {copiado ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </Button>
+          <div className="space-y-2 rounded-lg border border-success-200 bg-success-50 p-3">
+            <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-success-800">
+              <Globe className="h-4 w-4" />
+              Link público ativo
+            </p>
+            <div className="flex items-center gap-2">
+              <label htmlFor="link-compartilhamento" className="sr-only">
+                Link de compartilhamento
+              </label>
+              <Input
+                id="link-compartilhamento"
+                readOnly
+                value={linkCompleto(token)}
+                onFocus={(evento) => evento.currentTarget.select()}
+                className="font-mono text-sm"
+              />
+              <Button
+                type="button"
+                variant={copiado ? 'positivo' : 'secondary'}
+                onClick={() => void aoCopiarLink()}
+                aria-label={copiado ? 'Link copiado' : 'Copiar link'}
+                className="shrink-0"
+              >
+                {copiado ? <Check /> : <Copy />}
+                <span className="hidden sm:inline">{copiado ? 'Copiado!' : 'Copiar'}</span>
+              </Button>
+            </div>
+            <p className="sr-only" aria-live="polite">
+              {copiado ? 'Link copiado para a área de transferência.' : ''}
+            </p>
           </div>
         )}
 
         {!carregando && token === null && (
-          <p className="text-sm text-muted-foreground">Este deck ainda não tem um link de compartilhamento ativo.</p>
+          <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 p-3 text-sm text-ink-700">
+            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-ink-500" />
+            Este deck é privado. Nenhum link de compartilhamento está ativo.
+          </div>
         )}
+
+        {erro && <Alerta variante="erro">{erro}</Alerta>}
 
         <DialogFooter>
           {token !== null ? (
             <Button
               type="button"
-              variant="outline"
-              className="text-destructive hover:text-destructive"
+              variant="destructive-ghost"
               onClick={() => void aoRevogar()}
-              disabled={processando || carregando}
+              loading={processando}
+              disabled={carregando}
             >
-              {processando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Desativar compartilhamento
+              Desativar link
             </Button>
           ) : (
-            <Button type="button" onClick={() => void aoAtivar()} disabled={processando || carregando}>
-              {processando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
+            <Button type="button" onClick={() => void aoAtivar()} loading={processando} disabled={carregando}>
+              <Link2 />
               Gerar link de compartilhamento
             </Button>
           )}

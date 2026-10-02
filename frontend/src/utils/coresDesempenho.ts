@@ -1,34 +1,17 @@
-// Cores de desempenho compartilhadas (paleta "caderno ativamente
-// corrigido" - Docs/ tem a spec completa). Centraliza os hex literais que
-// bibliotecas como Recharts precisam receber diretamente (nao leem
-// variavel CSS/token Tailwind), evitando duplicar a mesma cor em varios
-// arquivos de grafico.
+// Cores de series dos graficos (Recharts nao le token Tailwind/variavel CSS
+// diretamente, entao os hex vivem aqui - os mesmos valores das escalas de
+// tailwind.config.js). Todas com contraste >= 3:1 sobre o card branco
+// (WCAG 1.4.11, elemento grafico).
 export const CORES_DESEMPENHO = {
-  dominado: '#3C6B52', // Verde-lousa - confirmacao/progresso real
-  emRisco: '#B3402C', // Vermelho-correcao - erro/atencao real
+  dominado: '#1D7A66', // success-600 - 5.2:1
+  emRisco: '#B3402C', // danger-600 - 5.7:1
 } as const
 
-function hexParaRgb(hex: string): [number, number, number] {
-  const valor = hex.replace('#', '')
-  return [parseInt(valor.slice(0, 2), 16), parseInt(valor.slice(2, 4), 16), parseInt(valor.slice(4, 6), 16)]
-}
-
-function rgbParaHex([r, g, b]: [number, number, number]): string {
-  return `#${[r, g, b].map((canal) => Math.round(canal).toString(16).padStart(2, '0')).join('')}`
-}
-
-// Escala de avaliacao SM-2 (0-5, ver AvaliacaoRevisaoBotoes/UC08): 6 tons
-// interpolados entre Vermelho-correcao (0, "não lembrei") e Verde-lousa (5,
-// "fácil"), em vez de introduzir laranja/amarelo/lima fora da paleta
-// aprovada.
-export const ESCALA_AVALIACAO: readonly string[] = Array.from({ length: 6 }, (_, indice) => {
-  const t = indice / 5
-  const inicio = hexParaRgb(CORES_DESEMPENHO.emRisco)
-  const fim = hexParaRgb(CORES_DESEMPENHO.dominado)
-
-  return rgbParaHex([
-    inicio[0] + (fim[0] - inicio[0]) * t,
-    inicio[1] + (fim[1] - inicio[1]) * t,
-    inicio[2] + (fim[2] - inicio[2]) * t,
-  ])
-})
+export const CORES_GRAFICO = {
+  principal: '#2C2F45', // ink-800 - linha de qualidade, 13:1
+  destaque: '#D27B0C', // brand-600 - pontos/destaques, 3.2:1
+  barra: '#F7B23A', // brand-400 - barras (com rotulo/tooltip numerico)
+  barraSuave: '#C9CDDC', // ink-300 - volume secundario
+  grade: '#E1E4EE', // ink-200
+  eixo: '#575C75', // ink-600 - texto dos eixos, 6.6:1
+} as const

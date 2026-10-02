@@ -44,7 +44,7 @@ public class RespostaTentativaQuiz {
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	private QuestaoQuiz questao;
 
-	@Column(name = "alternativa_escolhida", nullable = false, length = 500)
+	@Column(name = "alternativa_escolhida", nullable = false, columnDefinition = "TEXT")
 	private String alternativaEscolhida;
 
 	@Column(name = "correta", nullable = false)

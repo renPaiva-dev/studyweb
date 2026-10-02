@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.tcc.plataformaestudos.TransacaoDeTeste;
 import com.tcc.plataformaestudos.config.RecursoNaoEncontradoException;
 import com.tcc.plataformaestudos.deck.Deck;
 import com.tcc.plataformaestudos.deck.DeckService;
@@ -63,7 +64,7 @@ class PerguntaMaterialServiceTest {
 
 	@BeforeEach
 	void configurar() {
-		perguntaMaterialService = new PerguntaMaterialService(deckService, materialOrigemRepository, geminiClient, new ObjectMapper());
+		perguntaMaterialService = new PerguntaMaterialService(deckService, materialOrigemRepository, geminiClient, new ObjectMapper(), TransacaoDeTeste.template());
 	}
 
 	@Test

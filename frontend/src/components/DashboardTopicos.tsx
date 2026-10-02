@@ -3,11 +3,12 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { buscarTopicos, type TopicoDashboard } from '@/api/dashboardApi'
 import { extrairMensagemErro } from '@/api/apiError'
-import { Button } from '@/components/ui/button'
+import { EstadoErro } from '@/components/ui/estados'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ChartTooltipContent } from '@/components/ChartTooltipContent'
-import { CORES_DESEMPENHO } from '@/utils/coresDesempenho'
+import { useTelaEstreita } from '@/hooks/useTelaEstreita'
+import { CORES_DESEMPENHO, CORES_GRAFICO } from '@/utils/coresDesempenho'
 
 interface DashboardTopicosProps {
   deckId: number
@@ -21,6 +22,7 @@ const ALTURA_POR_TOPICO = 40
 // (docs/contrato-api.md). Mesmo criterio de dominado/em risco do dashboard
 // geral, so que agrupado por Flashcard.topico ("Sem categoria" quando nulo).
 export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
+  const estreito = useTelaEstreita()
   const [topicos, setTopicos] = useState<TopicoDashboard[] | null>(null)
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null)
 
@@ -54,29 +56,24 @@ export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-semibold">Desempenho por tópico</CardTitle>
+        <CardTitle>Desempenho por tópico</CardTitle>
       </CardHeader>
       <CardContent>
         {erroCarregamento !== null ? (
-          <div className="flex flex-col items-center gap-3 py-10 text-center">
-            <p className="text-sm text-muted-foreground">{erroCarregamento}</p>
-            <Button variant="outline" size="sm" onClick={() => void carregar()}>
-              Tentar novamente
-            </Button>
-          </div>
+          <EstadoErro compacto mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
         ) : topicos === null ? (
-          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full rounded-lg" />
         ) : topicos.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">Nenhum flashcard neste deck ainda.</p>
+          <p className="rounded-lg border border-dashed border-ink-300 py-10 text-center text-sm text-ink-600">Nenhum flashcard neste deck ainda.</p>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <div className="flex items-center gap-4 text-sm font-medium text-ink-700">
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COR_DOMINADO }} />
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: COR_DOMINADO }} />
                 Dominado
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COR_EM_RISCO }} />
+                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: COR_EM_RISCO }} />
                 Em risco
               </span>
             </div>
@@ -89,18 +86,18 @@ export function DashboardTopicos({ deckId }: DashboardTopicosProps) {
                   margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
                   barCategoryGap="30%"
                 >
-                  <CartesianGrid horizontal={false} stroke="hsl(var(--border))" />
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} />
+                  <CartesianGrid horizontal={false} stroke={CORES_GRAFICO.grade} />
+                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12, fill: CORES_GRAFICO.eixo }} axisLine={false} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="rotulo"
-                    width={150}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
+                    width={estreito ? 100 : 150}
+                    tick={{ fontSize: 12, fill: '#1A1C30' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <Tooltip
-                    cursor={{ fill: 'hsl(var(--muted))' }}
+                    cursor={{ fill: '#EEF0F6' }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null
                       const topico = payload[0].payload as TopicoDashboard

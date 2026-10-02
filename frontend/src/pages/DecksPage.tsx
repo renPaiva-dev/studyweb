@@ -1,14 +1,17 @@
-import { LayoutGrid, Plus } from 'lucide-react'
+import { Layers, Plus } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { listarDecks, type Deck } from '@/api/deckApi'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { CabecalhoPagina } from '@/components/CabecalhoPagina'
 import { DeckCard } from '@/components/DeckCard'
 import { DeckFormDialog } from '@/components/DeckFormDialog'
 import { ExcluirDeckDialog } from '@/components/ExcluirDeckDialog'
+import { DeckCardSkeleton } from '@/components/SkeletonsLista'
+import { Button } from '@/components/ui/button'
+import { EstadoErro, EstadoVazio } from '@/components/ui/estados'
+import { Carregando } from '@/components/ui/skeleton'
 
 // UC02 - Meus decks. GET /api/decks (docs/contrato-api.md).
 export function DecksPage() {
@@ -53,34 +56,51 @@ export function DecksPage() {
     await carregarDecks()
   }
 
+  const totalFlashcards = decks?.reduce((soma, deck) => soma + deck.totalFlashcards, 0) ?? 0
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold">Meus decks</h1>
-          <p className="text-muted-foreground">Organize seus estudos por tema</p>
-        </div>
-        <Button onClick={abrirNovoDeck}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo deck
-        </Button>
-      </div>
-
-      {decks === null && erroCarregamento === null && <ListaDecksSkeleton />}
-
-      {erroCarregamento !== null && (
-        <div className="flex flex-col items-center gap-4 rounded-none border py-16 text-center">
-          <p className="text-muted-foreground">{erroCarregamento}</p>
-          <Button variant="outline" onClick={() => void carregarDecks()}>
-            Tentar novamente
+    <div className="space-y-8">
+      <CabecalhoPagina
+        titulo="Meus decks"
+        descricao={
+          decks && decks.length > 0
+            ? `${decks.length} deck${decks.length === 1 ? '' : 's'} · ${totalFlashcards} flashcard${totalFlashcards === 1 ? '' : 's'} no total`
+            : 'Organize seus estudos por tema.'
+        }
+        acoes={
+          <Button onClick={abrirNovoDeck}>
+            <Plus />
+            Novo deck
           </Button>
-        </div>
+        }
+      />
+
+      {decks === null && erroCarregamento === null && (
+        <Carregando rotulo="Carregando seus decks..." className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, indice) => (
+            <DeckCardSkeleton key={indice} />
+          ))}
+        </Carregando>
       )}
 
-      {decks !== null && decks.length === 0 && <EstadoVazio onCriarDeck={abrirNovoDeck} />}
+      {erroCarregamento !== null && <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregarDecks()} />}
+
+      {decks !== null && decks.length === 0 && (
+        <EstadoVazio
+          icone={Layers}
+          titulo="Você ainda não tem nenhum deck"
+          descricao="Crie um deck por tema (ex.: “Anatomia — Sistema Nervoso”) e envie um PDF para a IA sugerir os primeiros flashcards."
+          acao={
+            <Button onClick={abrirNovoDeck}>
+              <Plus />
+              Criar meu primeiro deck
+            </Button>
+          }
+        />
+      )}
 
       {decks !== null && decks.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {decks.map((deck) => (
             <DeckCard
               key={deck.id}
@@ -107,38 +127,6 @@ export function DecksPage() {
         }}
         onExcluido={() => void aoExcluirDeck()}
       />
-    </div>
-  )
-}
-
-function ListaDecksSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }, (_, indice) => (
-        <div key={indice} className="space-y-3 rounded-none border p-6">
-          <Skeleton className="h-5 w-2/3" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-6 w-24" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function EstadoVazio({ onCriarDeck }: { onCriarDeck: () => void }) {
-  return (
-    <div className="flex flex-col items-center gap-4 rounded-none border border-dashed py-20 text-center">
-      <div className="rounded-full bg-primary/10 p-4">
-        <LayoutGrid className="h-8 w-8 text-primary" />
-      </div>
-      <div className="space-y-1">
-        <p className="font-medium">Você ainda não tem nenhum deck</p>
-        <p className="text-sm text-muted-foreground">Crie seu primeiro deck para começar a organizar seus estudos</p>
-      </div>
-      <Button onClick={onCriarDeck}>
-        <Plus className="mr-2 h-4 w-4" />
-        Criar seu primeiro deck
-      </Button>
     </div>
   )
 }

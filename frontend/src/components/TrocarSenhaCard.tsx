@@ -1,46 +1,46 @@
+import { KeyRound } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { trocarSenha } from '@/api/usuarioApi'
+import { RequisitosSenha } from '@/components/RequisitosSenha'
+import { SecaoPerfil } from '@/components/SecaoPerfil'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Campo } from '@/components/ui/campo'
+import { PasswordInput } from '@/components/ui/input'
+import { useValidacao } from '@/hooks/useValidacao'
 import { MENSAGEM_SENHA_FORTE, senhaEhForte } from '@/utils/senhaForte'
 
-interface Erros {
-  senhaAtual?: string
-  novaSenha?: string
-}
-
 // UC26/RN33 - Trocar senha autenticado. PUT /api/usuario/senha
-// (docs/contrato-api.md, secao "Trocar Senha").
+// (docs/contrato-api.md, secao "Trocar Senha"). 400 = senha atual incorreta
+// (ou nova fora de RN27) - mostrado inline, no proprio card.
 export function TrocarSenhaCard() {
   const [senhaAtual, setSenhaAtual] = useState('')
   const [novaSenha, setNovaSenha] = useState('')
-  const [erros, setErros] = useState<Erros>({})
   const [salvando, setSalvando] = useState(false)
+  const [tentouEnviar, setTentouEnviar] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState<string | null>(null)
+  const [sucesso, setSucesso] = useState(false)
 
-  function validar(): boolean {
-    const novosErros: Erros = {}
-
-    if (!senhaAtual) {
-      novosErros.senhaAtual = 'Informe sua senha atual.'
-    }
-
-    if (!senhaEhForte(novaSenha)) {
-      novosErros.novaSenha = MENSAGEM_SENHA_FORTE
-    }
-
-    setErros(novosErros)
-    return Object.keys(novosErros).length === 0
-  }
+  const validacao = useValidacao({
+    senhaAtual: () => (!senhaAtual ? 'Informe sua senha atual.' : undefined),
+    novaSenha: () => (!senhaEhForte(novaSenha) ? MENSAGEM_SENHA_FORTE : undefined),
+  })
 
   async function aoSubmeter(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!validar()) {
+    if (salvando) {
+      return
+    }
+
+    setTentouEnviar(true)
+    setErroEnvio(null)
+    setSucesso(false)
+
+    if (!validacao.validarTudo()) {
       return
     }
 
@@ -49,54 +49,65 @@ export function TrocarSenhaCard() {
     try {
       await trocarSenha(senhaAtual, novaSenha)
       toast.success('Senha alterada com sucesso.')
+      setSucesso(true)
       setSenhaAtual('')
       setNovaSenha('')
+      setTentouEnviar(false)
+      validacao.resetar()
     } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível alterar sua senha.'))
+      setErroEnvio(extrairMensagemErro(erro, 'Não foi possível alterar sua senha. Confira a senha atual e tente novamente.'))
     } finally {
       setSalvando(false)
     }
   }
 
+  const erroNovaSenha = validacao.erro('novaSenha')
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-semibold">Trocar senha</CardTitle>
-        <CardDescription>Informe sua senha atual para definir uma nova</CardDescription>
-      </CardHeader>
-      <form onSubmit={aoSubmeter} noValidate>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="senhaAtual">Senha atual</Label>
-            <Input
-              id="senhaAtual"
-              type="password"
-              className="h-10"
-              autoComplete="current-password"
-              value={senhaAtual}
-              onChange={(evento) => setSenhaAtual(evento.target.value)}
-              aria-invalid={Boolean(erros.senhaAtual)}
-            />
-            {erros.senhaAtual && <p className="text-sm text-destructive">{erros.senhaAtual}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="novaSenha">Nova senha</Label>
-            <Input
-              id="novaSenha"
-              type="password"
-              className="h-10"
+    <SecaoPerfil icone={KeyRound} titulo="Trocar senha" descricao="Informe sua senha atual para definir uma nova.">
+      <form onSubmit={aoSubmeter} noValidate className="space-y-5">
+        <Campo id="senhaAtual" rotulo="Senha atual" erro={validacao.erro('senhaAtual')}>
+          <PasswordInput
+            autoComplete="current-password"
+            value={senhaAtual}
+            onChange={(evento) => {
+              setSenhaAtual(evento.target.value)
+              setErroEnvio(null)
+              setSucesso(false)
+            }}
+            {...validacao.propsCampo('senhaAtual')}
+          />
+        </Campo>
+        <div className="space-y-2">
+          <Campo id="novaSenha" rotulo="Nova senha" erro={erroNovaSenha && !novaSenha ? 'Crie uma nova senha.' : undefined}>
+            <PasswordInput
               autoComplete="new-password"
               value={novaSenha}
-              onChange={(evento) => setNovaSenha(evento.target.value)}
-              aria-invalid={Boolean(erros.novaSenha)}
+              onChange={(evento) => {
+                setNovaSenha(evento.target.value)
+                setSucesso(false)
+              }}
+              aria-describedby="novaSenha-requisitos"
+              {...validacao.propsCampo('novaSenha')}
+              {...(erroNovaSenha ? { 'aria-invalid': true } : {})}
             />
-            {erros.novaSenha && <p className="text-sm text-destructive">{erros.novaSenha}</p>}
-          </div>
-          <Button type="submit" disabled={salvando}>
-            {salvando ? 'Alterando...' : 'Alterar senha'}
-          </Button>
-        </CardContent>
+          </Campo>
+          {(novaSenha || tentouEnviar) && (
+            <RequisitosSenha id="novaSenha-requisitos" senha={novaSenha} destacarPendentes={Boolean(erroNovaSenha) && tentouEnviar} />
+          )}
+        </div>
+
+        {erroEnvio && <Alerta variante="erro">{erroEnvio}</Alerta>}
+        {sucesso && (
+          <Alerta variante="sucesso" onFechar={() => setSucesso(false)}>
+            Senha alterada. Use a nova senha no próximo login.
+          </Alerta>
+        )}
+
+        <Button type="submit" variant="secondary" loading={salvando}>
+          {salvando ? 'Alterando...' : 'Alterar senha'}
+        </Button>
       </form>
-    </Card>
+    </SecaoPerfil>
   )
 }

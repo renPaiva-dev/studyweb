@@ -53,9 +53,9 @@ Convenções gerais:
 
 | Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
 |---|---|---|---|---|
-| GET | `/api/decks/{id}/flashcards` | — | `200` — `[ { id, pergunta, resposta, mnemonico, origem } ]` | `401` · `404` (não existe ou não é seu — RN01) |
-| POST | `/api/decks/{id}/flashcards` | `{ pergunta, resposta, mnemonico? }` | `201` — flashcard criado com `origem: "MANUAL"` | `400` (campos obrigatórios) · `401` · `404` (não existe ou não é seu — RN01) |
-| PUT | `/api/flashcards/{id}` | `{ pergunta, resposta, mnemonico? }` | `200` — flashcard atualizado | `400` · `401` · `404` (não existe ou não é seu — RN01, achado C3) |
+| GET | `/api/decks/{id}/flashcards` | — | `200` — `[ { id, pergunta, resposta, mnemonico, topico, origem, criadoEm } ]` | `401` · `404` (não existe ou não é seu — RN01) |
+| POST | `/api/decks/{id}/flashcards` | `{ pergunta, resposta, mnemonico?, topico? }` (topico opcional na origem MANUAL — RN17, até 60 caracteres) | `201` — flashcard criado com `origem: "MANUAL"` | `400` (campos obrigatórios) · `401` · `404` (não existe ou não é seu — RN01) |
+| PUT | `/api/flashcards/{id}` | `{ pergunta, resposta, mnemonico?, topico? }` (substitui o flashcard inteiro: omitir `topico` o apaga, então o cliente reenvia o valor atual) | `200` — flashcard atualizado | `400` · `401` · `404` (não existe ou não é seu — RN01, achado C3) |
 | DELETE | `/api/flashcards/{id}` | — | `204` (revisões associadas removidas em cascata) | `401` · `404` (não existe ou não é seu — RN01, achado C3) |
 
 ## Estudo com Repetição Espaçada (UC07/UC08/UC09)

@@ -1,11 +1,14 @@
+import { ArrowLeft, CheckCheck, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { confirmarSugestoes } from '@/api/flashcardApi'
 import type { SugestaoFlashcard } from '@/api/materialApi'
-import { Button } from '@/components/ui/button'
 import { CartaoSugestaoFlashcard, type SugestaoEditavel } from '@/components/CartaoSugestaoFlashcard'
+import { Alerta } from '@/components/ui/alerta'
+import { Button } from '@/components/ui/button'
+import { EstadoVazio } from '@/components/ui/estados'
 
 interface RevisaoSugestoesFlashcardsProps {
   deckId: number
@@ -27,10 +30,15 @@ export function RevisaoSugestoesFlashcards({
     sugestoesIniciais.map((sugestao, indice) => ({ ...sugestao, id: indice, aceita: false })),
   )
   const [confirmando, setConfirmando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   const totalAceitas = sugestoes.filter((sugestao) => sugestao.aceita).length
+  const idsVazios = new Set(
+    sugestoes.filter((sugestao) => sugestao.aceita && (!sugestao.pergunta.trim() || !sugestao.resposta.trim())).map((s) => s.id),
+  )
 
   function atualizarSugestao(id: number, dados: Partial<Pick<SugestaoEditavel, 'pergunta' | 'resposta' | 'aceita'>>) {
+    setErro(null)
     setSugestoes((atual) => atual.map((sugestao) => (sugestao.id === id ? { ...sugestao, ...dados } : sugestao)))
   }
 
@@ -38,15 +46,21 @@ export function RevisaoSugestoesFlashcards({
     setSugestoes((atual) => atual.filter((sugestao) => sugestao.id !== id))
   }
 
+  function aceitarTodas() {
+    setSugestoes((atual) => atual.map((sugestao) => ({ ...sugestao, aceita: true })))
+  }
+
   async function aoConfirmar() {
+    if (confirmando) return
     const aceitas = sugestoes.filter((sugestao) => sugestao.aceita)
 
     if (aceitas.some((sugestao) => !sugestao.pergunta.trim() || !sugestao.resposta.trim())) {
-      toast.error('Uma sugestão aceita está com pergunta ou resposta vazia. Edite ou descarte antes de confirmar.')
+      setErro('Uma sugestão aceita está com pergunta ou resposta vazia. Edite ou descarte antes de confirmar.')
       return
     }
 
     setConfirmando(true)
+    setErro(null)
 
     try {
       await confirmarSugestoes(
@@ -60,35 +74,60 @@ export function RevisaoSugestoesFlashcards({
       )
       toast.success(`${aceitas.length} flashcard${aceitas.length === 1 ? '' : 's'} adicionado${aceitas.length === 1 ? '' : 's'} ao deck.`)
       onConfirmado()
-    } catch (erro) {
-      toast.error(extrairMensagemErro(erro, 'Não foi possível salvar os flashcards selecionados.'))
+    } catch (erroCapturado) {
+      setErro(extrairMensagemErro(erroCapturado, 'Não foi possível salvar os flashcards selecionados. Tente novamente.'))
     } finally {
       setConfirmando(false)
     }
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-medium">Revise as sugestões da IA</p>
-          <p className="text-sm text-muted-foreground">
-            Nada foi salvo ainda. Aceite, edite ou descarte cada sugestão antes de confirmar.
-          </p>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 rounded-xl border border-brand-200 bg-brand-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-400 text-ink-950">
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="font-semibold text-foreground">Revise as {sugestoesIniciais.length} sugestões da IA</p>
+            <p className="text-sm text-brand-900">
+              Nada foi salvo ainda. Aceite, edite ou descarte cada sugestão antes de confirmar.
+            </p>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancelar} disabled={confirmando}>
-          Cancelar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={onCancelar} disabled={confirmando}>
+            <ArrowLeft />
+            Voltar
+          </Button>
+          {sugestoes.length > 0 && totalAceitas < sugestoes.length && (
+            <Button variant="outline" onClick={aceitarTodas} disabled={confirmando}>
+              <CheckCheck />
+              Aceitar todas
+            </Button>
+          )}
+        </div>
       </div>
 
       {sugestoes.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Todas as sugestões foram descartadas.</p>
+        <EstadoVazio
+          icone={Sparkles}
+          titulo="Todas as sugestões foram descartadas"
+          descricao="Volte para os materiais e gere novamente, ou crie flashcards manualmente."
+          acao={
+            <Button variant="outline" onClick={onCancelar}>
+              <ArrowLeft />
+              Voltar para materiais
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {sugestoes.map((sugestao) => (
             <CartaoSugestaoFlashcard
               key={sugestao.id}
               sugestao={sugestao}
+              invalida={idsVazios.has(sugestao.id) && erro !== null}
               onAtualizar={(dados) => atualizarSugestao(sugestao.id, dados)}
               onDescartar={() => descartarSugestao(sugestao.id)}
             />
@@ -96,10 +135,18 @@ export function RevisaoSugestoesFlashcards({
         </div>
       )}
 
-      <div className="flex justify-end border-t pt-4">
-        <Button onClick={() => void aoConfirmar()} disabled={confirmando || totalAceitas === 0}>
-          {confirmando ? 'Salvando...' : `Confirmar selecionados (${totalAceitas})`}
-        </Button>
+      {/* Barra de confirmacao fixa no fim da lista - acompanha o scroll. */}
+      <div className="sticky bottom-[calc(var(--altura-nav-mobile)+env(safe-area-inset-bottom)+0.75rem)] z-sticky space-y-3 rounded-xl border border-ink-200 bg-card/95 p-3 shadow-lg backdrop-blur md:bottom-4 sm:p-4">
+        {erro && <Alerta variante="erro">{erro}</Alerta>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-ink-700" aria-live="polite">
+            <span className="font-semibold tabular-nums text-foreground">{totalAceitas}</span> de {sugestoes.length} selecionada
+            {totalAceitas === 1 ? '' : 's'}
+          </p>
+          <Button onClick={() => void aoConfirmar()} loading={confirmando} disabled={totalAceitas === 0}>
+            {confirmando ? 'Salvando...' : `Confirmar selecionados (${totalAceitas})`}
+          </Button>
+        </div>
       </div>
     </div>
   )

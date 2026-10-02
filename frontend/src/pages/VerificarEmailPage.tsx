@@ -1,18 +1,27 @@
-import { MailCheck } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Loader2, MailCheck } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { extrairMensagemErro } from '@/api/apiError'
 import { reenviarVerificacao, verificarEmail } from '@/api/authApi'
 import { AuthSplitLayout } from '@/components/AuthSplitLayout'
+import { Alerta } from '@/components/ui/alerta'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Campo } from '@/components/ui/campo'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useValidacao } from '@/hooks/useValidacao'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 type Estado = 'verificando' | 'verificado' | 'token-invalido' | 'reenviar' | 'reenviado'
+
+const TITULOS: Record<Estado, string> = {
+  verificando: 'Confirmando seu e-mail',
+  verificado: 'E-mail confirmado!',
+  'token-invalido': 'Link inválido ou expirado',
+  reenviar: 'Confirme seu e-mail',
+  reenviado: 'Link reenviado',
+}
 
 // UC21 - Verificar e-mail de cadastro. POST /api/auth/verificar-email e
 // POST /api/auth/reenviar-verificacao (docs/contrato-api.md). RN26: toda
@@ -27,8 +36,11 @@ export function VerificarEmailPage() {
   const [estado, setEstado] = useState<Estado>(token ? 'verificando' : 'reenviar')
   const [mensagem, setMensagem] = useState<string | null>(null)
   const [email, setEmail] = useState(searchParams.get('email') ?? '')
-  const [erroEmail, setErroEmail] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+
+  const validacao = useValidacao({
+    email: () => (!email.trim() ? 'Informe seu e-mail.' : !EMAIL_REGEX.test(email) ? 'Informe um e-mail válido, como nome@email.com.' : undefined),
+  })
 
   useEffect(() => {
     if (!token) {
@@ -49,12 +61,10 @@ export function VerificarEmailPage() {
   async function aoReenviar(evento: FormEvent) {
     evento.preventDefault()
 
-    if (!EMAIL_REGEX.test(email)) {
-      setErroEmail('Informe um e-mail válido.')
+    if (enviando || !validacao.validarTudo()) {
       return
     }
 
-    setErroEmail(null)
     setEnviando(true)
 
     try {
@@ -70,98 +80,76 @@ export function VerificarEmailPage() {
     }
   }
 
+  const formularioReenvio = (rotulo: string) => (
+    <form onSubmit={aoReenviar} noValidate className="space-y-5">
+      <Campo id="email" rotulo={rotulo} erro={validacao.erro('email')}>
+        <Input
+          type="email"
+          inputMode="email"
+          placeholder="voce@email.com"
+          autoComplete="email"
+          value={email}
+          onChange={(evento) => setEmail(evento.target.value)}
+          {...validacao.propsCampo('email')}
+        />
+      </Campo>
+      <Button type="submit" size="lg" className="w-full" loading={enviando}>
+        {enviando ? 'Enviando...' : 'Reenviar e-mail de confirmação'}
+      </Button>
+    </form>
+  )
+
   return (
-    <AuthSplitLayout>
-      <Card className="w-full max-w-sm border-t-4 border-t-primary">
-        <CardHeader className="items-center text-center">
-          <span className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-manilha/40">
-            <MailCheck className="h-8 w-8" />
-          </span>
-          <CardTitle className="font-heading text-3xl">Confirme seu e-mail</CardTitle>
-          {estado === 'reenviar' && (
-            <CardDescription>
-              Enviamos um link de confirmação para o seu e-mail ao criar a conta. Confirme em até 10 minutos, senão
-              sua conta expira automaticamente e será preciso se cadastrar de novo.
-            </CardDescription>
-          )}
-        </CardHeader>
+    <AuthSplitLayout
+      icone={MailCheck}
+      titulo={TITULOS[estado]}
+      descricao={
+        estado === 'reenviar'
+          ? 'Enviamos um link de confirmação para o seu e-mail. Confirme em até 10 minutos, senão a conta expira e será preciso se cadastrar de novo.'
+          : undefined
+      }
+      rodape={
+        <Link to="/login" className="inline-flex items-center gap-1.5 font-semibold text-ink-700 hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para o login
+        </Link>
+      }
+    >
+      {estado === 'verificando' && (
+        <div role="status" className="flex items-center gap-3 rounded-lg border border-ink-200 bg-card p-4 text-sm text-ink-700 shadow-xs">
+          <Loader2 className="h-5 w-5 animate-spin text-brand-700" />
+          Confirmando seu e-mail, só um instante...
+        </div>
+      )}
 
-        {estado === 'verificando' && (
-          <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground">Confirmando seu e-mail...</p>
-          </CardContent>
-        )}
+      {estado === 'verificado' && (
+        <div className="space-y-5">
+          <Alerta variante="sucesso" titulo="Tudo certo">
+            {mensagem} Agora você já pode entrar na sua conta.
+          </Alerta>
+          <Button asChild size="lg" className="w-full">
+            <Link to="/login">
+              Ir para o login
+              <ArrowRight />
+            </Link>
+          </Button>
+        </div>
+      )}
 
-        {estado === 'verificado' && (
-          <CardContent className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">{mensagem}</p>
-            <Button asChild className="w-full">
-              <Link to="/login">Ir para o login</Link>
-            </Button>
-          </CardContent>
-        )}
+      {estado === 'token-invalido' && (
+        <div className="space-y-6">
+          <Alerta variante="erro">{mensagem}</Alerta>
+          {formularioReenvio('Reenviar confirmação para')}
+        </div>
+      )}
 
-        {estado === 'token-invalido' && (
-          <CardContent className="space-y-4">
-            <p className="text-center text-sm text-destructive">{mensagem}</p>
-            <form onSubmit={aoReenviar} className="space-y-4" noValidate>
-              <div className="space-y-2">
-                <Label htmlFor="email">Reenviar confirmação para</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  className="h-10"
-                  placeholder="voce@email.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(evento) => setEmail(evento.target.value)}
-                  aria-invalid={Boolean(erroEmail)}
-                />
-                {erroEmail && <p className="text-sm text-destructive">{erroEmail}</p>}
-              </div>
-              <Button type="submit" className="w-full" disabled={enviando}>
-                {enviando ? 'Enviando...' : 'Reenviar e-mail de confirmação'}
-              </Button>
-            </form>
-          </CardContent>
-        )}
+      {estado === 'reenviar' && formularioReenvio('Não recebeu? Reenviar para')}
 
-        {estado === 'reenviar' && (
-          <form onSubmit={aoReenviar} noValidate>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Não recebeu? Reenviar para</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  className="h-10"
-                  placeholder="voce@email.com"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(evento) => setEmail(evento.target.value)}
-                  aria-invalid={Boolean(erroEmail)}
-                />
-                {erroEmail && <p className="text-sm text-destructive">{erroEmail}</p>}
-              </div>
-              <Button type="submit" className="w-full" disabled={enviando}>
-                {enviando ? 'Enviando...' : 'Reenviar e-mail de confirmação'}
-              </Button>
-            </CardContent>
-          </form>
-        )}
-
-        {estado === 'reenviado' && (
-          <CardContent className="text-center">
-            <p className="text-sm text-muted-foreground">{mensagem}</p>
-          </CardContent>
-        )}
-
-        <CardFooter className="justify-center text-sm text-muted-foreground">
-          <Link to="/login" className="font-medium text-primary hover:underline">
-            Voltar para o login
-          </Link>
-        </CardFooter>
-      </Card>
+      {estado === 'reenviado' && (
+        <Alerta variante="sucesso" titulo="Confira sua caixa de entrada">
+          {mensagem} Não esqueça de olhar a pasta de spam.
+        </Alerta>
+      )}
     </AuthSplitLayout>
   )
 }

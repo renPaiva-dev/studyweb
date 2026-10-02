@@ -4,18 +4,15 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  // Cantos retos: o Card e a folha de papel em si, nao um painel flutuante
-  // (identidade "caderno" - ver tailwind.config.js, radius e usado so em
-  // controles interativos, nao em superficies de conteudo).
-  "rounded-none border bg-card text-card-foreground transition-colors duration-150",
+  // Superficie branca sobre o fundo ink-50, com sombra em camadas - a
+  // elevacao separa o conteudo do fundo sem precisar de bordas pesadas.
+  "rounded-xl border border-ink-200/80 bg-card text-card-foreground shadow-sm",
   {
     variants: {
-      // Opt-in para cards clicaveis (ex.: DeckCard) - a borda escurece no
-      // hover, sinalizando "clicavel" sem o efeito flutuante de
-      // sombra+escala. Cards estaticos (stat cards do dashboard, faces do
-      // flashcard) ficam de fora.
+      // Cards clicaveis (ex.: DeckCard): levantam no hover, ganham anel de
+      // foco ambar no teclado e afundam 1px ao clicar.
       interactive: {
-        true: "cursor-pointer hover:border-foreground/20",
+        true: "cursor-pointer transition-[box-shadow,border-color,transform] duration-base ease-suave hover:-translate-y-0.5 hover:border-ink-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:translate-y-0 active:shadow-sm",
         false: "",
       },
     },
@@ -46,7 +43,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
+    className={cn("flex flex-col gap-1 p-5 sm:p-6", className)}
     {...props}
   />
 ))
@@ -58,7 +55,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("font-semibold leading-none tracking-tight", className)}
+    className={cn("text-base font-semibold leading-6 tracking-tight text-foreground", className)}
     {...props}
   />
 ))
@@ -70,7 +67,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-sm leading-5 text-muted-foreground", className)}
     {...props}
   />
 ))
@@ -80,7 +77,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-5 pt-0 sm:p-6 sm:pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -90,7 +87,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
+    className={cn("flex items-center p-5 pt-0 sm:p-6 sm:pt-0", className)}
     {...props}
   />
 ))

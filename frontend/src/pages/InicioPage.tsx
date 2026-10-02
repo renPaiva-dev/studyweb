@@ -1,4 +1,4 @@
-import { Brain, ClipboardList, LayoutDashboard, Layers, ListChecks, Plus, Repeat, Sparkles } from 'lucide-react'
+import { ArrowRight, Brain, ClipboardList, Flame, Layers, ListChecks, Plus, Repeat, Sparkles, Target } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -10,10 +10,11 @@ import { DeckCard } from '@/components/DeckCard'
 import { DeckFormDialog } from '@/components/DeckFormDialog'
 import { ExcluirDeckDialog } from '@/components/ExcluirDeckDialog'
 import { HistoricoProvaCard } from '@/components/HistoricoProvaCard'
+import { DeckCardSkeleton, LinhaSkeleton } from '@/components/SkeletonsLista'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { EstadoErro, EstadoVazio } from '@/components/ui/estados'
+import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/context/AuthContext'
-import { useDefinirMargem } from '@/context/MargemContext'
 
 const RECURSOS = [
   {
@@ -33,11 +34,17 @@ const RECURSOS = [
   },
 ]
 
-// Tela inicial do app (clicar em "Sinapse" no cabecalho leva aqui) - combina um resumo do progresso (dashboard geral, UC20), uma
-// pre-visualizacao dos decks (UC02) e uma apresentacao do sistema, servindo
-// como ponto de partida unico em vez de cair direto em "Meus decks". Os
-// numeros de progresso vivem na margem (useDefinirMargem), nao numa grade
-// de cartoes de metrica - identidade "caderno ativamente corrigido".
+function saudacao() {
+  const hora = new Date().getHours()
+  if (hora < 12) return 'Bom dia'
+  if (hora < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+// Tela inicial do app (clicar em "Sinapse" no cabecalho leva aqui) - combina
+// um resumo do progresso (dashboard geral, UC20), uma pre-visualizacao dos
+// decks (UC02) e das provas (UC28), servindo como ponto de partida unico em
+// vez de cair direto em "Meus decks".
 export function InicioPage() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
@@ -86,109 +93,79 @@ export function InicioPage() {
     await carregar()
   }
 
-  useDefinirMargem(
-    dashboard ? (
-      <div className="space-y-6 text-sm">
-        <div>
-          <p className="font-heading text-2xl font-semibold">{dashboard.totalDecks}</p>
-          <p className="text-muted-foreground">
-            deck{dashboard.totalDecks === 1 ? '' : 's'}, {dashboard.totalFlashcards} flashcard
-            {dashboard.totalFlashcards === 1 ? '' : 's'} no total
-          </p>
-        </div>
-        <div>
-          <p className="font-heading text-2xl font-semibold text-verde-lousa">
-            {dashboard.streakDias} dia{dashboard.streakDias === 1 ? '' : 's'}
-          </p>
-          <p className="text-muted-foreground">consecutivos com revisão</p>
-        </div>
-        <div>
-          <p className="font-heading text-2xl font-semibold">{dashboard.percentualDominadoGeral}%</p>
-          <p className="text-muted-foreground">
-            dominado no geral.{' '}
-            <Link to="/dashboard-geral" className="font-medium text-foreground underline underline-offset-2">
-              Ver todos os gráficos
-            </Link>
-          </p>
-        </div>
-      </div>
-    ) : null,
-    null,
-    [dashboard?.totalDecks, dashboard?.totalFlashcards, dashboard?.streakDias, dashboard?.percentualDominadoGeral],
-    false,
-  )
-
   if (erroCarregamento !== null) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-none border py-16 text-center">
-        <p className="text-muted-foreground">{erroCarregamento}</p>
-        <Button variant="outline" onClick={() => void carregar()}>
-          Tentar novamente
-        </Button>
-      </div>
-    )
+    return <EstadoErro mensagem={erroCarregamento} onTentarNovamente={() => void carregar()} />
   }
 
   const primeiroNome = usuario?.nome?.split(' ')[0]
+  const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-6 border-b border-manilha pb-8 sm:flex-row sm:items-center sm:justify-between">
-        <div className="max-w-md space-y-2">
-          <p className="text-eyebrow text-muted-foreground">Sinapse</p>
-          <h1 className="font-heading text-display">{primeiroNome ? `Olá, ${primeiroNome}` : 'Bem-vindo(a) de volta'}</h1>
-          <p className="text-muted-foreground">
-            Organize seus materiais em decks, gere flashcards com IA e deixe a repetição espaçada guiar suas revisões.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button size="lg" className="gap-2" onClick={() => navigate('/dashboard-geral')}>
-            <LayoutDashboard className="h-4 w-4" />
-            Ver visão geral completa
-          </Button>
-          <Button size="lg" variant="outline" className="gap-2" onClick={abrirNovoDeck}>
-            <Plus className="h-4 w-4" />
-            Novo deck
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-12">
+      <section className="relative overflow-hidden rounded-2xl bg-ink-900 px-5 py-7 text-white shadow-lg sm:px-8 sm:py-9">
+        {/* Motivo do logo (dois discos que se sobrepoem), como textura. */}
+        <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-white/[0.04]" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-6 right-6 h-20 w-20 rounded-full bg-brand-400 sm:right-16" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-16 right-20 h-36 w-36 rounded-full bg-ink-800/80 sm:right-32" aria-hidden="true" />
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-semibold">Seus decks</h2>
-          {decks !== null && decks.length > 0 && (
-            <Link to="/decks" className="text-sm font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground">
-              Ver todos
-            </Link>
-          )}
+        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-xl space-y-3">
+            <p className="text-sm font-medium text-white/70 first-letter:uppercase">{hoje}</p>
+            <h1 className="font-heading text-h1 text-white sm:text-[2.75rem] sm:leading-[1.1]">
+              {saudacao()}
+              {primeiroNome ? `, ${primeiroNome}` : ''}.
+            </h1>
+            <p className="text-base text-white/75">
+              Organize seus materiais em decks, gere flashcards com IA e deixe a repetição espaçada guiar suas revisões.
+            </p>
+            <div className="flex flex-col gap-2 pt-3 sm:flex-row">
+              <Button size="lg" onClick={abrirNovoDeck}>
+                <Plus />
+                Novo deck
+              </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                className="text-white ring-1 ring-inset ring-white/20 hover:bg-white/10 hover:text-white active:bg-white/15"
+                onClick={() => navigate('/dashboard-geral')}
+              >
+                Ver visão geral
+                <ArrowRight />
+              </Button>
+            </div>
+          </div>
+
+          <ResumoProgresso dashboard={dashboard} />
         </div>
+      </section>
+
+      <section aria-labelledby="titulo-decks" className="space-y-4">
+        <CabecalhoSecao id="titulo-decks" titulo="Seus decks" link={decks && decks.length > 0 ? { para: '/decks', rotulo: 'Ver todos' } : undefined} />
 
         {decks === null && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Carregando rotulo="Carregando seus decks..." className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 3 }, (_, indice) => (
-              <Skeleton key={indice} className="h-32 w-full" />
+              <DeckCardSkeleton key={indice} />
             ))}
-          </div>
+          </Carregando>
         )}
 
         {decks !== null && decks.length === 0 && (
-          <div className="flex flex-col items-center gap-4 rounded-none border border-dashed py-16 text-center">
-            <div className="rounded-full bg-primary/10 p-4">
-              <Layers className="h-8 w-8 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium">Você ainda não tem nenhum deck</p>
-              <p className="text-sm text-muted-foreground">Crie seu primeiro deck para começar a organizar seus estudos</p>
-            </div>
-            <Button onClick={abrirNovoDeck}>
-              <Plus className="mr-2 h-4 w-4" />
-              Criar seu primeiro deck
-            </Button>
-          </div>
+          <EstadoVazio
+            icone={Layers}
+            titulo="Seu primeiro deck começa aqui"
+            descricao="Um deck agrupa os flashcards de um tema. Crie um e envie um PDF para a IA sugerir os primeiros cards."
+            acao={
+              <Button onClick={abrirNovoDeck}>
+                <Plus />
+                Criar meu primeiro deck
+              </Button>
+            }
+          />
         )}
 
         {decks !== null && decks.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {decks.slice(0, 6).map((deck) => (
               <DeckCard
                 key={deck.id}
@@ -200,36 +177,34 @@ export function InicioPage() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-semibold">Provas</h2>
-          {historicoProvas !== null && historicoProvas.length > 0 && (
-            <Link to="/provas" className="text-sm font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground">
-              Ver histórico
-            </Link>
-          )}
-        </div>
+      <section aria-labelledby="titulo-provas" className="space-y-4">
+        <CabecalhoSecao
+          id="titulo-provas"
+          titulo="Provas recentes"
+          link={historicoProvas && historicoProvas.length > 0 ? { para: '/provas', rotulo: 'Ver histórico' } : undefined}
+        />
 
-        {historicoProvas === null && <Skeleton className="h-20 w-full" />}
+        {historicoProvas === null && (
+          <Carregando rotulo="Carregando suas provas..." className="space-y-3">
+            <LinhaSkeleton />
+            <LinhaSkeleton />
+          </Carregando>
+        )}
 
         {historicoProvas !== null && historicoProvas.length === 0 && (
-          <div className="flex flex-col items-center gap-4 rounded-none border border-dashed py-16 text-center">
-            <div className="rounded-full bg-primary/10 p-4">
-              <ClipboardList className="h-8 w-8 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium">Você ainda não fez nenhuma prova</p>
-              <p className="text-sm text-muted-foreground">
-                Escolha flashcards de um deck e um estilo (ENEM, Vestibular ou Conhecimentos Gerais). A IA gera questões inéditas.
-              </p>
-            </div>
-            <Button onClick={() => navigate('/provas/nova')}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Fazer minha primeira prova
-            </Button>
-          </div>
+          <EstadoVazio
+            icone={ClipboardList}
+            titulo="Nenhuma prova feita ainda"
+            descricao="Escolha flashcards de um deck e um estilo (ENEM, Vestibular ou Conhecimentos Gerais). A IA gera questões inéditas."
+            acao={
+              <Button variant="secondary" onClick={() => navigate('/provas/nova')}>
+                <Sparkles />
+                Fazer minha primeira prova
+              </Button>
+            }
+          />
         )}
 
         {historicoProvas !== null && historicoProvas.length > 0 && (
@@ -243,20 +218,25 @@ export function InicioPage() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="space-y-4 border-t border-manilha pt-8">
-        <h2 className="font-heading text-xl font-semibold">Como funciona</h2>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {RECURSOS.map(({ icone: Icone, titulo, descricao }) => (
-            <div key={titulo} className="space-y-1.5">
-              <Icone className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
-              <p className="font-medium">{titulo}</p>
-              <p className="text-sm text-muted-foreground">{descricao}</p>
-            </div>
+      <section aria-labelledby="titulo-como-funciona" className="space-y-4">
+        <CabecalhoSecao id="titulo-como-funciona" titulo="Como o Sinapse funciona" />
+        <ol className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {RECURSOS.map(({ icone: Icone, titulo, descricao }, indice) => (
+            <li key={titulo} className="relative rounded-xl border border-ink-200/80 bg-card p-5 shadow-xs">
+              <span className="absolute right-5 top-4 font-heading text-h2 text-ink-200" aria-hidden="true">
+                {String(indice + 1).padStart(2, '0')}
+              </span>
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-brand-800">
+                <Icone className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <p className="mt-4 font-semibold text-foreground">{titulo}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{descricao}</p>
+            </li>
           ))}
-        </div>
-      </div>
+        </ol>
+      </section>
 
       <DeckFormDialog
         open={dialogAberto}
@@ -272,6 +252,62 @@ export function InicioPage() {
         }}
         onExcluido={() => void aoSalvarOuExcluirDeck()}
       />
+    </div>
+  )
+}
+
+function CabecalhoSecao({ id, titulo, link }: { id: string; titulo: string; link?: { para: string; rotulo: string } }) {
+  return (
+    <div className="flex items-end justify-between gap-4">
+      <h2 id={id} className="font-heading text-h2 text-foreground">
+        {titulo}
+      </h2>
+      {link && (
+        <Link
+          to={link.para}
+          className="group inline-flex h-9 shrink-0 items-center gap-1 rounded-md px-1 text-sm font-semibold text-brand-800 hover:text-brand-900"
+        >
+          {link.rotulo}
+          <ArrowRight className="h-4 w-4 transition-transform duration-fast group-hover:translate-x-0.5" />
+        </Link>
+      )}
+    </div>
+  )
+}
+
+// Os numeros de progresso (UC20) direto no hero - visiveis tambem no mobile.
+function ResumoProgresso({ dashboard }: { dashboard: DashboardGeral | null }) {
+  const itens = dashboard
+    ? [
+        {
+          icone: Flame,
+          valor: `${dashboard.streakDias}`,
+          sufixo: dashboard.streakDias === 1 ? 'dia' : 'dias',
+          rotulo: 'seguidos revisando',
+          destaque: true,
+        },
+        { icone: Layers, valor: `${dashboard.totalFlashcards}`, sufixo: '', rotulo: `flashcards em ${dashboard.totalDecks} deck${dashboard.totalDecks === 1 ? '' : 's'}` },
+        { icone: Target, valor: `${dashboard.percentualDominadoGeral}`, sufixo: '%', rotulo: 'dominado no geral' },
+      ]
+    : null
+
+  return (
+    <div className="relative grid grid-cols-3 gap-2 rounded-xl bg-white/[0.06] p-2 ring-1 ring-inset ring-white/10 backdrop-blur-sm lg:min-w-[26rem]">
+      {itens === null
+        ? Array.from({ length: 3 }, (_, indice) => <Skeleton key={indice} className="h-[84px] rounded-lg bg-white/10" />)
+        : itens.map(({ icone: Icone, valor, sufixo, rotulo, destaque }) => (
+            <dl key={rotulo} className="rounded-lg px-2.5 py-3 sm:px-3.5">
+              <dt className="sr-only">{rotulo}</dt>
+              <dd>
+                <Icone className={destaque ? 'h-4 w-4 text-brand-300' : 'h-4 w-4 text-white/60'} aria-hidden="true" />
+                <p className="mt-2 font-heading text-h2 leading-none tabular-nums text-white">
+                  {valor}
+                  {sufixo && <span className="ml-0.5 text-base font-semibold text-white/80">{sufixo}</span>}
+                </p>
+                <p className="mt-1.5 text-xs leading-4 text-white/70 sm:text-sm sm:leading-5" aria-hidden="true">{rotulo}</p>
+              </dd>
+            </dl>
+          ))}
     </div>
   )
 }

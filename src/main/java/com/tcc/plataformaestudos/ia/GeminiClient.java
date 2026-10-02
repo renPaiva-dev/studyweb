@@ -55,9 +55,12 @@ public class GeminiClient {
 
 	public String gerarConteudo(String prompt) {
 		HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(apiUrl + "?key=" + apiKey))
+				// Chave no header (não em "?key="): URLs com query string acabam em
+				// logs de proxy/erro e em stack traces de exceções de E/S.
+				.uri(URI.create(apiUrl))
 				.timeout(TIMEOUT)
 				.header("Content-Type", "application/json")
+				.header("x-goog-api-key", apiKey)
 				.POST(HttpRequest.BodyPublishers.ofString(montarCorpoRequisicao(prompt)))
 				.build();
 

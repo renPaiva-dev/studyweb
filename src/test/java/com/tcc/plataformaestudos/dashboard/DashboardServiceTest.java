@@ -330,4 +330,37 @@ class DashboardServiceTest {
 		assertThat(resposta.streakDias()).isEqualTo(2);
 	}
 
+	@Test
+	void deveManterStreakAteOntemQuandoAindaNaoHouveRevisaoHoje() {
+		autenticarUsuario();
+		when(deckRepository.findByUsuarioId(USUARIO_ID)).thenReturn(List.of());
+		when(dashboardRepository.buscarUltimaRevisaoPorUsuario(USUARIO_ID)).thenReturn(List.of());
+		when(tentativaQuizRepository.calcularEstatisticasPorUsuario(USUARIO_ID))
+				.thenReturn(new EstatisticaTentativaProjecao(0L, null));
+
+		LocalDate hoje = LocalDate.now();
+		when(dashboardRepository.buscarDatasDeRevisoesPorUsuario(USUARIO_ID)).thenReturn(List.of(
+				hoje.minusDays(1).atTime(21, 0), hoje.minusDays(2).atTime(9, 0)));
+
+		DashboardGeralResponseDTO resposta = dashboardService.obterDashboardGeral();
+
+		assertThat(resposta.streakDias()).isEqualTo(2);
+	}
+
+	@Test
+	void deveZerarStreakQuandoUltimaRevisaoFoiAnteontem() {
+		autenticarUsuario();
+		when(deckRepository.findByUsuarioId(USUARIO_ID)).thenReturn(List.of());
+		when(dashboardRepository.buscarUltimaRevisaoPorUsuario(USUARIO_ID)).thenReturn(List.of());
+		when(tentativaQuizRepository.calcularEstatisticasPorUsuario(USUARIO_ID))
+				.thenReturn(new EstatisticaTentativaProjecao(0L, null));
+
+		when(dashboardRepository.buscarDatasDeRevisoesPorUsuario(USUARIO_ID)).thenReturn(List.of(
+				LocalDate.now().minusDays(2).atTime(9, 0)));
+
+		DashboardGeralResponseDTO resposta = dashboardService.obterDashboardGeral();
+
+		assertThat(resposta.streakDias()).isZero();
+	}
+
 }

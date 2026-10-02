@@ -36,14 +36,14 @@ public class QuestaoQuiz {
 	@OnDelete(action = OnDeleteAction.CASCADE)
 	private Quiz quiz;
 
-	@Column(name = "enunciado", nullable = false, length = 1000)
+	@Column(name = "enunciado", nullable = false, columnDefinition = "TEXT")
 	private String enunciado;
 
 	@Convert(converter = AlternativasConverter.class)
 	@Column(name = "alternativas", nullable = false, columnDefinition = "TEXT")
 	private List<AlternativaQuiz> alternativas;
 
-	@Column(name = "resposta_correta", nullable = false, length = 500)
+	@Column(name = "resposta_correta", nullable = false, columnDefinition = "TEXT")
 	private String respostaCorreta;
 
 	/** UC27/RN35 — explicação da resposta correta, revelada só depois de respondida (quiz determinístico não usa). */

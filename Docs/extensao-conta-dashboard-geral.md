@@ -360,7 +360,9 @@ duplica os critérios de dominado/em risco.
      a pontuação média entre todas
    - Calcula o streak: conte, a partir de hoje retrocedendo, quantos
      dias consecutivos têm pelo menos uma RevisaoFlashcard do usuário
-     (em qualquer deck), parando no primeiro dia sem nenhuma revisão
+     (em qualquer deck), parando no primeiro dia sem nenhuma revisão.
+     Hoje ainda sem revisão não quebra a sequência (o dia não acabou):
+     nesse caso a contagem começa em ontem (ajuste de 2026-10)
    - Monta o ranking de decks (lista ordenada por percentualDominado
      desc)
 

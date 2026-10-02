@@ -26,4 +26,10 @@ RUN mkdir -p /app/uploads && chown -R app:app /app
 USER app
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Fuso de Brasilia: o banco grava LocalDateTime sem offset e o navegador o
+# exibe como hora local; o cron do lembrete (UC30, "8h"), o streak (RN25) e
+# a fila do dia (RN10, LocalDate.now()) tambem dependem do fuso da JVM. Sem
+# isto o container roda em UTC (3h a frente do usuario).
+ENV TZ=America/Sao_Paulo
+
+ENTRYPOINT ["java", "-Duser.timezone=America/Sao_Paulo", "-jar", "app.jar"]

@@ -55,6 +55,26 @@ FRONTEND_URL=http://localhost:5173
 enquanto — você volta aqui no passo 4, depois que o frontend tiver um
 domínio.)
 
+**E-mail (necessário para cadastrar uma conta nova ao vivo).** Sem SMTP,
+nenhum e-mail sai e o link de verificação (UC17) nunca chega — só a conta
+de demonstração (passo 5) consegue entrar. Para mostrar o cadastro na
+defesa, defina também:
+
+```
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=<seu-email@gmail.com>
+MAIL_PASSWORD=<senha de app: myaccount.google.com/apppasswords>
+```
+
+Alternativa só para teste, sem SMTP: `EMAIL_REGISTRAR_CORPO_SEM_SMTP=true`
+faz o link aparecer no log do backend (Railway → Deployments → Logs). Quem
+lê o log consegue confirmar qualquer conta — desligue depois.
+
+**Fuso horário.** O `Dockerfile` já fixa a JVM em `America/Sao_Paulo`
+(lembrete das 8h, streak, fila do dia e horários exibidos). Não é preciso
+configurar `TZ` no Railway.
+
 Em **Settings → Networking**, gere um domínio público (**Generate Domain**).
 O backend escuta na porta que o Railway injeta via `PORT` (já configurado em
 `application-docker.properties` como `server.port=${PORT:8080}`), então não
