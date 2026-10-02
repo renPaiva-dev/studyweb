@@ -6,6 +6,7 @@ import { extrairMensagemErro, statusDoErro } from '@/api/apiError'
 import { atualizarPerfil, buscarPerfil, enviarLembreteTeste, exportarDados, type Perfil } from '@/api/usuarioApi'
 import { CabecalhoPagina } from '@/components/CabecalhoPagina'
 import { ExcluirContaDialog } from '@/components/ExcluirContaDialog'
+import { PreferenciasEstudoCard } from '@/components/PreferenciasEstudoCard'
 import { SecaoPerfil } from '@/components/SecaoPerfil'
 import { TrocarSenhaCard } from '@/components/TrocarSenhaCard'
 import { Alerta } from '@/components/ui/alerta'
@@ -217,6 +218,8 @@ export function PerfilPage() {
             </Button>
           </div>
         </SecaoPerfil>
+
+        <PreferenciasEstudoCard />
 
         <SecaoPerfil icone={Download} titulo="Seus dados (LGPD)" descricao="Baixe uma cópia completa de todos os seus dados pessoais.">
           <div className="space-y-3">

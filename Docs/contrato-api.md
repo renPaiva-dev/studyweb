@@ -243,3 +243,13 @@ Sem chamada à IA nem serviço externo nesta feature (100% algorítmica, a parti
 A associação/remoção de um deck a uma coleção é feita via `POST`/`PUT` em
 `/api/decks` (campo `colecaoId`, ver seção "Decks (UC02)") — não há endpoint
 dedicado para mover um deck entre coleções.
+
+## Elaboração de Flashcard (UC34)
+
+| Método | Endpoint | Request Body | Resposta de sucesso | Erros possíveis |
+|---|---|---|---|---|
+| POST | `/api/flashcards/{id}/autoexplicacao` | `{ texto }` (20–1000 caracteres) | `200` — `{ veredito: "CONSISTENTE"\|"PARCIAL"\|"EQUIVOCADA", comentarioGeral, anotacoes: [ { trecho (literal do texto ou null), tipo: "ACERTO"\|"IMPRECISAO"\|"ERRO", comentario } ] (0–4), faltou (ou null), ancoradaNoMaterial }` (RN43; nada persistido) | `400` (texto fora do tamanho) · `401` · `403` (RN01) · `404` · `429` (limite de 10/min) · `502` (falha na IA, com retry) |
+| POST | `/api/flashcards/{id}/analogia` | `{ evitar? }` (opcional, máx. 1000; corpo pode ser omitido) | `200` — `{ tipo: "ANALOGIA"\|"EXEMPLO", texto, ancoradaNoMaterial }` (RN43) | `400` · `401` · `403` (RN01) · `404` · `429` (limite de 10/min) · `502` |
+
+Detalhamento (prompts, sanitização da resposta da IA, design da interface) em
+`Docs/extensao-elaboracao-flashcard.md`.

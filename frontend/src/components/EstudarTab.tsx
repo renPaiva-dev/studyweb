@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { extrairMensagemErro } from '@/api/apiError'
 import { avaliarRevisao, buscarFilaEstudo, type ItemFilaEstudo } from '@/api/estudoApi'
 import { AvaliacaoRevisaoBotoes } from '@/components/AvaliacaoRevisaoBotoes'
+import { ElaboracaoPainel } from '@/components/ElaboracaoPainel'
 import { FlashcardEstudoCard } from '@/components/FlashcardEstudoCard'
 import { NotaMargem } from '@/components/NotaMargem'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Progress } from '@/components/ui/progress'
 import { Carregando, Skeleton } from '@/components/ui/skeleton'
 import { useDefinirMargem } from '@/context/MargemContext'
 import { cn } from '@/lib/utils'
+import { definirElaboracaoVisivel, elaboracaoVisivel } from '@/utils/preferenciasEstudo'
 
 interface EstudarTabProps {
   deckId: number
@@ -59,6 +61,8 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
   const [virado, setVirado] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [notasCard, setNotasCard] = useState<ReactNode | null>(null)
+  const [notasElaboracao, setNotasElaboracao] = useState<ReactNode | null>(null)
+  const [mostrarElaboracao, setMostrarElaboracao] = useState(elaboracaoVisivel)
   const [ultimaAvaliacao, setUltimaAvaliacao] = useState<UltimaAvaliacao | null>(null)
 
   const carregarFila = useCallback(
@@ -132,6 +136,13 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emSessao, virado, enviando, indiceAtual])
 
+  // RN44 - ocultar vale para as próximas sessões deste navegador; reativa em Perfil.
+  function ocultarElaboracao() {
+    definirElaboracaoVisivel(false)
+    setMostrarElaboracao(false)
+    toast('Opções de aprofundamento ocultadas. Reative em Perfil.')
+  }
+
   const totalNaFila = fila?.length ?? 0
   const concluidos = Math.min(indiceAtual, totalNaFila)
 
@@ -160,6 +171,8 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
         )}
 
         {notasCard && <div className="space-y-3 border-t border-ink-100 pt-4 text-foreground">{notasCard}</div>}
+
+        {notasElaboracao && <div className="border-t border-ink-100 pt-4 text-foreground">{notasElaboracao}</div>}
       </NotaMargem>
     ) : (
       <NotaMargem valor="Em dia" tom="positivo" rotulo="Nenhuma revisão pendente hoje." />
@@ -178,7 +191,7 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
     // "vazia" ([]), concluidos/totalNaFila continuam os dois em 0 - sem
     // `fila` aqui, o efeito nao reexecuta nessa transicao e a margem fica
     // presa no conteudo (null) do primeiro render.
-    [fila, concluidos, totalNaFila, ultimaAvaliacao, notasCard],
+    [fila, concluidos, totalNaFila, ultimaAvaliacao, notasCard, notasElaboracao],
   )
 
   if (fila === null && erroCarregamento === null) {
@@ -271,7 +284,19 @@ export function EstudarTab({ deckId }: EstudarTabProps) {
           </p>
         </div>
       ) : (
-        <AvaliacaoRevisaoBotoes onAvaliar={(qualidade) => void aoAvaliar(qualidade)} desabilitado={enviando} />
+        <>
+          {/* UC34 - opcional (RN44): nunca interfere em AvaliacaoRevisaoBotoes,
+              que só depende de `enviando` (a própria avaliação). */}
+          {mostrarElaboracao && (
+            <ElaboracaoPainel
+              key={itemAtual.flashcardId}
+              flashcardId={itemAtual.flashcardId}
+              onNotasChange={setNotasElaboracao}
+              onOcultar={ocultarElaboracao}
+            />
+          )}
+          <AvaliacaoRevisaoBotoes onAvaliar={(qualidade) => void aoAvaliar(qualidade)} desabilitado={enviando} />
+        </>
       )}
     </div>
   )
