@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.1</version>
+		<version>4.1.2</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cardmind</groupId>
@@ -28,8 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>17</java.version>
-		<jjwt.version>0.12.6</jjwt.version>
-		<pdfbox.version>3.0.3</pdfbox.version>
+		<jjwt.version>0.13.0</jjwt.version>
+		<pdfbox.version>3.0.8</pdfbox.version>
 	</properties>
 	<dependencies>
 		<dependency>
